@@ -44,7 +44,7 @@ export async function openTelegramInvoice(amount: number) {
     }
 
     try {
-        const response = await fetch(`https://c1aec5b435247ce3066498060ecc3ada.serveo.net/create-invoice?amount=${amount}`);
+        const response = await fetch(`https://lenichev.site/ht_back/create-invoice?amount=${amount}`);
         console.log(response);
         const data = await response.json();
         console.log(data);

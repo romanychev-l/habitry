@@ -87,6 +87,6 @@ func main() {
 	// Оборачиваем наш handler в CORS middleware
 	handler := corsMiddleware.Handler(http.DefaultServeMux)
 
-	log.Println("Сервер запущен на порту 3030")
-	log.Fatal(http.ListenAndServe(":3030", handler))
+	log.Println("Сервер запущен на порту 8080")
+	log.Fatal(http.ListenAndServe(":8080", handler))
 }

@@ -11,7 +11,7 @@
     { id: '2', title: 'Бег', days: [0, 2, 4], goal: 'Ежедневно', score: 0, streak: 0 },
   ];
 
-  function handleNewHabit(event: CustomEvent) {
+  function handleNewHabit(event: { detail: any }) {
     const newHabit = {
       id: Date.now().toString(),
       score: 0,
