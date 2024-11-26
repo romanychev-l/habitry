@@ -13,6 +13,7 @@ export const initTelegram = () => {
     const userData = webapp.initDataUnsafe?.user;
     if (userData) {
       user.set({
+        id: userData.id,
         firstName: userData.first_name,
         lastName: userData.last_name,
         username: userData.username
