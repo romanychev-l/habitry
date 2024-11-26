@@ -6,21 +6,83 @@
   
   let isListView = false;
   let showModal = false;
-  let habits = [
-    { id: '1', title: 'Медитация', days: [1, 3, 5], goal: 'Ежедневно', score: 0, streak: 0 },
-    { id: '2', title: 'Бег', days: [0, 2, 4], goal: 'Ежедневно', score: 0, streak: 0 },
-  ];
+  let habits: any[] = [];
 
-  function handleNewHabit(event: { detail: any }) {
-    const newHabit = {
-      id: Date.now().toString(),
-      score: 0,
-      streak: 0,
-      goal: 'Ежедневно',
-      ...event.detail
-    };
-    habits = [...habits, newHabit];
-    showModal = false;
+  async function initializeUser() {
+    try {
+      console.log('initializeUser', $user);
+      const telegramId = $user?.id;
+      if (!telegramId) return;
+
+      const response = await fetch(`https://lenichev.site/ht_back/user?telegram_id=${telegramId}`);
+      console.log('response', response);
+      console.log('telegramId', telegramId);
+      if (response.status === 404) {
+        const createResponse = await fetch('https://lenichev.site/ht_back/user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            telegram_id: telegramId,
+            first_name: $user.firstName,
+            username: $user.username,
+          })
+        });
+
+        if (!createResponse.ok) {
+          throw new Error('Ошибка при создании пользователя');
+        }
+
+        habits = [];
+      } else {
+        console.log('user already exists');
+        const data = await response.json();
+        habits = data.habits || [];
+      }
+    } catch (error) {
+      console.error('Ошибка при инициализации пользователя:', error);
+    }
+  }
+
+  $: if ($user) {
+    initializeUser();
+  }
+
+  async function handleNewHabit(event: { detail: any }) {
+    try {
+      const telegramId = $user?.id;
+      if (!telegramId) return;
+
+      const newHabit = {
+        id: Date.now().toString(),
+        score: 0,
+        streak: 0,
+        goal: 'Ежедневно',
+        ...event.detail
+      };
+
+      const response = await fetch('https://lenichev.site/ht_back/habits', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          telegram_id: telegramId,
+          habit: newHabit
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Ошибка при сохранении привычки');
+      }
+
+      habits = [...habits, newHabit];
+      showModal = false;
+    } catch (error) {
+      console.error('Ошибка при создании привычки:', error);
+      alert('Не удалось создать привычку. Попробуйте еще раз.');
+    }
   }
 
   function handlePayment() {
@@ -94,6 +156,7 @@
 
   .habit-container.list-view :global(.habit-card) {
     border-radius: 12px;
+    height: 25px;
     margin: 4px 0;
   }
 

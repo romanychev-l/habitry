@@ -1,8 +1,8 @@
 import { writable } from 'svelte/store';
 
 interface TelegramUser {
+  id: number;
   firstName: string;
-  lastName?: string;
   username?: string;
 }
 
