@@ -15,10 +15,12 @@ export const initTelegram = () => {
       user.set({
         id: userData.id,
         firstName: userData.first_name,
-        lastName: userData.last_name,
-        username: userData.username
+        username: userData.username,
+        languageCode: userData.language_code,
+        photoUrl: userData.photo_url
       });
     }
+    console.log('user', userData);
   
     // Сообщаем что приложение готово
     webapp.ready();

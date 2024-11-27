@@ -16,8 +16,11 @@
 
       const response = await fetch(`https://lenichev.site/ht_back/user?telegram_id=${telegramId}`);
       console.log('response', response);
+      console.log('response.ok', response.status);
+      // console.log('response.json', await response.json());
       console.log('telegramId', telegramId);
       if (response.status === 404) {
+        console.log('create user');
         const createResponse = await fetch('https://lenichev.site/ht_back/user', {
           method: 'POST',
           headers: {
@@ -27,9 +30,11 @@
             telegram_id: telegramId,
             first_name: $user.firstName,
             username: $user.username,
+            language_code: $user.languageCode,
+            photo_url: $user.photoUrl
           })
         });
-
+        console.log('createResponse', createResponse);
         if (!createResponse.ok) {
           throw new Error('Ошибка при создании пользователя');
         }
@@ -39,6 +44,14 @@
         console.log('user already exists');
         const data = await response.json();
         habits = data.habits || [];
+        
+        const today = new Date().toISOString().split('T')[0];
+        console.log('today', today);
+        console.log('data', data);
+        console.log('data.last_visit', data.last_visit);
+        if (data.last_visit !== today && data.credit > 0) {
+          openTelegramInvoice(data.credit);
+        }
       }
     } catch (error) {
       console.error('Ошибка при инициализации пользователя:', error);
@@ -50,6 +63,7 @@
   }
 
   async function handleNewHabit(event: { detail: any }) {
+    console.log('handleNewHabit', event);
     try {
       const telegramId = $user?.id;
       if (!telegramId) return;
@@ -58,11 +72,10 @@
         id: Date.now().toString(),
         score: 0,
         streak: 0,
-        goal: 'Ежедневно',
         ...event.detail
       };
-
-      const response = await fetch('https://lenichev.site/ht_back/habits', {
+      console.log('newHabit', newHabit);
+      const response = await fetch('https://lenichev.site/ht_back/habit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -72,7 +85,7 @@
           habit: newHabit
         })
       });
-
+      console.log('response', response);
       if (!response.ok) {
         throw new Error('Ошибка при сохранении привычки');
       }
@@ -103,9 +116,11 @@
   </header>
 
   <div class="habit-container" class:list-view={isListView}>
-    {#each habits as habit}
-      <HabitCard {habit} />
-    {/each}
+    {#if $user}
+      {#each habits as habit}
+        <HabitCard {habit} telegramId={$user.id} />
+      {/each}
+    {/if}
   </div>
 
   <button 
@@ -116,15 +131,18 @@
   </button>
 
   {#if showModal}
-    <NewHabitModal on:save={handleNewHabit} />
+    <NewHabitModal 
+      on:save={handleNewHabit}
+      on:close={() => showModal = false}
+    />
   {/if}
 
-  <button 
+  <!-- <button 
     class="payment-button"
     on:click={handlePayment}
   >
     💎 Премиум
-  </button>
+  </button> -->
 </main>
 
 <style>
@@ -193,5 +211,12 @@
     color: var(--tg-theme-button-text-color);
     font-size: 16px;
     font-weight: 500;
+  }
+
+  :global(body) {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 </style>

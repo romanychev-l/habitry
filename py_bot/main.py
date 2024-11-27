@@ -2,6 +2,13 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 import asyncio
 import logging
+from motor.motor_asyncio import AsyncIOMotorClient
+
+# Подключение к MongoDB
+MONGO_URI = "mongodb://localhost:27017"
+client = AsyncIOMotorClient(MONGO_URI)
+db = client.ht_db  # Используем ту же базу данных, что и в бэкенде
+users_collection = db.users
 
 # Инициализация бота
 bot = Bot(token="1310848694:AAG9QRn_dO_WX6w2Hn7Y8W5Y7Wir4hOMsAU")
@@ -50,9 +57,25 @@ async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery)
 # Обработчик успешного платежа
 @dp.message(F.successful_payment)
 async def successful_payment(message: types.Message):
-    await message.answer(
-        f"Спасибо за покупку! Оплачено: {message.successful_payment.total_amount} Stars"
-    )
+    print(message)
+    try:
+        user_id = message.from_user.id
+        result = await users_collection.update_one(
+            {"telegram_id": user_id},
+            {"$set": {"credit": 0}}
+        )
+        
+        if result.modified_count > 0:
+            await message.answer(
+                f"Спасибо за покупку! Оплачено: {message.successful_payment.total_amount} Stars"
+            )
+        else:
+            logging.error(f"Пользователь не найден: {user_id}")
+            await message.answer("Произошла ошибка при обработке платежа. Пожалуйста, обратитесь в поддержку.")
+            
+    except Exception as e:
+        logging.error(f"Ошибка при обновлении БД: {e}")
+        await message.answer("Произошла ошибка при обработке платежа. Пожалуйста, обратитесь в поддержку.")
 
 async def main():
     logging.basicConfig(level=logging.INFO)
