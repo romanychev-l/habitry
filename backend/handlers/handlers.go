@@ -143,19 +143,30 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 
 		// Фильтруем привычки для текущего дня
 		todayHabits := []models.Habit{}
-		for _, habit := range user.Habits {
-			weekday := int(time.Now().Weekday())
-			// Преобразуем воскресенье (0) в 6, а остальные дни уменьшаем на 1
-			if weekday == 0 {
-				weekday = 6
-			} else {
-				weekday--
-			}
+		today = time.Now().Format("2006-01-02")
 
-			for _, day := range habit.Days {
-				if day == weekday {
+		for _, habit := range user.Habits {
+			if habit.IsOneTime {
+				// Для одноразовых дел показываем их в день создания
+				habitDate := habit.CreatedAt.Format("2006-01-02")
+				if habitDate == today {
 					todayHabits = append(todayHabits, habit)
-					break
+				}
+			} else {
+				// Существующая логика для обычных привычек
+
+				weekday := int(time.Now().Weekday())
+				if weekday == 0 {
+					weekday = 6
+				} else {
+					weekday--
+				}
+
+				for _, day := range habit.Days {
+					if day == weekday {
+						todayHabits = append(todayHabits, habit)
+						break
+					}
 				}
 			}
 		}
@@ -188,6 +199,8 @@ func (h *Handler) HandleHabit(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	log.Println(habitRequest)
+	log.Println("OneTime", habitRequest.Habit.IsOneTime)
 
 	habitRequest.Habit.CreatedAt = time.Now()
 
@@ -444,6 +457,125 @@ func (h *Handler) HandleHabitUpdate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"message": "Ошибка при обновлении истории"}`, http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *Handler) HandleHabitUndo(w http.ResponseWriter, r *http.Request) {
+	log.Println("handleHabitUndo", r.Method)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "PUT, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "PUT" {
+		http.Error(w, `{"message": "Метод не поддерживается"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	var habitRequest models.HabitRequest
+	if err := json.NewDecoder(r.Body).Decode(&habitRequest); err != nil {
+		http.Error(w, `{"message": "Неверный формат данных"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Получаем текущую привычку для правильного обновления score
+	var user models.User
+	err := h.usersCollection.FindOne(
+		context.Background(),
+		bson.M{
+			"telegram_id": habitRequest.TelegramID,
+			"habits.id":   habitRequest.Habit.ID,
+		},
+	).Decode(&user)
+
+	if err != nil {
+		http.Error(w, `{"message": "Привычка не найдена"}`, http.StatusNotFound)
+		return
+	}
+
+	var currentHabit models.Habit
+	for _, h := range user.Habits {
+		if h.ID == habitRequest.Habit.ID {
+			currentHabit = h
+			break
+		}
+	}
+
+	// Обновляем score и streak с проверкой на отрицательные значения
+	newStreak := currentHabit.Streak - 1
+	if newStreak < 0 {
+		newStreak = 0
+	}
+
+	newScore := currentHabit.Score - 1
+	if newScore < 0 {
+		newScore = 0
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"habits.$[habit].last_click_date": "",
+			"habits.$[habit].streak":          newStreak,
+			"habits.$[habit].score":           newScore,
+		},
+	}
+
+	arrayFilters := options.Update().SetArrayFilters(options.ArrayFilters{
+		Filters: []interface{}{
+			bson.M{"habit.id": habitRequest.Habit.ID},
+		},
+	})
+
+	result, err := h.usersCollection.UpdateOne(
+		context.Background(),
+		bson.M{"telegram_id": habitRequest.TelegramID},
+		update,
+		arrayFilters,
+	)
+
+	if err != nil {
+		http.Error(w, `{"message": "Ошибка при обновлении в базе данных"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Получаем обновленную привычку
+	err = h.usersCollection.FindOne(
+		context.Background(),
+		bson.M{
+			"telegram_id": habitRequest.TelegramID,
+			"habits.id":   habitRequest.Habit.ID,
+		},
+	).Decode(&user)
+
+	if err != nil {
+		http.Error(w, `{"message": "Ошибка при получении обновленной привычки"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Находим обновленную привычку в массиве
+	var updatedHabit models.Habit
+	for _, h := range user.Habits {
+		if h.ID == habitRequest.Habit.ID {
+			updatedHabit = h
+			break
+		}
+	}
+
+	log.Println(result)
+
+	// Возвращаем обновленную привычку вместе с результатом операции
+	response := struct {
+		ModifiedCount int64        `json:"modified_count"`
+		Habit         models.Habit `json:"habit"`
+	}{
+		ModifiedCount: result.ModifiedCount,
+		Habit:         updatedHabit,
+	}
+
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *Handler) HandleCreateInvoice(w http.ResponseWriter, r *http.Request) {

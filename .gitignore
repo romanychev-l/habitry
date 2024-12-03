@@ -1,6 +1,6 @@
 .DS_Store
 /backend/.env
-/backend/go.mod
-/backend/go.sum
+backend/go.mod
+backend/go.sum
 /backend/main
 /frontend/node_modules

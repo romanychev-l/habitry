@@ -4,7 +4,7 @@
   import { user } from './stores/user';
   import { openTelegramInvoice } from './utils/telegram';
   
-  let isListView = false;
+  let isListView = localStorage.getItem('isListView') === 'true';
   let showModal = false;
   let habits: any[] = [];
 
@@ -101,6 +101,10 @@
   function handlePayment() {
     openTelegramInvoice(1);
   }
+
+  $: {
+    localStorage.setItem('isListView', isListView.toString());
+  }
 </script>
 
 <main>
@@ -110,9 +114,13 @@
         <span class="greeting">Привет, {$user.username}! 👋</span>
       </div>
     {/if}
-    <button class="view-toggle" on:click={() => isListView = !isListView}>
-      {isListView ? '📱' : '📋'}
-    </button>
+    <div class="view-toggle">
+      <span class="toggle-label">Compact View</span>
+      <label class="switch">
+        <input type="checkbox" bind:checked={isListView}>
+        <span class="slider"></span>
+      </label>
+    </div>
   </header>
 
   <div class="habit-container" class:list-view={isListView}>
@@ -149,6 +157,8 @@
   main {
     padding: 20px;
     padding-bottom: 80px;
+    max-width: 800px;
+    margin: 0 auto;
   }
 
   header {
@@ -160,22 +170,84 @@
   }
 
   .view-toggle {
-    background: none;
-    border: none;
-    font-size: 24px;
-    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .toggle-label {
+    color: var(--tg-theme-text-color);
+    font-size: 14px;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .3s;
+    border-radius: 20px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: green;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(20px);
   }
 
   .habit-container {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    padding: 0 20px;
+  }
+
+  .habit-container :global(.habit-card) {
+    transition: all 0.3s ease;
+    width: calc(100% - 40px);
+    max-width: 280px;
+    aspect-ratio: 1;
+    margin: 0 auto;
   }
 
   .habit-container.list-view :global(.habit-card) {
+    width: 100%;
+    max-width: none;
+    aspect-ratio: auto;
+    height: 60px;
     border-radius: 12px;
-    height: 25px;
     margin: 4px 0;
+    padding: 8px 16px;
   }
 
   .add-button {

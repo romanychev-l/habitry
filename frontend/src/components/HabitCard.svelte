@@ -83,6 +83,36 @@
         clearTimeout(isPressTimeout);
         isPressed = false;
     }
+    
+    async function handleUndo() {
+        try {
+            const response = await fetch('https://lenichev.site/ht_back/habit/undo', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    telegram_id: telegramId,
+                    habit: {
+                        id: habit.id,
+                        title: habit.title
+                    }
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Ошибка при отмене привычки');
+            }
+            
+            const data = await response.json();
+            if (data.habit) {
+                habit = { ...data.habit };
+                completed = isCompletedToday();
+            }
+        } catch (error) {
+            console.error('Ошибка:', error);
+        }
+    }
 </script>
   
 <div class="habit-card"
@@ -95,6 +125,15 @@
     {habit.streak}
   </div>
   <h3>{habit.title}</h3>
+  
+  {#if completed}
+    <button 
+      class="undo-button"
+      on:click|stopPropagation={handleUndo}
+    >
+      ↩️
+    </button>
+  {/if}
 </div>
 
 <style>
@@ -144,9 +183,54 @@
     box-shadow: 0 4px 8px rgba(139, 92, 246, 0.3);
   }
 
+  /* Добавляем стили для режима списка */
+  :global(.list-view) .streak-counter {
+    top: 50%;
+    right: auto;
+    left: 8px;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    border-radius: 15px;
+    font-size: 16px;
+  }
+
   h3 {
     margin: 0;
     font-size: 24px;
     color: #333;
+  }
+
+  .undo-button {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: none;
+    border: none;
+    font-size: 24px;
+    padding: 8px;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: all 0.2s ease;
+  }
+
+  /* Добавляем стили для кнопки отмены в режиме списка */
+  :global(.list-view) .undo-button {
+    bottom: 50%;
+    left: auto;
+    right: 8px;
+    transform: translateY(50%);
+    font-size: 16px;
+    padding: 4px;
+  }
+
+  .undo-button:hover {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.1);
+  }
+
+  .undo-button:active {
+    transform: translateX(-50%) scale(0.9);
   }
 </style>

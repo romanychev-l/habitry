@@ -17,7 +17,7 @@ dp = Dispatcher()
 # Обработчик команды /start
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    await message.answer("Привет! Используй /buy для покупки Stars")
+    await message.answer("👇 Привет! Нажимай на кнопку Tracker")
 
 # Обработчик команды /buy
 @dp.message(Command("buy"))

@@ -46,6 +46,7 @@ func main() {
 	http.HandleFunc("/habit", handler.HandleHabit)
 	http.HandleFunc("/habit/update", handler.HandleHabitUpdate)
 	http.HandleFunc("/create-invoice", handler.HandleCreateInvoice)
+	http.HandleFunc("/habit/undo", handler.HandleHabitUndo)
 
 	// Запуск сервера
 	wrappedHandler := corsMiddleware.Handler(http.DefaultServeMux)

@@ -18,6 +18,7 @@ type Habit struct {
 	Days          []int     `bson:"days" json:"days"`
 	LastClickDate string    `bson:"last_click_date" json:"last_click_date"`
 	CreatedAt     time.Time `bson:"created_at" json:"created_at"`
+	IsOneTime     bool      `bson:"is_one_time" json:"is_one_time"`
 }
 
 type HabitRequest struct {

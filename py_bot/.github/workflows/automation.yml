@@ -1,0 +1,51 @@
+name: "Bot CI/CD"
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'py_bot/**'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push bot Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./py_bot
+          push: true
+          tags: ghcr.io/${{ github.repository }}/bot:latest
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          envs: GITHUB_TOKEN
+          script: |
+            cd /path/to/py_bot
+            echo $GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose pull
+            docker compose down
+            docker compose up -d
