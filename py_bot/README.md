@@ -1,4 +1,4 @@
-# Telegram Bot Template
+# Telegram Bot for Habitry
 * aiogram 3: The Best Library for Bot Development
 aiogram 3 is a powerful and versatile library for developing Telegram bots in Python. It offers a comprehensive set of features and tools that make it easy to create complex and feature-rich bots.
 
