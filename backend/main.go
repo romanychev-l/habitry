@@ -17,7 +17,7 @@ import (
 
 func main() {
 	// Загрузка переменных из .env файла
-	if err := godotenv.Load(); err != nil {
+	if err := godotenv.Load("backend/.env"); err != nil {
 		log.Printf("Ошибка загрузки .env файла: %v", err)
 	}
 

@@ -3,11 +3,11 @@ services:
     bot:
         image: ghcr.io/romanychev-l/habitry/bot:latest
         restart: "unless-stopped"
-        env_file: ".env"
+        env_file: "./py_bot/.env"
         network_mode: "host"
 
     backend:
         image: ghcr.io/romanychev-l/habitry/backend:latest
         network_mode: "host"
-        env_file: ".env"
+        env_file: "./backend/.env"
         restart: unless-stopped
