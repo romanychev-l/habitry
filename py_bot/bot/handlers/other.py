@@ -26,8 +26,8 @@ async def registration_start(msg: Message, state: FSMContext, i18n: TranslatorRu
 
 
 @other_router.message(Command("buy"))
-async def cmd_buy(msg: Message):
-    await msg.send_invoice(
+async def cmd_buy(msg: Message, bot: Bot):
+    await bot.send_invoice(
         chat_id=msg.chat.id,
         title="1 Telegram Stars",
         description="Покупка Stars для поддержки канала",
@@ -65,7 +65,7 @@ async def successful_payment(message: types.Message):
     print(message)
     try:
         user_id = message.from_user.id
-        result = await db.users_collection.update_one(
+        result = db.users_collection.update_one(
             {"telegram_id": user_id},
             {"$set": {"credit": 0}}
         )

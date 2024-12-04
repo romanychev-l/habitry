@@ -15,7 +15,7 @@ from bot.middlewares.i18n import TranslatorRunnerMiddleware
 from bot.utils.i18n import create_translator_hub
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='[%(asctime)s] #%(levelname)-8s %(filename)s:'
            '%(lineno)d - %(name)s - %(message)s'
 )
