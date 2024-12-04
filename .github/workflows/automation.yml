@@ -6,6 +6,7 @@ on:
       - 'main'
     paths:
       - 'py_bot/**'
+      - '.github/workflows/**'
 
 jobs:
   build-and-deploy:
@@ -44,6 +45,8 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           envs: GITHUB_TOKEN
           script: |
+            mkdir -p prod/habitry
+            cp py_bot/docker-compose.yml prod/habitry/
             cd prod/habitry
             rm -f ~/.docker/config.json
             docker logout ghcr.io || true
