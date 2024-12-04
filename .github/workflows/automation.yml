@@ -85,6 +85,17 @@ jobs:
         run: npm run build
 
       - name: Deploy to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "frontend/dist/*"
+          target: "/tmp/frontend-new"
+          strip_components: 2
+
+      - name: Setup permissions and move files
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -92,14 +103,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            # Создаем временную директорию для нового билда
-            mkdir -p /tmp/frontend-new
-            
-            # Очищаем старый билд если он есть
             rm -rf /var/www/html/habitry*
-            
-            # Копируем новый билд
             cp -r /tmp/frontend-new/* /var/www/html/habitry
-            
-            # Устанавливаем права для группы
             chmod -R g+w /var/www/html/habitry
