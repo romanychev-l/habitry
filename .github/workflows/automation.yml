@@ -44,7 +44,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           envs: GITHUB_TOKEN
           script: |
-            cd /path/to/py_bot
+            cd prod/habitry
             echo $GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker compose pull
             docker compose down
