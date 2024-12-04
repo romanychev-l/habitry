@@ -26,9 +26,9 @@ func main() {
 	mongoHost := os.Getenv("MONGO_HOST")
 	mongoPort := os.Getenv("MONGO_PORT")
 	dbName := os.Getenv("MONGO_DB_NAME")
-	port := os.Getenv("PORT")
+	port := os.Getenv("BACKEND_PORT")
 
-	if botToken == "" || mongoHost == "" || mongoPort == "" || dbName == "" {
+	if botToken == "" || mongoHost == "" || mongoPort == "" || dbName == "" || port == "" {
 		log.Fatal("Не все переменные окружения установлены")
 	}
 
