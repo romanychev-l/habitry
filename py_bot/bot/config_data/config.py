@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import SecretStr
 
 class Settings(BaseSettings):
-    TOKEN: SecretStr
+    BOT_TOKEN: SecretStr
     MONGO_HOST: str
     MONGO_PORT: int
     MONGO_DB_NAME: str
