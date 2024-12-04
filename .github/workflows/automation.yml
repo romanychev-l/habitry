@@ -38,15 +38,26 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          MONGO_HOST: ${{ secrets.MONGO_HOST }}
+          MONGO_PORT: ${{ secrets.MONGO_PORT }}
+          MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          envs: GITHUB_TOKEN
+          envs: GITHUB_TOKEN,BOT_TOKEN,MONGO_HOST,MONGO_PORT,MONGO_DB_NAME
           script: |
             cd prod/habitry
             git pull
+            # Создаем .env файл
+            cat > .env << EOL
+            TOKEN=${BOT_TOKEN}
+            MONGO_HOST=${MONGO_HOST}
+            MONGO_PORT=${MONGO_PORT}
+            MONGO_DB_NAME=${MONGO_DB_NAME}
+            EOL
             rm -f ~/.docker/config.json
             docker logout ghcr.io || true
             echo $GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
