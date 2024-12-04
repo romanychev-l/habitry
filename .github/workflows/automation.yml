@@ -9,7 +9,7 @@ on:
       - '.github/workflows/**'
 
 jobs:
-  build-and-deploy:
+  build-and-deploy-bot:
     runs-on: ubuntu-latest
     
     permissions:
@@ -64,3 +64,43 @@ jobs:
             docker compose pull
             docker compose down
             docker compose up -d
+
+  build-and-deploy-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm install
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            # Создаем временную директорию для нового билда
+            mkdir -p /tmp/frontend-new
+            
+            # Очищаем старый билд если он есть
+            sudo rm -rf /var/www/html/habitry*
+            
+            # Копируем новый билд
+            sudo cp -r /tmp/frontend-new/* /var/www/html/habitry
+            
+            # Устанавливаем правильные права
+            sudo chown -R www-data:www-data /var/www/html/habitry
+            sudo chmod -R 755 /var/www/html
