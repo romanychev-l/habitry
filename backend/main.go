@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -10,24 +11,39 @@ import (
 	"backend/db"
 	"backend/handlers"
 
+	"github.com/joho/godotenv"
 	"github.com/rs/cors"
 )
 
 func main() {
-	botToken := os.Getenv("BOT_TOKEN")
-	if botToken == "" {
-		log.Fatal("BOT_TOKEN не установлен")
+	// Загрузка переменных из .env файла
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Ошибка загрузки .env файла: %v", err)
 	}
 
+	// Получаем все переменные окружения
+	botToken := os.Getenv("BOT_TOKEN")
+	mongoHost := os.Getenv("MONGO_HOST")
+	mongoPort := os.Getenv("MONGO_PORT")
+	dbName := os.Getenv("MONGO_DB_NAME")
+	port := os.Getenv("PORT")
+
+	if botToken == "" || mongoHost == "" || mongoPort == "" || dbName == "" {
+		log.Fatal("Не все переменные окружения установлены")
+	}
+
+	// Формируем строку подключения к MongoDB
+	mongoURI := fmt.Sprintf("mongodb://%s:%s", mongoHost, mongoPort)
+
 	// Подключение к БД
-	client, err := db.Connect("mongodb://localhost:27017")
+	client, err := db.Connect(mongoURI)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer client.Disconnect(context.Background())
 
 	// Инициализация обработчиков
-	usersCollection := client.Database("ht_db").Collection("users")
+	usersCollection := client.Database(dbName).Collection("users")
 	b, err := bot.New(botToken)
 	if err != nil {
 		log.Fatal(err)
@@ -50,6 +66,7 @@ func main() {
 
 	// Запуск сервера
 	wrappedHandler := corsMiddleware.Handler(http.DefaultServeMux)
-	log.Println("Сервер запущен на порту 8080")
-	log.Fatal(http.ListenAndServe(":8080", wrappedHandler))
+	serverAddr := fmt.Sprintf(":%s", port)
+	log.Printf("Сервер запущен на порту %s", port)
+	log.Fatal(http.ListenAndServe(serverAddr, wrappedHandler))
 }

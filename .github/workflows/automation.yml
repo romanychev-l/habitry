@@ -6,10 +6,12 @@ on:
       - 'main'
     paths:
       - 'py_bot/**'
+      - 'backend/**'
+      - 'frontend/**'
       - '.github/workflows/**'
 
 jobs:
-  build-and-deploy-bot:
+  build-and-deploy-backend:
     runs-on: ubuntu-latest
     
     permissions:
@@ -27,45 +29,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push bot Docker image
+      - name: Build and push backend Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./py_bot
+          context: ./backend
           push: true
-          tags: ghcr.io/${{ github.repository }}/bot:latest
-
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          MONGO_HOST: ${{ secrets.MONGO_HOST }}
-          MONGO_PORT: ${{ secrets.MONGO_PORT }}
-          MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          envs: GITHUB_TOKEN,BOT_TOKEN,MONGO_HOST,MONGO_PORT,MONGO_DB_NAME
-          script: |
-            cd prod/habitry
-            git pull
-            # Создаем .env файл
-            cat > .env << EOL
-            TOKEN=${BOT_TOKEN}
-            MONGO_HOST=${MONGO_HOST}
-            MONGO_PORT=${MONGO_PORT}
-            MONGO_DB_NAME=${MONGO_DB_NAME}
-            EOL
-            rm -f ~/.docker/config.json
-            docker logout ghcr.io || true
-            echo $GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker compose pull
-            docker compose down
-            docker compose up -d
+          tags: ghcr.io/${{ github.repository }}/backend:latest
 
   build-and-deploy-frontend:
+    needs: [deploy]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -114,3 +86,64 @@ jobs:
             
             # Устанавливаем права
             chmod -R g+w /var/www/html/habitry
+  
+  build-and-deploy-bot:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push bot Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./py_bot
+          push: true
+          tags: ghcr.io/${{ github.repository }}/bot:latest
+
+  deploy:
+    needs: [build-and-deploy-bot, build-and-deploy-backend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          MONGO_HOST: ${{ secrets.MONGO_HOST }}
+          MONGO_PORT: ${{ secrets.MONGO_PORT }}
+          MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
+          BACKEND_PORT: ${{ secrets.BACKEND_PORT }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          envs: GITHUB_TOKEN,BOT_TOKEN,MONGO_HOST,MONGO_PORT,MONGO_DB_NAME,BACKEND_PORT
+          script: |
+            cd prod/habitry
+            git pull
+            cat > .env << EOL
+            TOKEN=${BOT_TOKEN}
+            MONGO_HOST=${MONGO_HOST}
+            MONGO_PORT=${MONGO_PORT}
+            MONGO_DB_NAME=${MONGO_DB_NAME}
+            BACKEND_PORT=${BACKEND_PORT}
+            EOL
+            rm -f ~/.docker/config.json
+            docker logout ghcr.io || true
+            echo $GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose pull
+            docker compose down
+            docker compose up -d

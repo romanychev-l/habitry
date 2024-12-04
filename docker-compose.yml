@@ -5,3 +5,10 @@ services:
         restart: "unless-stopped"
         env_file: ".env"
         network_mode: "host"
+
+    backend:
+        image: ghcr.io/romanychev-l/habitry/backend:latest
+        network_mode: "host"
+        env_file:
+            - .env
+        restart: unless-stopped
