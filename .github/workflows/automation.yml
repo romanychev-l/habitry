@@ -45,6 +45,8 @@ jobs:
           envs: GITHUB_TOKEN
           script: |
             cd prod/habitry
+            rm -f ~/.docker/config.json
+            docker logout ghcr.io || true
             echo $GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker compose pull
             docker compose down
