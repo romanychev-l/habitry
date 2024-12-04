@@ -134,6 +134,8 @@ jobs:
           script: |
             cd prod/habitry
             git pull
+            
+            # Создаем .env файл в корневой директории
             cat > .env << EOL
             BOT_TOKEN=${BOT_TOKEN}
             MONGO_HOST=${MONGO_HOST}
@@ -141,6 +143,11 @@ jobs:
             MONGO_DB_NAME=${MONGO_DB_NAME}
             BACKEND_PORT=${BACKEND_PORT}
             EOL
+            
+            # Копируем .env файл для каждого сервиса
+            cp .env backend/.env
+            cp .env py_bot/.env
+            
             rm -f ~/.docker/config.json
             docker logout ghcr.io || true
             echo $GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
