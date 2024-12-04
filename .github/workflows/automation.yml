@@ -135,7 +135,7 @@ jobs:
             cd prod/habitry
             git pull
             cat > .env << EOL
-            TOKEN=${BOT_TOKEN}
+            BOT_TOKEN=${BOT_TOKEN}
             MONGO_HOST=${MONGO_HOST}
             MONGO_PORT=${MONGO_PORT}
             MONGO_DB_NAME=${MONGO_DB_NAME}

@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 async def main() -> None:
 
     bot = Bot(
-        token=config_settings.TOKEN.get_secret_value(),
+        token=config_settings.BOT_TOKEN.get_secret_value(),
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
     # await bot.delete_webhook(drop_pending_updates=True)
