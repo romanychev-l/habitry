@@ -103,6 +103,14 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            rm -rf /var/www/html/habitry*
-            cp -r /tmp/frontend-new/* /var/www/html/habitry
+            # Сначала создаем директорию
+            mkdir -p /var/www/html/habitry
+            
+            # Затем удаляем старые файлы (но не саму директорию)
+            rm -rf /var/www/html/habitry/*
+            
+            # Копируем новые файлы
+            cp -r /tmp/frontend-new/* /var/www/html/habitry/
+            
+            # Устанавливаем права
             chmod -R g+w /var/www/html/habitry
