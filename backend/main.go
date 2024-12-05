@@ -11,14 +11,18 @@ import (
 	"backend/db"
 	"backend/handlers"
 
-	"github.com/joho/godotenv"
 	"github.com/rs/cors"
 )
 
 func main() {
-	// Загрузка переменных из .env файла
-	if err := godotenv.Load("backend/.env"); err != nil {
-		log.Printf("Ошибка загрузки .env файла: %v", err)
+	// Удаляем загрузку .env файла
+	// if err := godotenv.Load("backend/.env"); err != nil {
+	//     log.Printf("Ошибка загрузки .env файла: %v", err)
+	// }
+
+	port := os.Getenv("BACKEND_PORT")
+	if port == "" {
+		port = "8080" // значение по умолчанию
 	}
 
 	// Получаем все переменные окружения
@@ -26,9 +30,8 @@ func main() {
 	mongoHost := os.Getenv("MONGO_HOST")
 	mongoPort := os.Getenv("MONGO_PORT")
 	dbName := os.Getenv("MONGO_DB_NAME")
-	port := os.Getenv("BACKEND_PORT")
 
-	if botToken == "" || mongoHost == "" || mongoPort == "" || dbName == "" || port == "" {
+	if botToken == "" || mongoHost == "" || mongoPort == "" || dbName == "" {
 		log.Fatal("Не все переменные окружения установлены")
 	}
 

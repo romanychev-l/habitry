@@ -3,11 +3,21 @@ services:
     bot:
         image: ghcr.io/romanychev-l/habitry/bot:latest
         restart: "unless-stopped"
-        env_file: "./py_bot/.env"
+        environment:
+            BOT_TOKEN: ${BOT_TOKEN}
+            MONGO_HOST: ${MONGO_HOST}
+            MONGO_PORT: ${MONGO_PORT}
+            MONGO_DB_NAME: ${MONGO_DB_NAME}
+            BACKEND_PORT: ${BACKEND_PORT}
         network_mode: "host"
 
     backend:
         image: ghcr.io/romanychev-l/habitry/backend:latest
         network_mode: "host"
-        env_file: "./backend/.env"
+        environment:
+            BOT_TOKEN: ${BOT_TOKEN}
+            MONGO_HOST: ${MONGO_HOST}
+            MONGO_PORT: ${MONGO_PORT}
+            MONGO_DB_NAME: ${MONGO_DB_NAME}
+            BACKEND_PORT: ${BACKEND_PORT}
         restart: unless-stopped
