@@ -272,7 +272,7 @@
     font-weight: 500;
   }
 
-  .payment-button {
+  /* .payment-button {
     position: fixed;
     bottom: 20px;
     left: 20px;
@@ -283,7 +283,7 @@
     color: var(--tg-theme-button-text-color);
     font-size: 16px;
     font-weight: 500;
-  }
+  } */
 
   :global(body) {
     margin: 0;

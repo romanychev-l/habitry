@@ -11,14 +11,15 @@ import (
 	"backend/db"
 	"backend/handlers"
 
+	"github.com/joho/godotenv"
 	"github.com/rs/cors"
 )
 
 func main() {
 	// Удаляем загрузку .env файла
-	// if err := godotenv.Load("backend/.env"); err != nil {
-	//     log.Printf("Ошибка загрузки .env файла: %v", err)
-	// }
+	if err := godotenv.Load(".env"); err != nil {
+		log.Printf("Ошибка загрузки .env файла: %v", err)
+	}
 
 	port := os.Getenv("BACKEND_PORT")
 	if port == "" {

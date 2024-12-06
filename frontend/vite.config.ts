@@ -4,7 +4,7 @@ import path from 'path'
 
 export default defineConfig(({ mode }) => ({
   plugins: [svelte()],
-  base: mode === 'production' ? '/ht_front_dev/' : '/ht/',
+  base: mode === 'production' ? '/ht/' : '/ht_front_dev/',
   server: {
     port: 5173,
     strictPort: true,
