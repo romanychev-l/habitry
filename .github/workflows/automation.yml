@@ -87,8 +87,10 @@ jobs:
             # Копируем новые файлы
             cp -r /tmp/frontend-new/* /var/www/html/habitry/
             
-            # Устанавливаем права
-            chmod -R g+w /var/www/html/habitry
+            # Устанавливаем корректные права
+            chown -R www-data:www-data /var/www/html/habitry
+            chmod -R 755 /var/www/html/habitry
+            find /var/www/html/habitry -type f -exec chmod 644 {} \;
   
   build-and-deploy-bot:
     runs-on: ubuntu-latest

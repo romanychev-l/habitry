@@ -111,7 +111,7 @@
   <header>
     {#if $user}
       <div class="user-info">
-        <span class="greeting">Привет, {$user.username}! 👋</span>
+        <span class="greeting">Приветт, {$user.username}! 👋</span>
       </div>
     {/if}
     <div class="view-toggle">

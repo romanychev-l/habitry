@@ -8,7 +8,7 @@ console.log('🚀 Starting app initialization...')
 
 // Инициализируем Telegram SDK
 initTelegramSDK()
-console.log('📱 Telegram SDK initialized')
+console.log('📱 Telegram SDK initializedd')
 
 const target = document.getElementById('app')
 if (!target) throw new Error('Element #app not found')
