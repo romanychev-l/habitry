@@ -7,21 +7,22 @@
   let isListView = localStorage.getItem('isListView') === 'true';
   let showModal = false;
   let habits: any[] = [];
-
+  const API_URL = import.meta.env.VITE_API_URL;
+  
   async function initializeUser() {
     try {
       console.log('initializeUser', $user);
       const telegramId = $user?.id;
       if (!telegramId) return;
 
-      const response = await fetch(`https://lenichev.site/ht_back/user?telegram_id=${telegramId}`);
+      const response = await fetch(`${API_URL}/user?telegram_id=${telegramId}`);
       console.log('response', response);
       console.log('response.ok', response.status);
       // console.log('response.json', await response.json());
       console.log('telegramId', telegramId);
       if (response.status === 404) {
         console.log('create user');
-        const createResponse = await fetch('https://lenichev.site/ht_back/user', {
+        const createResponse = await fetch(`${API_URL}/user`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -75,7 +76,7 @@
         ...event.detail
       };
       console.log('newHabit', newHabit);
-      const response = await fetch('https://lenichev.site/ht_back/habit', {
+      const response = await fetch(`${API_URL}/habit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -111,7 +112,17 @@
   <header>
     {#if $user}
       <div class="user-info">
-        <span class="greeting">Приветт, {$user.username}! 👋</span>
+        {#if $user.photoUrl}
+          <img 
+            src={$user.photoUrl} 
+            alt="Profile" 
+            class="profile-photo"
+          />
+        {:else}
+          <div class="profile-placeholder">
+            {$user.firstName?.[0] || $user.username?.[0] || '?'}
+          </div>
+        {/if}
       </div>
     {/if}
     <div class="view-toggle">
@@ -159,6 +170,7 @@
     padding-bottom: 80px;
     max-width: 800px;
     margin: 0 auto;
+    box-sizing: border-box;
   }
 
   header {
@@ -229,25 +241,27 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
-    padding: 0 20px;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .habit-container :global(.habit-card) {
-    transition: all 0.3s ease;
-    width: calc(100% - 40px);
+    width: 100%;
     max-width: 280px;
     aspect-ratio: 1;
     margin: 0 auto;
+    box-sizing: border-box;
   }
 
   .habit-container.list-view :global(.habit-card) {
     width: 100%;
-    max-width: none;
+    max-width: 100%;
     aspect-ratio: auto;
     height: 60px;
     border-radius: 12px;
     margin: 4px 0;
     padding: 8px 16px;
+    box-sizing: border-box;
   }
 
   .add-button {
@@ -264,12 +278,30 @@
   }
 
   .user-info {
-    font-size: 18px;
-    color: var(--tg-theme-text-color);
+    display: flex;
+    align-items: center;
   }
 
-  .greeting {
+  .profile-photo {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--tg-theme-button-color);
+  }
+
+  .profile-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
     font-weight: 500;
+    text-transform: uppercase;
   }
 
   /* .payment-button {

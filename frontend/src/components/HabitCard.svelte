@@ -11,7 +11,7 @@
     
     let isPressed = false;
     let isPressTimeout: ReturnType<typeof setTimeout>;
-    
+    const API_URL = import.meta.env.VITE_API_URL;
     // Делаем переменную реактивной с помощью $:
     $: completed = isCompletedToday();
     
@@ -27,7 +27,7 @@
     
     async function updateHabitOnServer() {
         try {
-            const response = await fetch('https://lenichev.site/ht_back/habit/update', {
+            const response = await fetch(`${API_URL}/habit/update`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -86,7 +86,7 @@
     
     async function handleUndo() {
         try {
-            const response = await fetch('https://lenichev.site/ht_back/habit/undo', {
+            const response = await fetch(`${API_URL}/habit/undo`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
