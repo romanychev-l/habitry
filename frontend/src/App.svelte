@@ -223,6 +223,10 @@
     box-sizing: border-box;
   }
 
+  .habit-container.list-view {
+    gap: 4px;
+  }
+
   .habit-container :global(.habit-card) {
     width: 100%;
     max-width: 280px;
@@ -237,7 +241,7 @@
     aspect-ratio: auto;
     height: 60px;
     border-radius: 12px;
-    margin: 4px 0;
+    margin: 0;
     padding: 8px 16px;
     box-sizing: border-box;
   }

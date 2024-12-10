@@ -51,86 +51,69 @@
   tabindex="0"
 >
   <div class="modal">
-    <h2>{$_('habits.add')}</h2>
-    <input 
-      type="text" 
-      bind:value={title} 
-      placeholder={$_('habits.title')}
-    />
-    
-    <div class="type-selector">
-      <label>
-        <input 
-          type="checkbox" 
-          bind:checked={isOneTime}
-        />
-        {$_('habits.one_time')}
-      </label>
+    <div class="header">
+      <h2>{$_('habits.add')}</h2>
+      <button class="close-btn" on:click={() => dispatch('close')}>✕</button>
     </div>
-    
-    {#if !isOneTime}
-      <button 
-        class="daily-habit-btn" 
-        on:click={() => {
-          selectedDays = new Set([0, 1, 2, 3, 4, 5, 6]);
-        }}
-      >
-        {$_('habits.every_day')}
-      </button>
 
-      <div class="days-selector">
-        <button 
-          class:selected={selectedDays.has(0)}
-          on:click={() => toggleDay(0)}
-        >
-          {$_('days.monday')}
-        </button>
-        <button 
-          class:selected={selectedDays.has(1)}
-          on:click={() => toggleDay(1)}
-        >
-          {$_('days.tuesday')}
-        </button>
-        <button 
-          class:selected={selectedDays.has(2)}
-          on:click={() => toggleDay(2)}
-        >
-          {$_('days.wednesday')}
-        </button>
-        <button 
-          class:selected={selectedDays.has(3)}
-          on:click={() => toggleDay(3)}
-        >
-          {$_('days.thursday')}
-        </button>
-        <button 
-          class:selected={selectedDays.has(4)}
-          on:click={() => toggleDay(4)}
-        >
-          {$_('days.friday')}
-        </button>
-        <button 
-          class:selected={selectedDays.has(5)}
-          on:click={() => toggleDay(5)}
-        >
-          {$_('days.saturday')}
-        </button>
-        <button 
-          class:selected={selectedDays.has(6)}
-          on:click={() => toggleDay(6)}
-        >
-          {$_('days.sunday')}
-        </button>
+    <div class="content">
+      <div class="form-group">
+        <input 
+          type="text" 
+          bind:value={title} 
+          placeholder={$_('habits.title')}
+        />
       </div>
-    {/if}
+      
+      <div class="form-group">
+        <div class="type-selector">
+          <span class="label">{$_('habits.one_time')}</span>
+          <label class="switch">
+            <input 
+              type="checkbox" 
+              bind:checked={isOneTime}
+            />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+      
+      {#if !isOneTime}
+        <div class="form-group">
+          <button 
+            class="daily-habit-btn" 
+            on:click={() => {
+              selectedDays = new Set([0, 1, 2, 3, 4, 5, 6]);
+            }}
+          >
+            {$_('habits.every_day')}
+          </button>
+        </div>
 
-    <button 
-      class="save-btn" 
-      on:click={handleSubmit}
-      disabled={!title || (!isOneTime && selectedDays.size === 0)}
-    >
-      {$_('habits.save')}
-    </button>
+        <div class="form-group">
+          <div class="days-selector">
+            {#each [0, 1, 2, 3, 4, 5, 6] as day}
+              <button 
+                class:selected={selectedDays.has(day)}
+                on:click={() => toggleDay(day)}
+              >
+                {$_(`days.${['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][day]}`)}
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/if}
+    </div>
+
+    <div class="footer">
+      <button 
+        class="save-btn" 
+        on:click={handleSubmit}
+        disabled={!title || (!isOneTime && selectedDays.size === 0)}
+      >
+        {$_('habits.save')}
+      </button>
+    </div>
   </div>
 </div>
 
@@ -141,26 +124,147 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
     display: flex;
     align-items: flex-end;
     height: 100dvh;
-    overflow-y: auto;
+    z-index: 1000;
   }
 
   .modal {
     position: relative;
     width: 100%;
     background: var(--tg-theme-bg-color);
-    padding: 24px;
     border-radius: 24px 24px 0 0;
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+  }
+
+  .header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .content {
+    padding: 20px;
+  }
+
+  .footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--tg-theme-secondary-bg-color);
   }
 
   h2 {
-    margin: 0 0 20px 0;
-    font-size: 24px;
+    margin: 0;
+    font-size: 20px;
     font-weight: 600;
+    color: var(--tg-theme-text-color);
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--tg-theme-text-color);
+    opacity: 0.6;
+    padding: 8px;
+    cursor: pointer;
+  }
+
+  .form-group {
+    margin-bottom: 24px;
+    width: 100%;
+  }
+
+  .form-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .type-selector {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 0 4px;
+  }
+
+  .switch {
+    display: flex;
+    align-items: center;
+  }
+
+  .label {
+    font-size: 16px;
+    color: var(--tg-theme-text-color);
+  }
+
+  .daily-habit-btn {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 2px solid var(--tg-theme-button-color);
+    background: transparent;
+    color: var(--tg-theme-button-color);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+  }
+
+  .daily-habit-btn:active {
+    background: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+  }
+
+  .days-selector {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+  }
+
+  .days-selector button {
+    aspect-ratio: 1;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    background: var(--tg-theme-secondary-bg-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    font-size: 14px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .days-selector button.selected {
+    border-color: var(--tg-theme-button-color);
+    background: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+  }
+
+  .save-btn {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: none;
+    background: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    text-align: left;
+  }
+
+  .save-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   input[type="text"] {
@@ -172,6 +276,7 @@
     background: transparent;
     color: var(--tg-theme-text-color);
     transition: all 0.2s ease;
+    box-sizing: border-box;
   }
 
   input[type="text"]:focus {
@@ -179,83 +284,33 @@
     border-color: var(--tg-theme-button-color);
   }
 
-  .type-selector {
-    margin: 24px 0;
-  }
-
-  .type-selector label {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    font-size: 16px;
-  }
-
-  .type-selector input[type="checkbox"] {
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-  }
-
-  .days-selector {
-    display: flex;
-    gap: 8px;
-    margin: 20px 0;
-    justify-content: space-between;
-  }
-
-  .days-selector button {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    border: 2px solid transparent;
+  .slider {
+    position: relative;
+    width: 44px;
+    height: 24px;
     background: var(--tg-theme-secondary-bg-color);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-weight: 500;
-    font-size: 15px;
-  }
-
-  .days-selector button.selected {
-    border-color: var(--tg-theme-button-color);
-    background: var(--tg-theme-button-color);
-    color: var(--tg-theme-button-text-color);
-  }
-
-  .daily-habit-btn {
-    width: 100%;
-    padding: 12px;
     border-radius: 12px;
-    border: 2px solid var(--tg-theme-button-color);
-    background: transparent;
-    color: var(--tg-theme-button-color);
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: 12px;
+  }
+
+  .slider:before {
+    content: "";
+    position: absolute;
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    bottom: 2px;
+    background: white;
+    border-radius: 50%;
     transition: all 0.2s ease;
   }
 
-  .daily-habit-btn:active {
+  input:checked + .slider {
     background: var(--tg-theme-button-color);
-    color: var(--tg-theme-button-text-color);
   }
 
-  .save-btn {
-    width: 100%;
-    padding: 14px;
-    border-radius: 12px;
-    border: none;
-    background: var(--tg-theme-button-color);
-    color: var(--tg-theme-button-text-color);
-    font-size: 16px;
-    font-weight: 500;
-    margin-top: 24px;
-    cursor: pointer;
-    transition: opacity 0.2s ease;
-  }
-
-  .save-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+  input:checked + .slider:before {
+    transform: translateX(20px);
   }
 </style>

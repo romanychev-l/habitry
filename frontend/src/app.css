@@ -4,7 +4,7 @@
 
 :root {
   /* Дефолтные значения на случай, если тема Telegram не загрузится */
-  --tg-theme-bg-color: #ffffff;
+  --tg-theme-bg-color: #F9F8F3;
   --tg-theme-text-color: #000000;
   --tg-theme-button-color: #2481cc;
   --tg-theme-button-text-color: #ffffff;
@@ -14,11 +14,28 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--tg-theme-bg-color);
+  background-color: #F9F8F3;
   color: var(--tg-theme-text-color);
 }
 
 /* Отключаем скролл бар */
 ::-webkit-scrollbar {
   display: none;
+}
+
+html {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: none;
+}
+
+body {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
 }

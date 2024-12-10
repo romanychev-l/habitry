@@ -1,6 +1,6 @@
 # Makefile for Docker
 
-IMAGE_NAME = univision
+IMAGE_NAME = habitry
 ENV_FILE = .env
 
 build:

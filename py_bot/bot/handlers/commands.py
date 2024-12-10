@@ -20,5 +20,5 @@ async def process_start_command(
     dialog_manager: DialogManager
 ) -> None:
     # await dialog_manager.start(state=StartSG.start, mode=StartMode.RESET_STACK)
-    await msg.answer("👇 Привет! Нажимай на кнопку Tracker")
+    await msg.answer(i18n.message.start())
     # await start_logic(msg, state, i18n)

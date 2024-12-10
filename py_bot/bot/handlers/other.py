@@ -61,7 +61,7 @@ async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery,
 
 # Обработчик успешного платежа
 @other_router.message(F.successful_payment)
-async def successful_payment(message: types.Message):
+async def successful_payment(message: types.Message, i18n: TranslatorRunner):
     print(message)
     try:
         user_id = message.from_user.id
@@ -72,12 +72,12 @@ async def successful_payment(message: types.Message):
         
         if result.modified_count > 0:
             await message.answer(
-                f"Спасибо за покупку! Оплачено: {message.successful_payment.total_amount} Stars"
+                f"{i18n.message.payment_success()} {message.successful_payment.total_amount} Stars"
             )
         else:
             logging.error(f"Пользователь не найден: {user_id}")
-            await message.answer("Произошла ошибка при обработке платежа. Пожалуйста, обратитесь в поддержку.")
+            await message.answer(i18n.message.error_payment())
             
     except Exception as e:
         logging.error(f"Ошибка при обновлении БД: {e}")
-        await message.answer("Произошла ошибка при обработке платежа. Пожалуйста, обратитесь в поддержку.")
+        await message.answer(i18n.message.error_payment())

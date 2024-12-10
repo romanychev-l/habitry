@@ -115,52 +115,152 @@
             console.error('Ошибка:', error);
         }
     }
+
+    // Функция для генерации цвета на основе строки
+    function stringToColor(str: string): string {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const h = Math.abs(hash % 360);
+        return `hsl(${h}, 70%, 60%)`; // Используем HSL для сохранения яркости
+    }
+
+    // Получаем два цвета для градиента
+    const color1 = stringToColor(habit.id);
+    const color2 = stringToColor(habit.id.split('').reverse().join(''));
+
+    // Создаем строку градиента
+    const gradientStyle = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
 </script>
   
-<div class="habit-card"
-  class:pressed={isPressed}
-  class:completed={completed}
-  on:pointerdown={handlePointerDown}
-  on:pointerup={handlePointerUp}
-  on:pointerleave={handlePointerUp}>
+<div class="habit-wrapper" style="--habit-gradient: {gradientStyle}">
+  <div class="card-shadow">
+    <div class="habit-card"
+      class:pressed={isPressed}
+      class:completed={completed}
+      on:pointerdown={handlePointerDown}
+      on:pointerup={handlePointerUp}
+      on:pointerleave={handlePointerUp}>
+      <h3>{habit.title}</h3>
+      
+      {#if completed}
+        <button 
+          class="undo-button"
+          on:click|stopPropagation={handleUndo}
+        >
+          ↩️
+        </button>
+      {/if}
+    </div>
+  </div>
   <div class="streak-counter">
     {habit.streak}
   </div>
-  <h3>{habit.title}</h3>
-  
-  {#if completed}
-    <button 
-      class="undo-button"
-      on:click|stopPropagation={handleUndo}
-    >
-      ↩️
-    </button>
-  {/if}
 </div>
 
 <style>
-  .habit-card {
+  .habit-wrapper {
+    position: relative;
     width: 280px;
     aspect-ratio: 1;
+    margin: 0 auto;
+  }
+
+  /* Обновляем стили для режима списка */
+  :global(.list-view) .habit-wrapper {
+    width: calc(100% - 16px);
+    aspect-ratio: unset;
+    min-height: 80px;
+    height: auto;
+    margin: 4px auto;
+  }
+
+  .card-shadow {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08));
+  }
+
+  .card-shadow:has(.habit-card.pressed),
+  .card-shadow:has(.habit-card.completed) {
+    filter: drop-shadow(0 4px 12px rgba(139, 92, 246, 0.3));
+  }
+
+  .streak-counter {
+    position: absolute;
+    top: 5px;
+    right: -5px;
+    width: 60px;
+    height: 60px;
+    /* По умолчанию фиолетовый градиент */
+    background: var(--habit-gradient);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 24px;
+    box-shadow: 0 4px 8px rgba(139, 92, 246, 0.3);
+    z-index: 1;
+    mask: url('/src/assets/streak.svg') no-repeat center / contain;
+    -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
+  }
+
+  /* Изменяем положение streak в режиме списка */
+  :global(.list-view) .streak-counter {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 60px;
+    height: 60px;
+    z-index: 2; /* Поднимаем streak над карточкой */
+  }
+
+  /* Если привычка выполнена - streak белый */
+  .habit-wrapper:has(.habit-card.completed) .streak-counter {
+    background: white;
+    color: #8B5CF6;
+  }
+
+  .habit-card {
+    width: 100%;
+    height: 100%;
     background: white;
     border-radius: 100px;
     padding: 32px;
     position: relative;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     transition: background 0.8s ease;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
     user-select: none;
-    -webkit-user-select: none; /* Safari */
-    -moz-user-select: none; /* Firefox */
-    -ms-user-select: none; /* IE10+/Edge */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    mask: url('/src/assets/squircley.svg') no-repeat center / contain;
+    -webkit-mask: url('/src/assets/squircley.svg') no-repeat center / contain;
+  }
+
+  /* Обновляем стили карточки для режима списка */
+  :global(.list-view) .habit-card {
+    border-radius: 16px;
+    padding: 16px 32px 16px 84px;
+    mask: none !important;
+    -webkit-mask: none !important;
+    width: 100%;
+    min-height: 80px;
+    height: auto;
+    background: white;
+    color: #333;
   }
 
   .habit-card.pressed,
   .habit-card.completed {
-    background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+    background: var(--habit-gradient);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
   }
 
   .habit-card.pressed h3,
@@ -168,39 +268,18 @@
     color: white;
   }
 
-  .streak-counter {
-    position: absolute;
-    top: -10px;
-    right: -10px;
-    width: 60px;
-    height: 60px;
-    background: #8B5CF6;
-    border-radius: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: bold;
-    font-size: 24px;
-    box-shadow: 0 4px 8px rgba(139, 92, 246, 0.3);
-  }
-
-  /* Добавляем стили для режима списка */
-  :global(.list-view) .streak-counter {
-    top: 50%;
-    right: auto;
-    left: 8px;
-    transform: translateY(-50%);
-    width: 30px;
-    height: 30px;
-    border-radius: 15px;
-    font-size: 16px;
-  }
-
   h3 {
     margin: 0;
     font-size: 24px;
     color: #333;
+  }
+
+  /* Уменьшаем размер заголовка в режиме списка */
+  :global(.list-view) h3 {
+    font-size: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .undo-button {
@@ -214,25 +293,100 @@
     padding: 8px;
     cursor: pointer;
     opacity: 0.8;
-    transition: all 0.2s ease;
   }
 
-  /* Добавляем стили для кнопки отмены в режиме списка */
+  /* Обновляем стили для кнопки отмены в режиме списка */
   :global(.list-view) .undo-button {
     bottom: 50%;
     left: auto;
-    right: 8px;
+    right: 16px;
     transform: translateY(50%);
-    font-size: 16px;
-    padding: 4px;
+    font-size: 20px;
+    padding: 8px;
   }
 
+  /* Убираем все hover и active эффекты */
   .undo-button:hover {
     opacity: 1;
-    transform: translateX(-50%) scale(1.1);
   }
 
-  .undo-button:active {
-    transform: translateX(-50%) scale(0.9);
+  /* Добавляем контейнер для списка */
+  :global(.list-view) {
+    overflow-x: hidden;
+    width: 100%;
+    padding: 0 4px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Убираем тень для card-shadow в режиме списка */
+  :global(.list-view) .card-shadow {
+    background: transparent;
+    filter: none;
+  }
+
+  /* Убираем тень для completed карточек в режиме списка */
+  :global(.list-view) .card-shadow:has(.habit-card.completed) {
+    filter: none;
+  }
+
+  /* Добавляем стили для completed состояния в режиме списка */
+  :global(.list-view) .habit-card.completed {
+    background: var(--habit-gradient);
+  }
+
+  /* Убираем белый фон streak для completed состояния в режиме списка */
+  :global(.list-view) .habit-wrapper:has(.habit-card.completed) .streak-counter {
+    background: white;
+    color: var(--habit-gradient);
+  }
+
+  /* Обновляем цвет текста для режима списка */
+  :global(.list-view) .habit-card h3 {
+    color: #333;
+  }
+
+  /* Обновляем стили для completed состояния */
+  :global(.list-view) .habit-card.completed {
+    background: var(--habit-gradient);
+    color: white;
+  }
+
+  /* Обновляем streak в обычном состоянии */
+  :global(.list-view) .streak-counter {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 60px;
+    height: 60px;
+    background: var(--habit-gradient);
+    color: white;
+    z-index: 2;
+  }
+
+  /* Обновляем streak для completed состояния */
+  :global(.list-view) .habit-wrapper:has(.habit-card.completed) .streak-counter {
+    background: white;
+    color: #8B5CF6;
+  }
+
+  /* Добавляем отступ для текста, чтобы не пересекался со streak и кнопкой отмены */
+  :global(.list-view) h3 {
+    font-size: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 40px;
+    margin-left: 60px;
+  }
+
+  /* Обновляем цвет текста */
+  :global(.list-view) .habit-card h3 {
+    color: #333;
+  }
+
+  :global(.list-view) .habit-card.completed h3 {
+    color: white;
   }
 </style>
