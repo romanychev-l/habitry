@@ -1,11 +1,11 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import { _ } from 'svelte-i18n';
   
   const dispatch = createEventDispatcher();
   let title = '';
   let selectedDays = new Set();
   let isOneTime = false;
-  const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
   function toggleDay(index: number) {
     if (selectedDays.has(index)) {
@@ -17,7 +17,6 @@
   }
 
   function handleSubmit() {
-    console.log(isOneTime);
     if (isOneTime) {
       const today = new Date();
       let dayIndex = today.getDay() - 1;
@@ -52,11 +51,11 @@
   tabindex="0"
 >
   <div class="modal">
-    <h2>Новая привычка</h2>
+    <h2>{$_('habits.add')}</h2>
     <input 
       type="text" 
       bind:value={title} 
-      placeholder="Название привычки"
+      placeholder={$_('habits.title')}
     />
     
     <div class="type-selector">
@@ -65,7 +64,7 @@
           type="checkbox" 
           bind:checked={isOneTime}
         />
-        Одноразовое дело
+        {$_('habits.one_time')}
       </label>
     </div>
     
@@ -76,18 +75,52 @@
           selectedDays = new Set([0, 1, 2, 3, 4, 5, 6]);
         }}
       >
-        Выполнять каждый день
+        {$_('habits.every_day')}
       </button>
 
       <div class="days-selector">
-        {#each weekDays as day, i}
-          <button 
-            class:selected={selectedDays.has(i)}
-            on:click={() => toggleDay(i)}
-          >
-            {day}
-          </button>
-        {/each}
+        <button 
+          class:selected={selectedDays.has(0)}
+          on:click={() => toggleDay(0)}
+        >
+          {$_('days.monday')}
+        </button>
+        <button 
+          class:selected={selectedDays.has(1)}
+          on:click={() => toggleDay(1)}
+        >
+          {$_('days.tuesday')}
+        </button>
+        <button 
+          class:selected={selectedDays.has(2)}
+          on:click={() => toggleDay(2)}
+        >
+          {$_('days.wednesday')}
+        </button>
+        <button 
+          class:selected={selectedDays.has(3)}
+          on:click={() => toggleDay(3)}
+        >
+          {$_('days.thursday')}
+        </button>
+        <button 
+          class:selected={selectedDays.has(4)}
+          on:click={() => toggleDay(4)}
+        >
+          {$_('days.friday')}
+        </button>
+        <button 
+          class:selected={selectedDays.has(5)}
+          on:click={() => toggleDay(5)}
+        >
+          {$_('days.saturday')}
+        </button>
+        <button 
+          class:selected={selectedDays.has(6)}
+          on:click={() => toggleDay(6)}
+        >
+          {$_('days.sunday')}
+        </button>
       </div>
     {/if}
 
@@ -96,7 +129,7 @@
       on:click={handleSubmit}
       disabled={!title || (!isOneTime && selectedDays.size === 0)}
     >
-      Сохранить
+      {$_('habits.save')}
     </button>
   </div>
 </div>

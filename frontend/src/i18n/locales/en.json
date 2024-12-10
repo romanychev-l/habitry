@@ -1,0 +1,29 @@
+{
+  "habits": {
+    "title": "Habits",
+    "add": "Add habit",
+    "delete": "Delete",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "compact_view": "Compact View",
+    "one_time": "One-time task",
+    "every_day": "Do every day",
+    "errors": {
+      "create": "Failed to create habit. Please try again.",
+      "update": "Error updating habit",
+      "undo": "Error undoing habit",
+      "user_create": "Error creating user"
+    }
+  },
+  "days": {
+    "monday": "Mon",
+    "tuesday": "Tue",
+    "wednesday": "Wed",
+    "thursday": "Thu",
+    "friday": "Fri",
+    "saturday": "Sat",
+    "sunday": "Sun"
+  },
+  "premium": "Premium"
+} 

@@ -48,11 +48,12 @@ func main() {
 
 	// Инициализация обработчиков
 	usersCollection := client.Database(dbName).Collection("users")
+	historyCollection := client.Database(dbName).Collection("history")
 	b, err := bot.New(botToken)
 	if err != nil {
 		log.Fatal(err)
 	}
-	handler := handlers.NewHandler(usersCollection, b)
+	handler := handlers.NewHandler(usersCollection, historyCollection, b)
 
 	// Настройка CORS
 	corsMiddleware := cors.New(cors.Options{

@@ -3,6 +3,7 @@
   import NewHabitModal from './components/NewHabitModal.svelte';
   import { user } from './stores/user';
   import { openTelegramInvoice } from './utils/telegram';
+  import { _ } from 'svelte-i18n';
   
   let isListView = localStorage.getItem('isListView') === 'true';
   let showModal = false;
@@ -16,10 +17,6 @@
       if (!telegramId) return;
 
       const response = await fetch(`${API_URL}/user?telegram_id=${telegramId}`);
-      console.log('response', response);
-      console.log('response.ok', response.status);
-      // console.log('response.json', await response.json());
-      console.log('telegramId', telegramId);
       if (response.status === 404) {
         console.log('create user');
         const createResponse = await fetch(`${API_URL}/user`, {
@@ -35,21 +32,16 @@
             photo_url: $user.photoUrl
           })
         });
-        console.log('createResponse', createResponse);
         if (!createResponse.ok) {
-          throw new Error('Ошибка при создании пользователя');
+          throw new Error($_('habits.errors.user_create'));
         }
 
         habits = [];
       } else {
-        console.log('user already exists');
         const data = await response.json();
         habits = data.habits || [];
         
         const today = new Date().toISOString().split('T')[0];
-        console.log('today', today);
-        console.log('data', data);
-        console.log('data.last_visit', data.last_visit);
         if (data.last_visit !== today && data.credit > 0) {
           openTelegramInvoice(data.credit);
         }
@@ -64,7 +56,6 @@
   }
 
   async function handleNewHabit(event: { detail: any }) {
-    console.log('handleNewHabit', event);
     try {
       const telegramId = $user?.id;
       if (!telegramId) return;
@@ -75,7 +66,6 @@
         streak: 0,
         ...event.detail
       };
-      console.log('newHabit', newHabit);
       const response = await fetch(`${API_URL}/habit`, {
         method: 'POST',
         headers: {
@@ -86,21 +76,16 @@
           habit: newHabit
         })
       });
-      console.log('response', response);
       if (!response.ok) {
-        throw new Error('Ошибка при сохранении привычки');
+        throw new Error($_('habits.errors.create'));
       }
 
       habits = [...habits, newHabit];
       showModal = false;
     } catch (error) {
       console.error('Ошибка при создании привычки:', error);
-      alert('Не удалось создать привычку. Попробуйте еще раз.');
+      alert($_('habits.errors.create'));
     }
-  }
-
-  function handlePayment() {
-    openTelegramInvoice(1);
   }
 
   $: {
@@ -126,7 +111,7 @@
       </div>
     {/if}
     <div class="view-toggle">
-      <span class="toggle-label">Compact View</span>
+      <span class="toggle-label">{$_('habits.compact_view')}</span>
       <label class="switch">
         <input type="checkbox" bind:checked={isListView}>
         <span class="slider"></span>
@@ -155,13 +140,6 @@
       on:close={() => showModal = false}
     />
   {/if}
-
-  <!-- <button 
-    class="payment-button"
-    on:click={handlePayment}
-  >
-    💎 Премиум
-  </button> -->
 </main>
 
 <style>

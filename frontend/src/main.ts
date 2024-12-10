@@ -3,6 +3,7 @@ import { mount } from 'svelte';
 import App from './App.svelte'
 import { initTelegram } from './utils/telegram'
 import { init as initTelegramSDK } from '@telegram-apps/sdk'
+import './i18n/i18n'
 
 console.log('🚀 Starting app initialization...')
 

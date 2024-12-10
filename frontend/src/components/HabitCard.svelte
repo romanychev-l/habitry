@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { _ } from 'svelte-i18n';
+    
     export let habit: {
         id: string;
         title: string;
@@ -42,7 +44,7 @@
             });
             
             if (!response.ok) {
-                throw new Error('Ошибка при обновлении привычки');
+                throw new Error($_('habits.errors.update'));
             }
             
             const data = await response.json();
@@ -101,7 +103,7 @@
             });
             
             if (!response.ok) {
-                throw new Error('Ошибка при отмене привычки');
+                throw new Error($_('habits.errors.undo'));
             }
             
             const data = await response.json();

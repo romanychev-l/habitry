@@ -18,14 +18,16 @@ import (
 )
 
 type Handler struct {
-	usersCollection *mongo.Collection
-	bot             *bot.Bot
+	usersCollection   *mongo.Collection
+	historyCollection *mongo.Collection
+	bot               *bot.Bot
 }
 
-func NewHandler(collection *mongo.Collection, b *bot.Bot) *Handler {
+func NewHandler(usersCollection, historyCollection *mongo.Collection, b *bot.Bot) *Handler {
 	return &Handler{
-		usersCollection: collection,
-		bot:             b,
+		usersCollection:   usersCollection,
+		historyCollection: historyCollection,
+		bot:               b,
 	}
 }
 
@@ -54,7 +56,6 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 		user.CreatedAt = time.Now()
 		user.Credit = 0
 		user.LastVisit = time.Now().Format("2006-01-02")
-		user.History = []models.DayHistory{}
 		if user.Habits == nil {
 			user.Habits = []models.Habit{}
 		}
@@ -88,36 +89,55 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 			// Проверяем историю за вчерашний день
 			yesterday := time.Now().AddDate(0, 0, -1)
 			yesterdayStr := yesterday.Format("2006-01-02")
-			yesterdayIndex := int(yesterday.Weekday())
-			if yesterdayIndex == 0 {
-				yesterdayIndex = 6
-			} else {
-				yesterdayIndex--
-			}
 
-			// Получаем все привычки, которые должны были быть выполнены вчера
-			scheduledHabits := make(map[string]bool)
-			for _, habit := range user.Habits {
-				for _, day := range habit.Days {
-					if day == yesterdayIndex {
-						scheduledHabits[habit.ID] = false
-						break
-					}
+			var yesterdayHistory models.History
+			err = h.historyCollection.FindOne(
+				context.Background(),
+				bson.M{
+					"telegram_id": id,
+					"date":        yesterdayStr,
+				},
+			).Decode(&yesterdayHistory)
+
+			// Проверяем, какие привычки были выполнены
+			completedHabits := make(map[string]bool)
+			if err == nil {
+				for _, habitHistory := range yesterdayHistory.Habits {
+					completedHabits[habitHistory.HabitID] = true
 				}
 			}
 
-			// Проверяем, какие из них были выполнены
-			for _, dayHistory := range user.History {
-				if dayHistory.Date == yesterdayStr {
-					for _, habitHistory := range dayHistory.Habits {
-						delete(scheduledHabits, habitHistory.HabitID)
+			scheduledHabits := make(map[string]bool)
+			for _, habit := range user.Habits {
+				// Получаем вчерашний день недели
+				yesterday := time.Now().AddDate(0, 0, -1)
+				weekday := int(yesterday.Weekday())
+				if weekday == 0 {
+					weekday = 6
+				} else {
+					weekday--
+				}
+
+				// Проверяем, была ли привычка запланирована на вчера
+				if habit.IsOneTime {
+					// Для одноразовых дел проверяем дату создания
+					habitDate := habit.CreatedAt.Format("2006-01-02")
+					if habitDate == yesterdayStr {
+						scheduledHabits[habit.ID] = true
 					}
-					break
+				} else {
+					// Для регулярных привычек проверяем день недели
+					for _, day := range habit.Days {
+						if day == weekday {
+							scheduledHabits[habit.ID] = true
+							break
+						}
+					}
 				}
 			}
 
 			// Количество невыполненных привычек - это количество оставшихся в мапе
-			missedHabits := len(scheduledHabits)
+			missedHabits := len(scheduledHabits) - len(completedHabits)
 
 			// Обновляем кредит и дату последнего визита
 			update := bson.M{
@@ -147,7 +167,7 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 
 		for _, habit := range user.Habits {
 			if habit.IsOneTime {
-				// Для одноразовых дел показываем их в день создания
+				// Для одноразовых дел покаываем их в день создания
 				habitDate := habit.CreatedAt.Format("2006-01-02")
 				if habitDate == today {
 					todayHabits = append(todayHabits, habit)
@@ -337,7 +357,7 @@ func (h *Handler) HandleHabitUpdate(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		http.Error(w, `{"message": "Ошибка при обновлении в базе данных"}`, http.StatusInternalServerError)
+		http.Error(w, `{"message": "Ошибк�� при обновлении в базе данных"}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -380,81 +400,53 @@ func (h *Handler) HandleHabitUpdate(w http.ResponseWriter, r *http.Request) {
 	// После успешного обновления привычки обновляем историю
 	today := time.Now().Format("2006-01-02")
 
-	// Проверяем, существует ли запись за сегодня
-	err = h.usersCollection.FindOne(
+	// Проверяем существование записи за сегодня
+	var existingHistory models.History
+	err = h.historyCollection.FindOne(
 		context.Background(),
 		bson.M{
 			"telegram_id": habitRequest.TelegramID,
-			"history": bson.M{
-				"$elemMatch": bson.M{
-					"date": today,
-				},
-			},
+			"date":        today,
 		},
-	).Decode(&user)
-
-	var updateOperation bson.M
-	var needsArrayFilter bool
+	).Decode(&existingHistory)
 
 	if err == mongo.ErrNoDocuments {
-		// Если записи за сегодня нет, создаем новую
-		updateOperation = bson.M{
-			"$push": bson.M{
-				"history": models.DayHistory{
-					Date: today,
-					Habits: []models.HabitHistory{
-						{
-							HabitID: habitRequest.Habit.ID,
-							Title:   habitRequest.Habit.Title,
-							Done:    true,
-						},
-					},
-				},
-			},
-		}
-		needsArrayFilter = false
-	} else {
-		// Если запись за сегодня существует, добавляем привычку в существующий массив
-		updateOperation = bson.M{
-			"$push": bson.M{
-				"history.$[elem].habits": models.HabitHistory{
+		// Создаем новую запись истории
+		newHistory := models.History{
+			TelegramID: habitRequest.TelegramID,
+			Date:       today,
+			Habits: []models.HabitHistory{
+				{
 					HabitID: habitRequest.Habit.ID,
 					Title:   habitRequest.Habit.Title,
 					Done:    true,
 				},
 			},
 		}
-		needsArrayFilter = true
-	}
 
-	var updateOpts *options.UpdateOptions
-	if needsArrayFilter {
-		updateOpts = options.Update().SetArrayFilters(options.ArrayFilters{
-			Filters: []interface{}{
-				bson.M{"elem.date": today},
+		_, err = h.historyCollection.InsertOne(context.Background(), newHistory)
+	} else if err == nil {
+		// Добавляем привычку в существующую запись
+		_, err = h.historyCollection.UpdateOne(
+			context.Background(),
+			bson.M{
+				"telegram_id": habitRequest.TelegramID,
+				"date":        today,
 			},
-		})
-	}
-
-	var err2 error
-	if needsArrayFilter {
-		_, err2 = h.usersCollection.UpdateOne(
-			context.Background(),
-			bson.M{"telegram_id": habitRequest.TelegramID},
-			updateOperation,
-			updateOpts,
-		)
-	} else {
-		_, err2 = h.usersCollection.UpdateOne(
-			context.Background(),
-			bson.M{"telegram_id": habitRequest.TelegramID},
-			updateOperation,
+			bson.M{
+				"$push": bson.M{
+					"habits": models.HabitHistory{
+						HabitID: habitRequest.Habit.ID,
+						Title:   habitRequest.Habit.Title,
+						Done:    true,
+					},
+				},
+			},
 		)
 	}
 
-	if err2 != nil {
-		log.Printf("Ошибка при обновлении истории: %v", err2)
-		http.Error(w, `{"message": "Ошибка при обновлении истории"}`, http.StatusInternalServerError)
+	if err != nil {
+		log.Printf("Ошибка при обновлении истории: %v", err)
 		return
 	}
 }
@@ -555,7 +547,7 @@ func (h *Handler) HandleHabitUndo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Находим обновленную привычку в массиве
+	// Находим об��овленную привычку в массиве
 	var updatedHabit models.Habit
 	for _, h := range user.Habits {
 		if h.ID == habitRequest.Habit.ID {

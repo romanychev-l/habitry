@@ -32,9 +32,11 @@ type HabitHistory struct {
 	Done    bool   `bson:"done" json:"done"`
 }
 
-type DayHistory struct {
-	Date   string         `bson:"date" json:"date"`
-	Habits []HabitHistory `bson:"habits" json:"habits"`
+type History struct {
+	ID         primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
+	TelegramID int64              `bson:"telegram_id" json:"telegram_id"`
+	Date       string             `bson:"date" json:"date"`
+	Habits     []HabitHistory     `bson:"habits" json:"habits"`
 }
 
 type User struct {
@@ -48,5 +50,4 @@ type User struct {
 	CreatedAt  time.Time          `bson:"created_at" json:"created_at"`
 	Credit     int                `bson:"credit" json:"credit"`
 	LastVisit  string             `bson:"last_visit" json:"last_visit"`
-	History    []DayHistory       `bson:"history" json:"history"`
 }
