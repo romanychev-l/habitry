@@ -139,6 +139,21 @@
     border-radius: 24px 24px 0 0;
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
     overflow: hidden;
+    transform: translateY(0);
+    transition: transform 0.3s ease;
+  }
+
+  /* iOS-специфичные стили */
+  @supports (-webkit-touch-callout: none) {
+    .overlay {
+        position: absolute;
+        height: 100vh;
+        min-height: -webkit-fill-available;
+    }
+
+    .modal:focus-within {
+        transform: translateY(-35vh);
+    }
   }
 
   .header {
