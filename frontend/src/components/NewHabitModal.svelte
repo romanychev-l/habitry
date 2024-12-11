@@ -73,24 +73,26 @@
       {#if !isOneTime}
         <div class="days-wrapper">
           <div class="days-selector">
-            {#each [0, 1, 2, 3, 4, 5, 6, 'all'] as day, i}
+            {#each [0, 1, 2, 3, 4, 5, 6] as day}
               <button 
-                class:selected={day === 'all' ? selectedDays.size === 7 : selectedDays.has(day)}
-                on:click={() => {
-                  if (day === 'all') {
-                    if (selectedDays.size === 7) {
-                      selectedDays = new Set();
-                    } else {
-                      selectedDays = new Set([0, 1, 2, 3, 4, 5, 6]);
-                    }
-                  } else {
-                    toggleDay(day);
-                  }
-                }}
+                class:selected={selectedDays.has(day)}
+                on:click={() => toggleDay(day)}
               >
-                {day === 'all' ? 'All' : $_(`days.${['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][day]}`)}
+                {$_(`days.${['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][day]}`)}
               </button>
             {/each}
+            <button 
+              class:selected={selectedDays.size === 7}
+              on:click={() => {
+                if (selectedDays.size === 7) {
+                  selectedDays = new Set();
+                } else {
+                  selectedDays = new Set([0, 1, 2, 3, 4, 5, 6]);
+                }
+              }}
+            >
+              All
+            </button>
           </div>
         </div>
       {/if}
