@@ -51,4 +51,5 @@ type User struct {
 	CreatedAt  time.Time          `bson:"created_at" json:"created_at"`
 	Credit     int                `bson:"credit" json:"credit"`
 	LastVisit  string             `bson:"last_visit" json:"last_visit"`
+	Timezone   string             `bson:"timezone" json:"timezone"`
 }

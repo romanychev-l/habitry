@@ -84,10 +84,22 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		today := time.Now().Format("2006-01-02")
+		// Получаем часовой пояс из параметров запроса
+		timezone := r.URL.Query().Get("timezone")
+		if timezone == "" {
+			timezone = "UTC"
+		}
+
+		// Получаем текущее время в часовом поясе пользователя
+		loc, err := time.LoadLocation(timezone)
+		if err != nil {
+			loc = time.UTC
+		}
+		today := time.Now().In(loc).Format("2006-01-02")
+
 		if user.LastVisit != today {
 			// Проверяем историю за вчерашний день
-			yesterday := time.Now().AddDate(0, 0, -1)
+			yesterday := time.Now().In(loc).AddDate(0, 0, -1)
 			yesterdayStr := yesterday.Format("2006-01-02")
 
 			var yesterdayHistory models.History
@@ -110,7 +122,7 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 			scheduledHabits := make(map[string]bool)
 			for _, habit := range user.Habits {
 				// Получаем вчерашний день недели
-				yesterday := time.Now().AddDate(0, 0, -1)
+				yesterday := time.Now().In(loc).AddDate(0, 0, -1)
 				weekday := int(yesterday.Weekday())
 				if weekday == 0 {
 					weekday = 6
@@ -163,7 +175,7 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 
 		// Фильтруем привычки для текущего дня
 		todayHabits := []models.Habit{}
-		today = time.Now().Format("2006-01-02")
+		today = time.Now().In(loc).Format("2006-01-02")
 
 		for _, habit := range user.Habits {
 			if habit.IsOneTime {
@@ -175,7 +187,7 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 			} else {
 				// Существующая логика для обычных привычек
 
-				weekday := int(time.Now().Weekday())
+				weekday := int(time.Now().In(loc).Weekday())
 				if weekday == 0 {
 					weekday = 6
 				} else {
@@ -254,7 +266,7 @@ func (h *Handler) HandleHabitUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method != "PUT" {
-		http.Error(w, `{"message": "Метод не поддержи��ается"}`, http.StatusMethodNotAllowed)
+		http.Error(w, `{"message": "Метод не поддерживается"}`, http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -651,4 +663,66 @@ func (h *Handler) HandleCreateInvoice(w http.ResponseWriter, r *http.Request) {
 	response := models.InvoiceResponse{URL: invoiceURL}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+func (h *Handler) HandleUpdateLastVisit(w http.ResponseWriter, r *http.Request) {
+	log.Println("HandleUpdateLastVisit called")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "PUT, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "PUT" {
+		http.Error(w, `{"message": "Метод не поддерживается"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	var request struct {
+		TelegramID int64  `json:"telegram_id"`
+		Timezone   string `json:"timezone"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		log.Printf("Error decoding request: %v", err)
+		http.Error(w, `{"message": "Неверный формат данных"}`, http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Updating last_visit for user %d with timezone %s", request.TelegramID, request.Timezone)
+
+	// Получаем текущее время в часовом поясе пользователя
+	loc, err := time.LoadLocation(request.Timezone)
+	if err != nil {
+		log.Printf("Error loading timezone: %v, using UTC", err)
+		loc = time.UTC
+	}
+	today := time.Now().In(loc).Format("2006-01-02")
+	log.Printf("Setting last_visit to: %s", today)
+
+	// Обновляем last_visit и сбрасываем credit
+	update := bson.M{
+		"$set": bson.M{
+			"last_visit": today,
+			"credit":     0,
+		},
+	}
+
+	result, err := h.usersCollection.UpdateOne(
+		context.Background(),
+		bson.M{"telegram_id": request.TelegramID},
+		update,
+	)
+
+	if err != nil {
+		log.Printf("Error updating last_visit: %v", err)
+		http.Error(w, `{"message": "Ошибка при обновлении даты последнего визита"}`, http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Update result: %+v", result)
+	w.WriteHeader(http.StatusOK)
 }

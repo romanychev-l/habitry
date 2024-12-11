@@ -7,6 +7,7 @@
   let selectedDays = new Set();
   let isOneTime = false;
   let wantToBecome = '';
+  let isDarkTheme = window.Telegram?.WebApp?.colorScheme === 'dark';
 
   function toggleDay(index: number) {
     if (selectedDays.has(index)) {
@@ -135,7 +136,7 @@
 
   .modal {
     width: 100%;
-    background: var(--tg-theme-bg-color);
+    background: #F9F8F3;
     border-radius: 24px 24px 0 0;
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
   }
@@ -320,5 +321,37 @@
 
   .input-field {
     margin-bottom: 16px;
+  }
+
+  :global([data-theme="dark"]) .modal {
+    background: var(--tg-theme-bg-color);
+  }
+
+  :global([data-theme="dark"]) input[type="text"] {
+    color: white;
+  }
+
+  :global([data-theme="dark"]) .type-selector {
+    color: white;
+  }
+
+  :global([data-theme="dark"]) .days-selector button {
+    color: white;
+  }
+
+  :global([data-theme="dark"]) h2 {
+    color: white;
+  }
+
+  :global([data-theme="dark"]) .modal * {
+    color: white !important;
+  }
+
+  :global([data-theme="dark"]) input::placeholder {
+    color: rgba(255, 255, 255, 0.6) !important;
+  }
+
+  :global([data-theme="dark"]) .days-selector button:not(.selected) {
+    color: white !important;
   }
 </style>

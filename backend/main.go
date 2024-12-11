@@ -64,6 +64,7 @@ func main() {
 
 	// Роутинг
 	http.HandleFunc("/user", handler.HandleUser)
+	http.HandleFunc("/user/visit", handler.HandleUpdateLastVisit)
 	http.HandleFunc("/habit", handler.HandleHabit)
 	http.HandleFunc("/habit/update", handler.HandleHabitUpdate)
 	http.HandleFunc("/create-invoice", handler.HandleCreateInvoice)

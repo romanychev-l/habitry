@@ -76,7 +76,7 @@
                     navigator.vibrate(200);
                 }
             } catch (error) {
-                // Ошибка уже обработа��а в updateHabitOnServer
+                // Ошибка уже обработа���� в updateHabitOnServer
             } finally {
                 isPressed = false;
             }
@@ -282,6 +282,7 @@
     margin: 0;
     font-size: 20px;
     font-weight: 700;
+    color: #333;
   }
 
   /* Уменьшаем размер заголовка в режиме списка */
@@ -342,7 +343,7 @@
     filter: none;
   }
 
-  /* Убираем тень для completed карточек в режиме списка */
+  /* Убираем тень для completed карточек в режиме сп��ска */
   :global(.list-view) .card-shadow:has(.habit-card.completed) {
     filter: none;
   }
@@ -368,7 +369,7 @@
     color: #333;
   }
 
-  /* Обновляем стил�� для completed состояния */
+  /* Обновляем стил для completed состояния */
   :global(.list-view) .habit-card.completed {
     background: var(--habit-gradient);
     color: white;
@@ -387,7 +388,7 @@
     z-index: 2;
   }
 
-  /* Обновляем streak для completed состояния */
+  /* Обновляем streak для completed с��стояния */
   :global(.list-view) .habit-wrapper:has(.habit-card.completed) .streak-counter {
     background: white;
     color: #8B5CF6;
@@ -419,6 +420,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    color: #333;
   }
 
   .want-to-become .label {
@@ -453,7 +455,7 @@
     font-weight: 700;
   }
 
-  /* Обновляем стили для текста в режиме списка */
+  /* Обновляем стили для теста в режиме списка */
   :global(.list-view) h3 {
     font-size: 20px;
     white-space: normal;

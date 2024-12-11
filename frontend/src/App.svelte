@@ -9,6 +9,7 @@
   let showModal = false;
   let habits: any[] = [];
   const API_URL = import.meta.env.VITE_API_URL;
+  let isDarkTheme = window.Telegram?.WebApp?.colorScheme === 'dark';
   
   async function initializeUser() {
     try {
@@ -16,7 +17,9 @@
       const telegramId = $user?.id;
       if (!telegramId) return;
 
-      const response = await fetch(`${API_URL}/user?telegram_id=${telegramId}`);
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const response = await fetch(`${API_URL}/user?telegram_id=${telegramId}&timezone=${userTimezone}`);
+      
       if (response.status === 404) {
         console.log('create user');
         const createResponse = await fetch(`${API_URL}/user`, {
@@ -29,7 +32,8 @@
             first_name: $user.firstName,
             username: $user.username,
             language_code: $user.languageCode,
-            photo_url: $user.photoUrl
+            photo_url: $user.photoUrl,
+            timezone: userTimezone
           })
         });
         if (!createResponse.ok) {
@@ -41,9 +45,34 @@
         const data = await response.json();
         habits = data.habits || [];
         
-        const today = new Date().toISOString().split('T')[0];
-        if (data.last_visit !== today && data.credit > 0) {
+        const now = new Date();
+        const userDate = now.toLocaleString('en-US', { timeZone: userTimezone }).split(',')[0];
+        console.log('Checking dates:', { last_visit: data.last_visit, userDate, credit: data.credit });
+        
+        if (data.last_visit !== userDate && data.credit > 0) {
+          console.log('Showing invoice and updating last_visit');
           openTelegramInvoice(data.credit);
+          
+          try {
+            const visitResponse = await fetch(`${API_URL}/user/visit`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                telegram_id: telegramId,
+                timezone: userTimezone
+              })
+            });
+            
+            if (!visitResponse.ok) {
+              console.error('Failed to update last_visit:', await visitResponse.text());
+            } else {
+              console.log('Last visit updated successfully');
+            }
+          } catch (error) {
+            console.error('Error updating last_visit:', error);
+          }
         }
       }
     } catch (error) {
@@ -90,6 +119,10 @@
 
   $: {
     localStorage.setItem('isListView', isListView.toString());
+  }
+
+  $: {
+    document.documentElement.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
   }
 </script>
 
@@ -149,6 +182,24 @@
     max-width: 800px;
     margin: 0 auto;
     box-sizing: border-box;
+    min-height: 100vh;
+    background-color: #F9F8F3;
+  }
+
+  :global([data-theme="dark"]) main {
+    background-color: var(--tg-theme-bg-color);
+  }
+
+  :global([data-theme="dark"]) body {
+    background-color: var(--tg-theme-bg-color);
+  }
+
+  :global([data-theme="dark"]) .habit-container {
+    color: white;
+  }
+
+  :global([data-theme="dark"]) .toggle-label {
+    color: white;
   }
 
   header {
