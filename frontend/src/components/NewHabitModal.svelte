@@ -64,12 +64,14 @@
         bind:value={title} 
         placeholder={$_('habits.title')}
         autofocus
+        class="input-field"
       />
       
       <input 
         type="text" 
         bind:value={wantToBecome} 
         placeholder={$_('habits.want_to_become')}
+        class="input-field"
       />
       
       <button class="type-selector" on:click={() => isOneTime = !isOneTime}>
@@ -151,7 +153,7 @@
   }
 
   .header {
-    padding: 16px;
+    padding: 32px 16px 16px 16px;
     border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
     text-align: center;
   }
@@ -179,6 +181,7 @@
     color: var(--tg-theme-text-color);
     padding: 0;
     font-size: 16px;
+    margin-top: 8px;
   }
 
   .daily-habit-btn {
@@ -313,5 +316,9 @@
 
   .save-btn:disabled {
     opacity: 0.6;
+  }
+
+  .input-field {
+    margin-bottom: 16px;
   }
 </style>

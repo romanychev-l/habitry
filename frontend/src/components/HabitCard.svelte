@@ -7,7 +7,7 @@
         title: string;
         streak: number;
         score: number;
-        last_click_date?: string;
+        last_click_date?: string | null;
         want_to_become?: string;
     };
     
@@ -76,7 +76,7 @@
                     navigator.vibrate(200);
                 }
             } catch (error) {
-                // Ошибка уже обработана в updateHabitOnServer
+                // Ошибка уже обработа��а в updateHabitOnServer
             } finally {
                 isPressed = false;
             }
@@ -111,7 +111,8 @@
             const data = await response.json();
             if (data.habit) {
                 habit = { ...data.habit };
-                completed = isCompletedToday();
+                habit.last_click_date = null;
+                completed = false;
             }
         } catch (error) {
             console.error('Ошибка:', error);
@@ -147,14 +148,17 @@
       <div class="content">
         <h3>{habit.title}</h3>
         
-        {#if !$isListView && habit.want_to_become}
-          <div class="want-to-become">
-            <div class="want-to-become-wrapper">
+        {#if !$isListView}
+          {#if habit.want_to_become}
+            <div class="want-to-become">
               <span class="label">{$_('habits.want_to_become')}</span>
-              <!-- <span class="value">{habit.want_to_become}</span> -->
+              <span class="value">{habit.want_to_become}</span>
             </div>
-          </div>
-          <h3>{habit.want_to_become}</h3>
+          {/if}
+        {/if}
+
+        {#if completed}
+          <button class="undo-button" on:click={handleUndo}>↩</button>
         {/if}
       </div>
     </div>
@@ -212,7 +216,7 @@
     -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
   }
 
-  /* Изменяем положение streak в режиме списка */
+  /* Изменяем положение streak в режиме спика */
   :global(.list-view) .streak-counter {
     position: absolute;
     left: 10px;
@@ -260,6 +264,7 @@
     height: auto;
     background: white;
     color: #333;
+    text-align: left;
   }
 
   .habit-card.pressed,
@@ -282,9 +287,12 @@
   /* Уменьшаем размер заголовка в режиме списка */
   :global(.list-view) h3 {
     font-size: 20px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    margin-right: 40px;
+    margin-left: 60px;
+    line-height: 1.2;
   }
 
   .undo-button {
@@ -298,16 +306,20 @@
     padding: 8px;
     cursor: pointer;
     opacity: 0.8;
+    z-index: 3;
   }
 
   /* Обновляем стили для кнопки отмены в режиме списка */
   :global(.list-view) .undo-button {
+    position: absolute;
     bottom: 50%;
-    left: auto;
     right: 16px;
+    left: auto;
     transform: translateY(50%);
     font-size: 20px;
     padding: 8px;
+    z-index: 3;
+    color: inherit;
   }
 
   /* Убираем все hover и active эффекты */
@@ -338,6 +350,11 @@
   /* Добавляем стили для completed состояния в режиме списка */
   :global(.list-view) .habit-card.completed {
     background: var(--habit-gradient);
+    color: white;
+  }
+
+  :global(.list-view) .habit-card.completed .undo-button {
+    color: white;
   }
 
   /* Убираем белый фон streak для completed состояния в режиме списка */
@@ -351,7 +368,7 @@
     color: #333;
   }
 
-  /* Обновляем стили для completed состояния */
+  /* Обновляем стил�� для completed состояния */
   :global(.list-view) .habit-card.completed {
     background: var(--habit-gradient);
     color: white;
@@ -379,11 +396,12 @@
   /* Добавляем отступ для текста, чтобы не пересекался со streak и кнопкой отмены */
   :global(.list-view) h3 {
     font-size: 20px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
     margin-right: 40px;
     margin-left: 60px;
+    line-height: 1.2;
   }
 
   /* Обновляем цвет текста */
@@ -398,9 +416,6 @@
   .want-to-become {
     margin-top: 16px;
     text-align: center;
-  }
-
-  .want-to-become-wrapper {
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -425,12 +440,7 @@
   h3 {
     margin: 0;
     font-size: 20px;
-  }
-
-  .want-to-become-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    font-weight: 700;
   }
 
   .want-to-become .label {
@@ -440,6 +450,27 @@
 
   .want-to-become .value {
     font-size: 20px;
-    font-weight: 500;
+    font-weight: 700;
+  }
+
+  /* Обновляем стили для текста в режиме списка */
+  :global(.list-view) h3 {
+    font-size: 20px;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    margin-right: 40px;
+    margin-left: 65px;
+    line-height: 1.2;
+  }
+
+  :global(.list-view) .content {
+    padding-left: 0;
+    width: 100%;
+    text-align: left;
+  }
+
+  :global(.list-view) .want-to-become {
+    display: none;
   }
 </style>
