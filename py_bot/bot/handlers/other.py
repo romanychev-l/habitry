@@ -76,7 +76,7 @@ async def successful_payment(message: types.Message, i18n: TranslatorRunner):
             )
         else:
             logging.error(f"Пользователь не найден: {user_id}")
-            await message.answer(i18n.message.error_payment())
+            # await message.answer(i18n.message.error_payment())
             
     except Exception as e:
         logging.error(f"Ошибка при обновлении БД: {e}")

@@ -254,7 +254,7 @@ func (h *Handler) HandleHabitUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method != "PUT" {
-		http.Error(w, `{"message": "Метод не поддерживается"}`, http.StatusMethodNotAllowed)
+		http.Error(w, `{"message": "Метод не поддержи��ается"}`, http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -357,7 +357,7 @@ func (h *Handler) HandleHabitUpdate(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		http.Error(w, `{"message": "Ошибк�� при обновлении в базе данных"}`, http.StatusInternalServerError)
+		http.Error(w, `{"message": "Ошибка при обновлении в базе данных"}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -496,7 +496,43 @@ func (h *Handler) HandleHabitUndo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Обновляем score и streak с проверкой на отрицательные значения
+	// Получаем предыдущий разрешенный день для привычки
+	var previousAllowedDate string
+	if currentHabit.Streak > 1 { // Если streak > 1, значит был предыдущий день
+		today := time.Now()
+		currentDayIndex := int(today.Weekday())
+		if currentDayIndex == 0 {
+			currentDayIndex = 6
+		} else {
+			currentDayIndex--
+		}
+
+		// Находим текущий день в массиве дней привычки
+		currentDayPos := -1
+		for i, day := range currentHabit.Days {
+			if day == currentDayIndex {
+				currentDayPos = i
+				break
+			}
+		}
+
+		// Находим предыдущий разрешенный день
+		var prevAllowedDay int
+		if currentDayPos > 0 {
+			prevAllowedDay = currentHabit.Days[currentDayPos-1]
+		} else if len(currentHabit.Days) > 0 {
+			prevAllowedDay = currentHabit.Days[len(currentHabit.Days)-1]
+		}
+
+		// Вычисляем дату предыдущего разрешенного дня
+		daysToSubtract := (currentDayIndex - prevAllowedDay + 7) % 7
+		if daysToSubtract == 0 {
+			daysToSubtract = 7
+		}
+		previousDate := today.AddDate(0, 0, -daysToSubtract)
+		previousAllowedDate = previousDate.Format("2006-01-02")
+	}
+
 	newStreak := currentHabit.Streak - 1
 	if newStreak < 0 {
 		newStreak = 0
@@ -509,9 +545,9 @@ func (h *Handler) HandleHabitUndo(w http.ResponseWriter, r *http.Request) {
 
 	update := bson.M{
 		"$set": bson.M{
-			"habits.$[habit].last_click_date": "",
 			"habits.$[habit].streak":          newStreak,
 			"habits.$[habit].score":           newScore,
+			"habits.$[habit].last_click_date": previousAllowedDate, // Устанавливаем дату предыдущего разрешенного дня
 		},
 	}
 
@@ -547,7 +583,7 @@ func (h *Handler) HandleHabitUndo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Находим об��овленную привычку в массиве
+	// Находим обновленную привычку в массиве
 	var updatedHabit models.Habit
 	for _, h := range user.Habits {
 		if h.ID == habitRequest.Habit.ID {
