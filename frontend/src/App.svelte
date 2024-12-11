@@ -208,7 +208,7 @@
   }
 
   input:checked + .slider {
-    background-color: green;
+    background-color: #00D5A0;
   }
 
   input:checked + .slider:before {
@@ -267,15 +267,15 @@
   .profile-photo {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
     object-fit: cover;
     border: 2px solid var(--tg-theme-button-color);
+    mask: url('/src/assets/streak.svg') no-repeat center / contain;
+    -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
   }
 
   .profile-placeholder {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
     background: var(--tg-theme-button-color);
     color: var(--tg-theme-button-text-color);
     display: flex;
@@ -284,6 +284,8 @@
     font-size: 18px;
     font-weight: 500;
     text-transform: uppercase;
+    mask: url('/src/assets/streak.svg') no-repeat center / contain;
+    -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
   }
 
   /* .payment-button {

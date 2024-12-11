@@ -46,58 +46,49 @@
 <div 
   class="overlay" 
   on:click={handleOverlayClick}
-  on:keydown={(e) => e.key === 'Escape' && dispatch('close')} 
+  on:keydown={(e) => e.key === 'Escape' && dispatch('close')}
   role="button"
   tabindex="0"
 >
   <div class="modal">
     <div class="header">
       <h2>{$_('habits.add')}</h2>
-      <button class="close-btn" on:click={() => dispatch('close')}>✕</button>
     </div>
 
     <div class="content">
-      <div class="form-group">
-        <input 
-          type="text" 
-          bind:value={title} 
-          placeholder={$_('habits.title')}
-        />
-      </div>
+      <input 
+        type="text" 
+        bind:value={title} 
+        placeholder={$_('habits.title')}
+        autofocus
+      />
       
-      <div class="form-group">
-        <div class="type-selector">
-          <span class="label">{$_('habits.one_time')}</span>
-          <label class="switch">
-            <input 
-              type="checkbox" 
-              bind:checked={isOneTime}
-            />
-            <span class="slider"></span>
-          </label>
+      <button class="type-selector" on:click={() => isOneTime = !isOneTime}>
+        <span>{$_('habits.one_time')}</span>
+        <div class="switch">
+          <span class="slider" class:checked={isOneTime}></span>
         </div>
-      </div>
+      </button>
       
       {#if !isOneTime}
-        <div class="form-group">
-          <button 
-            class="daily-habit-btn" 
-            on:click={() => {
-              selectedDays = new Set([0, 1, 2, 3, 4, 5, 6]);
-            }}
-          >
-            {$_('habits.every_day')}
-          </button>
-        </div>
-
-        <div class="form-group">
+        <div class="days-wrapper">
           <div class="days-selector">
-            {#each [0, 1, 2, 3, 4, 5, 6] as day}
+            {#each [0, 1, 2, 3, 4, 5, 6, 'all'] as day, i}
               <button 
-                class:selected={selectedDays.has(day)}
-                on:click={() => toggleDay(day)}
+                class:selected={day === 'all' ? selectedDays.size === 7 : selectedDays.has(day)}
+                on:click={() => {
+                  if (day === 'all') {
+                    if (selectedDays.size === 7) {
+                      selectedDays = new Set();
+                    } else {
+                      selectedDays = new Set([0, 1, 2, 3, 4, 5, 6]);
+                    }
+                  } else {
+                    toggleDay(day);
+                  }
+                }}
               >
-                {$_(`days.${['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][day]}`)}
+                {day === 'all' ? 'All' : $_(`days.${['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][day]}`)}
               </button>
             {/each}
           </div>
@@ -120,10 +111,7 @@
 <style>
   .overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
     display: flex;
@@ -133,70 +121,41 @@
   }
 
   .modal {
-    position: relative;
     width: 100%;
     background: var(--tg-theme-bg-color);
     border-radius: 24px 24px 0 0;
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
-    overflow: hidden;
-    transform: translateY(0);
-    transition: transform 0.3s ease;
   }
 
-  /* iOS-специфичные стили */
   @supports (-webkit-touch-callout: none) {
     .overlay {
-        position: absolute;
-        height: 100vh;
-        min-height: -webkit-fill-available;
+      position: absolute;
+      height: 100vh;
+      min-height: -webkit-fill-available;
     }
 
     .modal:focus-within {
-        transform: translateY(-35vh);
+      transform: translateY(-35vh);
     }
   }
 
   .header {
-    padding: 16px 20px;
+    padding: 16px;
     border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .content {
-    padding: 20px;
-  }
-
-  .footer {
-    padding: 16px 20px;
-    border-top: 1px solid var(--tg-theme-secondary-bg-color);
+    text-align: center;
   }
 
   h2 {
     margin: 0;
     font-size: 20px;
     font-weight: 600;
-    color: var(--tg-theme-text-color);
   }
 
-  .close-btn {
-    background: none;
-    border: none;
-    font-size: 24px;
-    color: var(--tg-theme-text-color);
-    opacity: 0.6;
-    padding: 8px;
-    cursor: pointer;
-  }
-
-  .form-group {
-    margin-bottom: 24px;
-    width: 100%;
-  }
-
-  .form-group:last-child {
-    margin-bottom: 0;
+  .content {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
   }
 
   .type-selector {
@@ -204,31 +163,21 @@
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    padding: 0 4px;
-  }
-
-  .switch {
-    display: flex;
-    align-items: center;
-  }
-
-  .label {
-    font-size: 16px;
+    background: none;
+    border: none;
     color: var(--tg-theme-text-color);
+    padding: 0;
+    font-size: 16px;
   }
 
   .daily-habit-btn {
-    width: 100%;
-    padding: 12px 16px;
     border-radius: 12px;
     border: 2px solid var(--tg-theme-button-color);
     background: transparent;
     color: var(--tg-theme-button-color);
-    font-size: 15px;
     font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
     text-align: left;
+    font-size: 14px;
   }
 
   .daily-habit-btn:active {
@@ -236,62 +185,63 @@
     color: var(--tg-theme-button-text-color);
   }
 
+  .days-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: start;
+  }
+
   .days-selector {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 8px;
+    flex: 1;
+  }
+
+  .all-btn {
+    aspect-ratio: 1;
+    border-radius: 12px;
+    border: 2px solid #00D5A0;
+    background: var(--tg-theme-secondary-bg-color);
+    font-weight: 500;
+    font-size: 14px;
+    padding: 0;
+    width: 48px;
+    height: 48px;
+  }
+
+  .all-btn.selected {
+    border-color: #00D5A0;
+    background: #00D5A0;
+    color: var(--tg-theme-button-text-color);
   }
 
   .days-selector button {
     aspect-ratio: 1;
     border-radius: 12px;
-    border: 2px solid transparent;
+    border: 2px solid #00D5A0;
     background: var(--tg-theme-secondary-bg-color);
-    cursor: pointer;
-    transition: all 0.2s ease;
     font-weight: 500;
     font-size: 14px;
     padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 100%;
+    height: 48px;
   }
 
   .days-selector button.selected {
-    border-color: var(--tg-theme-button-color);
-    background: var(--tg-theme-button-color);
-    color: var(--tg-theme-button-text-color);
-  }
-
-  .save-btn {
-    width: 100%;
-    padding: 14px 16px;
-    border-radius: 12px;
-    border: none;
-    background: var(--tg-theme-button-color);
-    color: var(--tg-theme-button-text-color);
-    font-size: 16px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: opacity 0.2s ease;
-    text-align: left;
-  }
-
-  .save-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+    border-color: #00D5A0;
+    background: #00D5A0;
+    color: white;
   }
 
   input[type="text"] {
-    width: 100%;
-    padding: 12px 16px;
     border: 2px solid var(--tg-theme-secondary-bg-color);
     border-radius: 12px;
-    font-size: 16px;
     background: transparent;
-    color: var(--tg-theme-text-color);
-    transition: all 0.2s ease;
-    box-sizing: border-box;
+    font-size: 16px;
+    padding: 14px 0px;
+    margin: 0;
+    width: 100%;
   }
 
   input[type="text"]:focus {
@@ -299,33 +249,58 @@
     border-color: var(--tg-theme-button-color);
   }
 
+  .switch {
+    display: flex;
+    align-items: center;
+    margin-right: 4px;
+  }
+
   .slider {
     position: relative;
-    width: 44px;
-    height: 24px;
-    background: var(--tg-theme-secondary-bg-color);
-    border-radius: 12px;
-    transition: all 0.2s ease;
+    width: 36px;
+    height: 20px;
+    background: #ccc;
+    border-radius: 10px;
     margin-left: 12px;
   }
 
   .slider:before {
     content: "";
     position: absolute;
-    height: 20px;
-    width: 20px;
+    height: 16px;
+    width: 16px;
     left: 2px;
     bottom: 2px;
     background: white;
     border-radius: 50%;
-    transition: all 0.2s ease;
+    transition: transform 0.2s;
   }
 
-  input:checked + .slider {
-    background: var(--tg-theme-button-color);
+  .slider.checked {
+    background: #00D5A0;
   }
 
-  input:checked + .slider:before {
-    transform: translateX(20px);
+  .slider.checked:before {
+    transform: translateX(16px);
+  }
+
+  .footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--tg-theme-secondary-bg-color);
+  }
+
+  .save-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    background: #00D5A0;
+    color: white;
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  .save-btn:disabled {
+    opacity: 0.6;
   }
 </style>
