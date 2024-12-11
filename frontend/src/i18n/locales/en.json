@@ -1,6 +1,7 @@
 {
   "habits": {
     "title": "Habits title",
+    "want_to_become": "I want to become",
     "add": "Add habit",
     "delete": "Delete",
     "edit": "Edit",

@@ -6,6 +6,7 @@
   let title = '';
   let selectedDays = new Set();
   let isOneTime = false;
+  let wantToBecome = '';
 
   function toggleDay(index: number) {
     if (selectedDays.has(index)) {
@@ -24,12 +25,14 @@
       
       dispatch('save', {
         title,
+        want_to_become: wantToBecome,
         days: [dayIndex],
         is_one_time: true
       });
     } else {
       dispatch('save', {
         title,
+        want_to_become: wantToBecome,
         days: Array.from(selectedDays),
         is_one_time: false
       });
@@ -61,6 +64,12 @@
         bind:value={title} 
         placeholder={$_('habits.title')}
         autofocus
+      />
+      
+      <input 
+        type="text" 
+        bind:value={wantToBecome} 
+        placeholder={$_('habits.want_to_become')}
       />
       
       <button class="type-selector" on:click={() => isOneTime = !isOneTime}>

@@ -13,12 +13,13 @@ type InvoiceResponse struct {
 type Habit struct {
 	ID            string    `bson:"id" json:"id"`
 	Title         string    `bson:"title" json:"title"`
-	Score         int       `bson:"score" json:"score"`
-	Streak        int       `bson:"streak" json:"streak"`
+	WantToBecome  string    `bson:"want_to_become" json:"want_to_become"`
 	Days          []int     `bson:"days" json:"days"`
-	LastClickDate string    `bson:"last_click_date" json:"last_click_date"`
-	CreatedAt     time.Time `bson:"created_at" json:"created_at"`
 	IsOneTime     bool      `bson:"is_one_time" json:"is_one_time"`
+	LastClickDate string    `bson:"last_click_date" json:"last_click_date"`
+	Streak        int       `bson:"streak" json:"streak"`
+	Score         int       `bson:"score" json:"score"`
+	CreatedAt     time.Time `bson:"created_at" json:"created_at"`
 }
 
 type HabitRequest struct {

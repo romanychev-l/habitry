@@ -1,5 +1,6 @@
 <script lang="ts">
     import { _ } from 'svelte-i18n';
+    import { isListView } from '../stores/view';
     
     export let habit: {
         id: string;
@@ -7,6 +8,7 @@
         streak: number;
         score: number;
         last_click_date?: string;
+        want_to_become?: string;
     };
     
     export let telegramId: number;
@@ -142,16 +144,19 @@
       on:pointerdown={handlePointerDown}
       on:pointerup={handlePointerUp}
       on:pointerleave={handlePointerUp}>
-      <h3>{habit.title}</h3>
-      
-      {#if completed}
-        <button 
-          class="undo-button"
-          on:click|stopPropagation={handleUndo}
-        >
-          ↩️
-        </button>
-      {/if}
+      <div class="content">
+        <h3>{habit.title}</h3>
+        
+        {#if !$isListView && habit.want_to_become}
+          <div class="want-to-become">
+            <div class="want-to-become-wrapper">
+              <span class="label">{$_('habits.want_to_become')}</span>
+              <!-- <span class="value">{habit.want_to_become}</span> -->
+            </div>
+          </div>
+          <h3>{habit.want_to_become}</h3>
+        {/if}
+      </div>
     </div>
   </div>
   <div class="streak-counter">
@@ -270,8 +275,8 @@
 
   h3 {
     margin: 0;
-    font-size: 24px;
-    color: #333;
+    font-size: 20px;
+    font-weight: 700;
   }
 
   /* Уменьшаем размер заголовка в режиме списка */
@@ -319,7 +324,7 @@
     flex-direction: column;
   }
 
-  /* Убираем тень для card-shadow в режиме списка */
+  /* Убираем тен для card-shadow в режиме списка */
   :global(.list-view) .card-shadow {
     background: transparent;
     filter: none;
@@ -388,5 +393,53 @@
 
   :global(.list-view) .habit-card.completed h3 {
     color: white;
+  }
+
+  .want-to-become {
+    margin-top: 16px;
+    text-align: center;
+  }
+
+  .want-to-become-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .want-to-become .label {
+    font-size: 12px;
+    opacity: 0.7;
+  }
+
+  .want-to-become .value {
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 20px;
+  }
+
+  .want-to-become-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .want-to-become .label {
+    font-size: 12px;
+    opacity: 0.7;
+  }
+
+  .want-to-become .value {
+    font-size: 20px;
+    font-weight: 500;
   }
 </style>
