@@ -1,20 +1,26 @@
 {
   "habits": {
-    "title": "Habits title",
+    "title": "Habit name",
     "want_to_become": "I want to become",
     "add": "Add habit",
     "delete": "Delete",
     "edit": "Edit",
     "save": "Save",
     "cancel": "Cancel",
-    "compact_view": "Compact View",
-    "one_time": "One-time task",
+    "compact_view": "Compact view",
+    "one_time": "One time task",
     "every_day": "Do every day",
     "errors": {
       "create": "Failed to create habit. Please try again.",
       "update": "Error updating habit",
       "undo": "Error undoing habit",
       "user_create": "Error creating user"
+    },
+    "modals": {
+      "delete_title": "Delete Habit",
+      "delete_message": "Are you sure you want to delete this habit?",
+      "delete_confirm": "Yes, delete",
+      "delete_cancel": "No, keep it"
     }
   },
   "days": {

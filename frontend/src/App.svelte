@@ -2,10 +2,12 @@
   import HabitCard from './components/HabitCard.svelte';
   import NewHabitModal from './components/NewHabitModal.svelte';
   import { user } from './stores/user';
+  import { isListView } from './stores/view';
   import { openTelegramInvoice } from './utils/telegram';
   import { _ } from 'svelte-i18n';
   
-  let isListView = localStorage.getItem('isListView') === 'true';
+  // Инициализируем значение из localStorage
+  $isListView = localStorage.getItem('isListView') === 'true';
   let showModal = false;
   let habits: any[] = [];
   const API_URL = import.meta.env.VITE_API_URL;
@@ -118,7 +120,7 @@
   }
 
   $: {
-    localStorage.setItem('isListView', isListView.toString());
+    localStorage.setItem('isListView', $isListView.toString());
   }
 
   $: {
@@ -146,13 +148,13 @@
     <div class="view-toggle">
       <span class="toggle-label">{$_('habits.compact_view')}</span>
       <label class="switch">
-        <input type="checkbox" bind:checked={isListView}>
+        <input type="checkbox" bind:checked={$isListView}>
         <span class="slider"></span>
       </label>
     </div>
   </header>
 
-  <div class="habit-container" class:list-view={isListView}>
+  <div class="habit-container" class:list-view={$isListView}>
     {#if $user}
       {#each habits as habit}
         <HabitCard {habit} telegramId={$user.id} />
@@ -177,7 +179,7 @@
 
 <style>
   main {
-    padding: 20px;
+    padding: 20px 8px;
     padding-bottom: 80px;
     max-width: 800px;
     margin: 0 auto;
@@ -275,7 +277,8 @@
   }
 
   .habit-container.list-view {
-    gap: 4px;
+    gap: 0;
+    padding: 0;
   }
 
   .habit-container :global(.habit-card) {
@@ -293,7 +296,6 @@
     height: 60px;
     border-radius: 12px;
     margin: 0;
-    padding: 8px 16px;
     box-sizing: border-box;
   }
 

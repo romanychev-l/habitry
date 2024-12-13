@@ -76,7 +76,7 @@
                     navigator.vibrate(200);
                 }
             } catch (error) {
-                // Ошибка уже обработа���� в updateHabitOnServer
+                // Ошибка уже обработа в updateHabitOnServer
             } finally {
                 isPressed = false;
             }
@@ -135,6 +135,34 @@
 
     // Создаем строку градиента
     const gradientStyle = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
+
+    let showActions = false;
+    let showDeleteConfirm = false;
+    
+    async function handleDelete() {
+        try {
+            const response = await fetch(`${API_URL}/habit/delete`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    telegram_id: telegramId,
+                    habit_id: habit.id
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error($_('habits.errors.delete'));
+            }
+            
+            // Перезагружаем страницу после успешного удаления
+            window.location.reload();
+        } catch (error) {
+            console.error('Error:', error);
+            alert($_('habits.errors.delete'));
+        }
+    }
 </script>
   
 <div class="habit-wrapper" style="--habit-gradient: {gradientStyle}">
@@ -148,25 +176,90 @@
       <div class="content">
         <h3>{habit.title}</h3>
         
-        {#if !$isListView}
-          {#if habit.want_to_become}
-            <div class="want-to-become">
-              <span class="label">{$_('habits.want_to_become')}</span>
-              <span class="value">{habit.want_to_become}</span>
-            </div>
-          {/if}
+        {#if !$isListView && habit.want_to_become}
+          <div class="want-to-become">
+            <span class="label">{$_('habits.want_to_become')}</span>
+            <span class="value">{habit.want_to_become}</span>
+          </div>
         {/if}
 
         {#if completed}
           <button class="undo-button" on:click={handleUndo}>↩</button>
         {/if}
       </div>
+
+      <button 
+        class={!$isListView ? 'more-button' : 'more-list-view-button'}
+        on:click={() => showActions = true}
+      >
+        {!$isListView ? '…' : '⋮'}
+      </button>
     </div>
   </div>
   <div class="streak-counter">
     {habit.streak}
   </div>
 </div>
+
+{#if showActions}
+  <div 
+    class="dialog-overlay" 
+    on:click|stopPropagation={() => showActions = false}
+    on:keydown={(e) => e.key === 'Escape' && (showActions = false)}
+    role="button"
+    tabindex="0"
+  >
+    <div class="dialog">
+      <div class="dialog-header">
+        <h2>{habit.title}</h2>
+      </div>
+      <div class="dialog-content">
+        <button 
+          class="dialog-button delete"
+          on:click={() => {
+            showActions = false;
+            showDeleteConfirm = true;
+          }}
+        >
+          {$_('habits.delete')}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+{#if showDeleteConfirm}
+  <div 
+    class="dialog-overlay" 
+    on:click|stopPropagation={() => showDeleteConfirm = false}
+    on:keydown={(e) => e.key === 'Escape' && (showDeleteConfirm = false)}
+    role="button"
+    tabindex="0"
+  >
+    <div class="dialog">
+      <div class="dialog-header">
+        <h2>{$_('habits.modals.delete_title')}</h2>
+      </div>
+      <div class="dialog-content">
+        <p>{$_('habits.modals.delete_message')}</p>
+        <div class="dialog-buttons">
+          <button 
+            class="dialog-button cancel"
+            on:click={() => showDeleteConfirm = false}
+          >
+            {$_('habits.cancel')}
+          </button>
+          <button 
+            class="dialog-button delete"
+            on:click={handleDelete}
+          >
+            {$_('habits.delete')}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
   .habit-wrapper {
@@ -178,13 +271,17 @@
 
   /* Обновляем стили для режима списка */
   :global(.list-view) .habit-wrapper {
-    width: calc(100% - 16px);
+    width: 100%;
     aspect-ratio: unset;
-    min-height: 80px;
+    min-height: 70px;
     height: auto;
-    margin: 4px auto;
+    margin: 8px auto;
+    max-width: 800px;
+    padding: 0 8px;
+    box-sizing: border-box;
   }
 
+  /* Общие стили для card-shadow */
   .card-shadow {
     width: 100%;
     height: 100%;
@@ -194,6 +291,18 @@
   .card-shadow:has(.habit-card.pressed),
   .card-shadow:has(.habit-card.completed) {
     filter: drop-shadow(0 4px 12px rgba(139, 92, 246, 0.3));
+  }
+
+  /* Убираем специальные стили теней для списка */
+  :global(.list-view) .card-shadow {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Убираем дополнительные тени */
+  .habit-card.pressed,
+  .habit-card.completed {
+    background: var(--habit-gradient);
   }
 
   .streak-counter {
@@ -210,21 +319,23 @@
     justify-content: center;
     font-weight: bold;
     font-size: 24px;
-    box-shadow: 0 4px 8px rgba(139, 92, 246, 0.3);
+    box-shadow: none;
     z-index: 1;
     mask: url('/src/assets/streak.svg') no-repeat center / contain;
     -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
   }
 
-  /* Изменяем положение streak в режиме спика */
+  /* Изменяем положение streak в режиме списка */
   :global(.list-view) .streak-counter {
     position: absolute;
-    left: 10px;
+    left: 20px;
     top: 50%;
     transform: translateY(-50%);
     width: 60px;
     height: 60px;
-    z-index: 2; /* Поднимаем streak над карточкой */
+    background: var(--habit-gradient);
+    color: white;
+    z-index: 2;
   }
 
   /* Если привычка выполнена - streak белый */
@@ -237,7 +348,6 @@
     width: 100%;
     height: 100%;
     background: white;
-    border-radius: 100px;
     padding: 32px;
     position: relative;
     transition: background 0.8s ease;
@@ -256,21 +366,21 @@
   /* Обновляем стили карточки для режима списка */
   :global(.list-view) .habit-card {
     border-radius: 16px;
-    padding: 16px 32px 16px 84px;
+    padding: 12px 16px;
     mask: none !important;
     -webkit-mask: none !important;
     width: 100%;
-    min-height: 80px;
+    min-height: 85px;
     height: auto;
     background: white;
     color: #333;
     text-align: left;
+    position: relative;
   }
 
   .habit-card.pressed,
   .habit-card.completed {
     background: var(--habit-gradient);
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
   }
 
   .habit-card.pressed h3,
@@ -285,15 +395,16 @@
     color: #333;
   }
 
-  /* Уменьшаем размер заголовка в режиме списка */
+  /* Уменьшаем разер заголовка в режиме списка */
   :global(.list-view) h3 {
     font-size: 20px;
     white-space: normal;
     overflow: visible;
     text-overflow: unset;
-    margin-right: 40px;
-    margin-left: 60px;
+    margin-right: 50px;
+    margin-left: 65px;
     line-height: 1.2;
+    color: #333;
   }
 
   .undo-button {
@@ -313,8 +424,8 @@
   /* Обновляем стили для кнопки отмены в режиме списка */
   :global(.list-view) .undo-button {
     position: absolute;
-    bottom: 50%;
-    right: 16px;
+    bottom: 47%;
+    right: 30px;
     left: auto;
     transform: translateY(50%);
     font-size: 20px;
@@ -328,7 +439,7 @@
     opacity: 1;
   }
 
-  /* Добавляем контейнер для списка */
+  /* Добавляем контейнер дя списка */
   :global(.list-view) {
     overflow-x: hidden;
     width: 100%;
@@ -339,13 +450,16 @@
 
   /* Убираем тен для card-shadow в режиме списка */
   :global(.list-view) .card-shadow {
-    background: transparent;
-    filter: none;
+    width: 100%;
+    height: 100%;
   }
 
-  /* Убираем тень для completed карточек в режиме сп��ска */
   :global(.list-view) .card-shadow:has(.habit-card.completed) {
-    filter: none;
+    filter: drop-shadow(0 4px 12px rgba(139, 92, 246, 0.3));
+  }
+
+  :global(.list-view) .card-shadow:has(.habit-card.pressed) {
+    filter: drop-shadow(0 4px 12px rgba(139, 92, 246, 0.3));
   }
 
   /* Добавляем стили для completed состояния в режиме списка */
@@ -369,40 +483,16 @@
     color: #333;
   }
 
-  /* Обновляем стил для completed состояния */
+  /* Обновляем стили для completed состояния */
   :global(.list-view) .habit-card.completed {
     background: var(--habit-gradient);
     color: white;
   }
 
-  /* Обновляем streak в обычном состоянии */
-  :global(.list-view) .streak-counter {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 60px;
-    height: 60px;
-    background: var(--habit-gradient);
-    color: white;
-    z-index: 2;
-  }
-
-  /* Обновляем streak для completed с��стояния */
+  /* Обновляем streak для completed состояния */
   :global(.list-view) .habit-wrapper:has(.habit-card.completed) .streak-counter {
     background: white;
     color: #8B5CF6;
-  }
-
-  /* Добавляем отступ для текста, чтобы не пересекался со streak и кнопкой отмены */
-  :global(.list-view) h3 {
-    font-size: 20px;
-    white-space: normal;
-    overflow: visible;
-    text-overflow: unset;
-    margin-right: 40px;
-    margin-left: 60px;
-    line-height: 1.2;
   }
 
   /* Обновляем цвет текста */
@@ -439,12 +529,6 @@
     gap: 16px;
   }
 
-  h3 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 700;
-  }
-
   .want-to-become .label {
     font-size: 12px;
     opacity: 0.7;
@@ -455,17 +539,6 @@
     font-weight: 700;
   }
 
-  /* Обновляем стили для теста в режиме списка */
-  :global(.list-view) h3 {
-    font-size: 20px;
-    white-space: normal;
-    overflow: visible;
-    text-overflow: unset;
-    margin-right: 40px;
-    margin-left: 65px;
-    line-height: 1.2;
-  }
-
   :global(.list-view) .content {
     padding-left: 0;
     width: 100%;
@@ -474,5 +547,156 @@
 
   :global(.list-view) .want-to-become {
     display: none;
+  }
+
+  .more-button {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: none;
+    border: none;
+    font-size: 24px;
+    padding: 8px;
+    cursor: pointer;
+    opacity: 0.8;
+    z-index: 3;
+  }
+
+  .more-list-view-button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    right: 8px;
+    background: none;
+    border: none;
+    color: black;
+    font-size: 24px;
+    padding: 8px;
+    cursor: pointer;
+    z-index: 3;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  :global(.list-view) .habit-card.completed .more-list-view-button {
+    color: white;
+  }
+
+  :global([data-theme="dark"]) .more-list-view-button {
+    color: white;
+  }
+
+  .dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: flex-end;
+    height: 100dvh;
+    z-index: 1000;
+  }
+
+  .dialog {
+    width: 100%;
+    background: #F9F8F3;
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  @supports (-webkit-touch-callout: none) {
+    .dialog-overlay {
+      position: absolute;
+      height: 100vh;
+      min-height: -webkit-fill-available;
+    }
+  }
+
+  .dialog-header {
+    padding: 32px 16px 16px 16px;
+    border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
+    text-align: center;
+  }
+
+  .dialog-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .dialog-content {
+    padding: 24px;
+  }
+
+  .dialog-button {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    font-size: 16px;
+    font-weight: 500;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  .dialog-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  .dialog-button.cancel {
+    background: var(--tg-theme-secondary-bg-color);
+    color: var(--tg-theme-text-color);
+  }
+
+  .dialog-button.delete {
+    background: #ff3b30;
+    color: white;
+  }
+
+  :global([data-theme="dark"]) .dialog {
+    background: var(--tg-theme-bg-color);
+  }
+
+  :global([data-theme="dark"]) .dialog * {
+    color: white !important;
+  }
+
+  :global([data-theme="dark"]) .dialog-button.delete {
+    color: white !important;
+  }
+
+  /* Стиль для кнопки в бычном режиме */
+  .habit-card:not(:global(.list-view) *) .more-button {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: none;
+    border: none;
+    font-size: 30px;
+    padding: 8px;
+    cursor: pointer;
+    opacity: 0.8;
+    z-index: 3;
+  }
+
+  /* Стиль для кнопки в режиме списка */
+  :global(.list-view) .more-list-view-button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    right: 8px;
+    background: none;
+    border: none;
+    color: black;
+    font-size: 24px;
+    padding: 8px;
+    cursor: pointer;
+    z-index: 3;
   }
 </style>

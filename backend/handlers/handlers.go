@@ -383,7 +383,7 @@ func (h *Handler) HandleHabitUpdate(w http.ResponseWriter, r *http.Request) {
 	).Decode(&user)
 
 	if err != nil {
-		http.Error(w, `{"message": "Ошибка при получении обновленной привычки"}`, http.StatusInternalServerError)
+		http.Error(w, `{"message": "Ошибка при получении обновленной ��ривычки"}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -724,5 +724,58 @@ func (h *Handler) HandleUpdateLastVisit(w http.ResponseWriter, r *http.Request) 
 	}
 
 	log.Printf("Update result: %+v", result)
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) HandleHabitDelete(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "DELETE" {
+		http.Error(w, `{"message": "Метод не поддерживается"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	var request struct {
+		TelegramID int64  `json:"telegram_id"`
+		HabitID    string `json:"habit_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, `{"message": "Неверный формат данных"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Удаляем привычку из массива habits
+	update := bson.M{
+		"$pull": bson.M{
+			"habits": bson.M{
+				"id": request.HabitID,
+			},
+		},
+	}
+
+	result, err := h.usersCollection.UpdateOne(
+		context.Background(),
+		bson.M{"telegram_id": request.TelegramID},
+		update,
+	)
+
+	if err != nil {
+		http.Error(w, `{"message": "Ошибка при удалении привычки"}`, http.StatusInternalServerError)
+		return
+	}
+
+	if result.ModifiedCount == 0 {
+		http.Error(w, `{"message": "Привычка не найдена"}`, http.StatusNotFound)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 }

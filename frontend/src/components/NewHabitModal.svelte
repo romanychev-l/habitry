@@ -75,12 +75,12 @@
         class="input-field"
       />
       
-      <button class="type-selector" on:click={() => isOneTime = !isOneTime}>
+      <!-- <button class="type-selector" on:click={() => isOneTime = !isOneTime}>
         <span>{$_('habits.one_time')}</span>
         <div class="switch">
           <span class="slider" class:checked={isOneTime}></span>
         </div>
-      </button>
+      </button> -->
       
       {#if !isOneTime}
         <div class="days-wrapper">
