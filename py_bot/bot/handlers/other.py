@@ -7,6 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram_dialog import DialogManager, StartMode
 from fluentogram import TranslatorRunner
+from zoneinfo import ZoneInfo
 
 from bot.config_data.config import db
 from bot.states.start import StartSG
@@ -46,7 +47,7 @@ async def cmd_stats(msg: Message):
 
         total_users = len(users)
         
-        # Получаем все привычки
+        # Пол��чаем все привычки
         all_habits = []
         for user in users:
             if "habits" in user:
@@ -57,9 +58,21 @@ async def cmd_stats(msg: Message):
         # Считаем выполненные привычки за последние 24 часа
         now = datetime.utcnow()
         yesterday = now - timedelta(days=1)
-        completed_today = sum(1 for habit in all_habits 
-                            if habit.get("last_click_date") and 
-                            datetime.fromisoformat(habit["last_click_date"].replace('Z', '+00:00')) > yesterday)
+        completed_today = 0
+        for user in users:
+            user_timezone = ZoneInfo(user.get('timezone', 'UTC'))
+            user_now = datetime.now(user_timezone)
+            user_start_of_day = user_now.replace(hour=0, minute=0, second=0, microsecond=0)
+            user_end_of_day = user_start_of_day + timedelta(days=1)
+
+            if "habits" in user:
+                completed_today += sum(
+                    1 for habit in user["habits"]
+                    if habit.get("last_click_date") and 
+                    user_start_of_day <= datetime.fromisoformat(
+                        habit["last_click_date"].replace('Z', '+00:00')
+                    ).astimezone(user_timezone) < user_end_of_day
+                )
         
         # Считаем общее количество выполнений
         total_completions = sum(habit.get("score", 0) for habit in all_habits)
@@ -124,7 +137,7 @@ async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery,
     except Exception as e:
         logging.error(f"Error in pre_checkout_query: {e}")
 
-# Обработчик успешного платежа
+# Обработчик успешного пла��ежа
 @other_router.message(F.successful_payment)
 async def successful_payment(message: types.Message, i18n: TranslatorRunner):
     print(message)

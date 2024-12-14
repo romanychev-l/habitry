@@ -209,7 +209,7 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    padding: 8px 0;
+    padding: 8px 16px;
   }
 
   .view-toggle {
@@ -359,5 +359,9 @@
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  :global([data-theme="dark"]) .add-button {
+    color: white;
   }
 </style>
