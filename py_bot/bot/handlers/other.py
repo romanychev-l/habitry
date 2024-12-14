@@ -1,5 +1,5 @@
 import logging
-
+from datetime import datetime, timedelta
 from aiogram import Router, F, types, Bot
 from aiogram.types import Message, ReplyKeyboardRemove, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.filters import Command
@@ -16,6 +16,71 @@ other_router = Router()
 
 class Actions(StatesGroup):
     base_state = State()
+
+
+@other_router.message(Command("stats"))
+async def cmd_stats(msg: Message):
+    if msg.from_user.id != 248603604:  # Ваш ID
+        logging.info(f"Unauthorized stats access attempt from user {msg.from_user.id}")
+        return
+        
+    try:
+        logging.info("Starting stats collection...")
+        
+        # Проверяем подключение к БД
+        try:
+            db['users'].database.client.server_info()
+            logging.info("Successfully connected to MongoDB")
+        except Exception as e:
+            logging.error(f"MongoDB connection error: {e}")
+            await msg.answer("Ошибка подключения к базе данных")
+            return
+
+        # Получаем всех пользователей
+        users = list(db['users'].find({}))
+        logging.info(f"Found {len(users)} users in database")
+        
+        if not users:
+            await msg.answer("В базе данных нет пользователей")
+            return
+
+        total_users = len(users)
+        
+        # Получаем все привычки
+        all_habits = []
+        for user in users:
+            if "habits" in user:
+                all_habits.extend(user["habits"])
+        
+        total_habits = len(all_habits)
+        
+        # Считаем выполненные привычки за последние 24 часа
+        now = datetime.utcnow()
+        yesterday = now - timedelta(days=1)
+        completed_today = sum(1 for habit in all_habits 
+                            if habit.get("last_click_date") and 
+                            datetime.fromisoformat(habit["last_click_date"].replace('Z', '+00:00')) > yesterday)
+        
+        # Считаем общее количество выполнений
+        total_completions = sum(habit.get("score", 0) for habit in all_habits)
+        
+        logging.info(f"Stats collected: users={total_users}, habits={total_habits}, "
+                    f"completed_today={completed_today}, total_completions={total_completions}")
+        
+        # Формируем сообщение со статистикой
+        stats_message = (
+            f"📊 Статистика Habitry:\n\n"
+            f"👥 Всего пользователей: {total_users}\n"
+            f"📝 Всего привычек: {total_habits}\n"
+            f"✅ Выполнено за 24 часа: {completed_today}\n"
+            f"🏆 Общее количество выполнений: {total_completions}\n"
+        )
+        
+        await msg.answer(stats_message)
+        
+    except Exception as e:
+        logging.error(f"Error in stats command: {e}")
+        await msg.answer(f"Ошибка при получении статистики: {str(e)}")
 
 
 @other_router.message(Actions.base_state)
@@ -81,3 +146,5 @@ async def successful_payment(message: types.Message, i18n: TranslatorRunner):
     except Exception as e:
         logging.error(f"Ошибка при обновлении БД: {e}")
         await message.answer(i18n.message.error_payment())
+
+
