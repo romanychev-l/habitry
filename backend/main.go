@@ -9,7 +9,9 @@ import (
 
 	"backend/bot"
 	"backend/db"
-	"backend/handlers"
+	"backend/handlers/habit"
+	"backend/handlers/invoice"
+	"backend/handlers/user"
 
 	"github.com/joho/godotenv"
 	"github.com/rs/cors"
@@ -56,24 +58,28 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	handler := handlers.NewHandler(usersCollection, historyCollection, habitsCollection, b)
+
+	// Инициализация хендлеров
+	userHandler := user.NewHandler(usersCollection, historyCollection, habitsCollection)
+	habitHandler := habit.NewHandler(habitsCollection, historyCollection)
+	invoiceHandler := invoice.NewHandler(b)
 
 	// Настройка CORS
 	corsMiddleware := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
-		AllowedMethods: []string{"GET", "POST", "PUT", "OPTIONS"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"*"},
 	})
 
 	// Роутинг
-	http.HandleFunc("/user", handler.HandleUser)
-	http.HandleFunc("/user/visit", handler.HandleUpdateLastVisit)
-	http.HandleFunc("/habit", handler.HandleHabit)
-	http.HandleFunc("/habit/update", handler.HandleHabitUpdate)
-	http.HandleFunc("/habit/delete", handler.HandleHabitDelete)
-	http.HandleFunc("/create-invoice", handler.HandleCreateInvoice)
-	http.HandleFunc("/habit/undo", handler.HandleHabitUndo)
-	http.HandleFunc("/habit/join", handler.HandleHabitJoin)
+	http.HandleFunc("/user", userHandler.HandleUser)
+	http.HandleFunc("/user/visit", userHandler.HandleUpdateLastVisit)
+	http.HandleFunc("/habit", habitHandler.HandleCreate)
+	http.HandleFunc("/habit/update", habitHandler.HandleUpdate)
+	http.HandleFunc("/habit/delete", habitHandler.HandleDelete)
+	http.HandleFunc("/create-invoice", invoiceHandler.HandleCreateInvoice)
+	http.HandleFunc("/habit/undo", habitHandler.HandleUndo)
+	http.HandleFunc("/habit/join", habitHandler.HandleJoin)
 
 	// Запуск сервера
 	wrappedHandler := corsMiddleware.Handler(http.DefaultServeMux)
