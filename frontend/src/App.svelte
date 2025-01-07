@@ -5,19 +5,53 @@
   import { isListView } from './stores/view';
   import { openTelegramInvoice } from './utils/telegram';
   import { _ } from 'svelte-i18n';
+  import { habits } from './stores/habit';
   
   // Инициализируем значение из localStorage
   $isListView = localStorage.getItem('isListView') === 'true';
   let showModal = false;
-  let habits: any[] = [];
   const API_URL = import.meta.env.VITE_API_URL;
   let isDarkTheme = window.Telegram?.WebApp?.colorScheme === 'dark';
+  let isInitialized = false;
   
+  async function handleSharedHabit() {
+    try {
+      const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+      console.log('Start param:', startParam);
+      
+      if (startParam && startParam.startsWith('habit_') && $user?.id) {
+        const habitId = startParam.replace('habit_', '');
+        console.log('Присоединяемся к привычке:', habitId);
+        
+        const response = await fetch(`${API_URL}/habit/join`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            telegram_id: $user.id,
+            habit_id: habitId
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Ошибка при присоединении к привычке');
+        }
+      }
+    } catch (error) {
+      console.error('Ошибка при обработке shared habit:', error);
+    }
+  }
+
   async function initializeUser() {
+    if (isInitialized) return;
+    
     try {
       console.log('initializeUser', $user);
       const telegramId = $user?.id;
       if (!telegramId) return;
+
+      await handleSharedHabit();
 
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const response = await fetch(`${API_URL}/user?telegram_id=${telegramId}&timezone=${userTimezone}`);
@@ -42,10 +76,11 @@
           throw new Error($_('habits.errors.user_create'));
         }
 
-        habits = [];
+        habits.update(currentHabits => []);
       } else {
         const data = await response.json();
-        habits = data.habits || [];
+        habits.update(currentHabits => data.habits || []);
+        console.log('habits', habits);
         
         const now = new Date();
         const userDate = now.toLocaleString('en-US', { timeZone: userTimezone }).split(',')[0];
@@ -77,8 +112,9 @@
           }
         }
       }
+      isInitialized = true;
     } catch (error) {
-      console.error('Ошибка при инициализации пользователя:', error);
+      console.error('Ошибка при инициаизации пользователя:', error);
     }
   }
 
@@ -91,27 +127,34 @@
       const telegramId = $user?.id;
       if (!telegramId) return;
 
-      const newHabit = {
-        id: Date.now().toString(),
-        score: 0,
-        streak: 0,
-        ...event.detail
+      console.log('Sending habit data:', event.detail);
+      const habitData = {
+        telegram_id: telegramId,
+        habit: {
+          title: event.detail.title,
+          want_to_become: event.detail.want_to_become,
+          days: event.detail.days,
+          is_one_time: event.detail.is_one_time
+        }
       };
+
       const response = await fetch(`${API_URL}/habit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          telegram_id: telegramId,
-          habit: newHabit
-        })
+        body: JSON.stringify(habitData)
       });
+
       if (!response.ok) {
         throw new Error($_('habits.errors.create'));
       }
 
-      habits = [...habits, newHabit];
+      const data = await response.json();
+      console.log('Server response:', data);
+      if (data.habit) {
+        habits.update(currentHabits => [...currentHabits, data.habit]);
+      }
       showModal = false;
     } catch (error) {
       console.error('Ошибка при создании привычки:', error);
@@ -126,6 +169,8 @@
   $: {
     document.documentElement.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
   }
+
+  $: habitsList = $habits;
 </script>
 
 <main>
@@ -156,7 +201,7 @@
 
   <div class="habit-container" class:list-view={$isListView}>
     {#if $user}
-      {#each habits as habit}
+      {#each habitsList as habit}
         <HabitCard {habit} telegramId={$user.id} />
       {/each}
     {/if}

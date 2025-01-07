@@ -1,14 +1,20 @@
 <script lang="ts">
     import { _ } from 'svelte-i18n';
     import { isListView } from '../stores/view';
+    import HabitActionsModal from './HabitActionsModal.svelte';
+    import DeleteConfirmModal from './DeleteConfirmModal.svelte';
     
     export let habit: {
-        id: string;
+        _id: string;
         title: string;
-        streak: number;
-        score: number;
-        last_click_date?: string | null;
         want_to_become?: string;
+        is_shared: boolean;
+        participants: {
+            telegram_id: number;
+            last_click_date: string | null;
+            streak: number;
+            score: number;
+        }[];
     };
     
     export let telegramId: number;
@@ -16,15 +22,16 @@
     let isPressed = false;
     let isPressTimeout: ReturnType<typeof setTimeout>;
     const API_URL = import.meta.env.VITE_API_URL;
-    // Делаем переменную реактивной с помощью $:
-    $: completed = isCompletedToday();
+    
+    $: currentParticipant = habit.participants.find(p => p.telegram_id === telegramId);
+    $: completed = currentParticipant?.last_click_date ? isCompletedToday() : false;
     
     function isCompletedToday(): boolean {
-        if (!habit.last_click_date) return false;
+        if (!currentParticipant?.last_click_date) return false;
         
         const now = new Date();
         const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        const lastClick = habit.last_click_date.split('T')[0];
+        const lastClick = currentParticipant.last_click_date.split('T')[0];
         
         return lastClick === todayStr;
     }
@@ -39,8 +46,7 @@
                 body: JSON.stringify({
                     telegram_id: telegramId,
                     habit: {
-                        id: habit.id,
-                        title: habit.title
+                        _id: habit._id
                     }
                 })
             });
@@ -50,9 +56,18 @@
             }
             
             const data = await response.json();
+            console.log('Update response:', data);
+            
             if (data.habit) {
-                habit = { ...data.habit };
+                habit = data.habit;
+                // Принудительно вызываем пересчет прогресса
+                progress = calculateProgress();
+                
+                if (navigator.vibrate) {
+                    navigator.vibrate(200);
+                }
             }
+            
             return data;
         } catch (error) {
             console.error('Ошибка:', error);
@@ -68,15 +83,18 @@
         isPressed = true;
         isPressTimeout = setTimeout(async () => {
             try {
-                await updateHabitOnServer();
+                const data = await updateHabitOnServer();
                 
-                completed = isCompletedToday();
-                
-                if (navigator.vibrate) {
-                    navigator.vibrate(200);
+                if (data.habit) {
+                    habit = data.habit;
+                    // completed будет обновлен автоматически через реактивное выражение
+                    
+                    if (navigator.vibrate) {
+                        navigator.vibrate(200);
+                    }
                 }
             } catch (error) {
-                // Ошибка уже обработа в updateHabitOnServer
+                // Ошибка уже обработана в updateHabitOnServer
             } finally {
                 isPressed = false;
             }
@@ -98,8 +116,7 @@
                 body: JSON.stringify({
                     telegram_id: telegramId,
                     habit: {
-                        id: habit.id,
-                        title: habit.title
+                        _id: habit._id
                     }
                 })
             });
@@ -110,9 +127,10 @@
             
             const data = await response.json();
             if (data.habit) {
-                habit = { ...data.habit };
-                habit.last_click_date = null;
+                habit = data.habit;
                 completed = false;
+                // Принудительно вызываем пересчет прогресса
+                progress = calculateProgress();
             }
         } catch (error) {
             console.error('Ошибка:', error);
@@ -130,8 +148,8 @@
     }
 
     // Получаем два цвета для градиента
-    const color1 = stringToColor(habit.id);
-    const color2 = stringToColor(habit.id.split('').reverse().join(''));
+    const color1 = stringToColor(habit._id);
+    const color2 = stringToColor(habit._id.split('').reverse().join(''));
 
     // Создаем строку градиента
     const gradientStyle = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
@@ -148,11 +166,15 @@
                 },
                 body: JSON.stringify({
                     telegram_id: telegramId,
-                    habit_id: habit.id
+                    habit_id: habit._id
                 })
             });
             
             if (!response.ok) {
+                if (response.status === 403) {
+                    alert($_('habits.errors.delete_forbidden'));
+                    return;
+                }
                 throw new Error($_('habits.errors.delete'));
             }
             
@@ -163,13 +185,31 @@
             alert($_('habits.errors.delete'));
         }
     }
+
+    // Добавляем функцию подсчета прогресса
+    function calculateProgress(): number {
+        if (!habit.is_shared) {
+            return completed ? 1 : 0;
+        }
+        
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        
+        const completedCount = habit.participants.filter(p => 
+            p.last_click_date && p.last_click_date.split('T')[0] === todayStr
+        ).length;
+        
+        return completedCount / habit.participants.length;
+    }
+    
+    $: progress = calculateProgress();
 </script>
   
-<div class="habit-wrapper" style="--habit-gradient: {gradientStyle}">
+<div class="habit-wrapper" style="--habit-gradient: {gradientStyle}; --progress: {progress}">
   <div class="card-shadow">
     <div class="habit-card"
       class:pressed={isPressed}
-      class:completed={completed}
+      class:completed={!habit.is_shared && completed}
       on:pointerdown={handlePointerDown}
       on:pointerup={handlePointerUp}
       on:pointerleave={handlePointerUp}>
@@ -196,69 +236,27 @@
       </button>
     </div>
   </div>
-  <div class="streak-counter">
-    {habit.streak}
+  <div class="streak-counter" class:completed-streak={habit.is_shared ? progress === 1 : completed}>
+    {currentParticipant?.streak || 0}
   </div>
 </div>
 
 {#if showActions}
-  <div 
-    class="dialog-overlay" 
-    on:click|stopPropagation={() => showActions = false}
-    on:keydown={(e) => e.key === 'Escape' && (showActions = false)}
-    role="button"
-    tabindex="0"
-  >
-    <div class="dialog">
-      <div class="dialog-header">
-        <h2>{habit.title}</h2>
-      </div>
-      <div class="dialog-content">
-        <button 
-          class="dialog-button delete"
-          on:click={() => {
-            showActions = false;
-            showDeleteConfirm = true;
-          }}
-        >
-          {$_('habits.delete')}
-        </button>
-      </div>
-    </div>
-  </div>
+  <HabitActionsModal 
+    {habit}
+    on:close={() => showActions = false}
+    on:showDeleteConfirm={() => {
+      showActions = false;  // Закрываем окно действий
+      showDeleteConfirm = true;  // Показываем окно подтверждения
+    }}
+  />
 {/if}
 
 {#if showDeleteConfirm}
-  <div 
-    class="dialog-overlay" 
-    on:click|stopPropagation={() => showDeleteConfirm = false}
-    on:keydown={(e) => e.key === 'Escape' && (showDeleteConfirm = false)}
-    role="button"
-    tabindex="0"
-  >
-    <div class="dialog">
-      <div class="dialog-header">
-        <h2>{$_('habits.modals.delete_title')}</h2>
-      </div>
-      <div class="dialog-content">
-        <p>{$_('habits.modals.delete_message')}</p>
-        <div class="dialog-buttons">
-          <button 
-            class="dialog-button cancel"
-            on:click={() => showDeleteConfirm = false}
-          >
-            {$_('habits.cancel')}
-          </button>
-          <button 
-            class="dialog-button delete"
-            on:click={handleDelete}
-          >
-            {$_('habits.delete')}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <DeleteConfirmModal 
+    on:close={() => showDeleteConfirm = false}
+    on:delete={handleDelete}
+  />
 {/if}
 
 <style>
@@ -311,7 +309,6 @@
     right: -5px;
     width: 60px;
     height: 60px;
-    /* По умолчанию фиолетовый градиент */
     background: var(--habit-gradient);
     color: white;
     display: flex;
@@ -325,7 +322,11 @@
     -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
   }
 
-  /* Изменяем положение streak в режиме списка */
+  .streak-counter.completed-streak {
+    background: white;
+    color: #8B5CF6;
+  }
+
   :global(.list-view) .streak-counter {
     position: absolute;
     left: 20px;
@@ -333,21 +334,11 @@
     transform: translateY(-50%);
     width: 60px;
     height: 60px;
-    background: var(--habit-gradient);
-    color: white;
-    z-index: 2;
-  }
-
-  /* Если привычка выполнена - streak белый */
-  .habit-wrapper:has(.habit-card.completed) .streak-counter {
-    background: white;
-    color: #8B5CF6;
   }
 
   .habit-card {
     width: 100%;
     height: 100%;
-    background: white;
     padding: 32px;
     position: relative;
     transition: background 0.8s ease;
@@ -361,6 +352,20 @@
     -ms-user-select: none;
     mask: url('/src/assets/squircley.svg') no-repeat center / contain;
     -webkit-mask: url('/src/assets/squircley.svg') no-repeat center / contain;
+    background: white;
+  }
+
+  /* Стили для обычного режима */
+  .habit-card:not(:global(.list-view) .habit-card)::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: calc(var(--progress) * 100%);
+    background: var(--habit-gradient);
+    transition: height 0.8s ease;
+    z-index: -1;
   }
 
   /* Обновляем стили карточки для режима списка */
@@ -376,27 +381,50 @@
     color: #333;
     text-align: left;
     position: relative;
+    overflow: hidden;
   }
 
+  :global(.list-view) .habit-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    width: calc(var(--progress) * 100%);
+    background: var(--habit-gradient);
+    transition: width 0.8s ease;
+    z-index: 0;
+  }
+
+  /* Обновляем стили для completed состояния */
   .habit-card.pressed,
   .habit-card.completed {
     background: var(--habit-gradient);
   }
 
-  .habit-card.pressed h3,
-  .habit-card.completed h3 {
-    color: white;
+  .habit-card.pressed::before,
+  .habit-card.completed::before {
+    display: none;
   }
 
-  h3 {
+  /* Обновляем стили для completed состояния в режиме списка */
+  :global(.list-view) .habit-card.completed {
+    background: var(--habit-gradient);
+  }
+
+  :global(.list-view) .habit-card.completed::before {
+    display: none;
+  }
+
+  /* Обновляем цвет текста */
+  .habit-card h3 {
+    position: relative;
+    z-index: 1;
     margin: 0;
     font-size: 20px;
     font-weight: 700;
     color: #333;
   }
 
-  /* Уменьшаем разер заголовка в режиме списка */
-  :global(.list-view) h3 {
+  :global(.list-view) .habit-card h3 {
     font-size: 20px;
     white-space: normal;
     overflow: visible;
@@ -405,6 +433,16 @@
     margin-left: 65px;
     line-height: 1.2;
     color: #333;
+  }
+
+  /* Обновляем цвет текста для заполненных карточек */
+  .habit-card.completed h3,
+  :global(.list-view) .habit-card.completed h3 {
+    color: white;
+  }
+
+  :global(.list-view) .habit-card:not(.completed)[style*="--progress: 1"] h3 {
+    color: white;
   }
 
   .undo-button {
@@ -439,7 +477,7 @@
     opacity: 1;
   }
 
-  /* Добавляем контейнер дя списка */
+  /* Добавляем контейнер для списка */
   :global(.list-view) {
     overflow-x: hidden;
     width: 100%;
@@ -448,7 +486,7 @@
     flex-direction: column;
   }
 
-  /* Убираем тен для card-shadow в режиме списка */
+  /* Убираем тень для card-shadow в режиме списка */
   :global(.list-view) .card-shadow {
     width: 100%;
     height: 100%;
@@ -462,42 +500,10 @@
     filter: drop-shadow(0 4px 12px rgba(139, 92, 246, 0.3));
   }
 
-  /* Добавляем стили для completed состояния в режиме списка */
+  /* Обновляем стили для completed состояния в режиме списка */
   :global(.list-view) .habit-card.completed {
     background: var(--habit-gradient);
     color: white;
-  }
-
-  :global(.list-view) .habit-card.completed .undo-button {
-    color: white;
-  }
-
-  /* Убираем белый фон streak для completed состояния в режиме списка */
-  :global(.list-view) .habit-wrapper:has(.habit-card.completed) .streak-counter {
-    background: white;
-    color: var(--habit-gradient);
-  }
-
-  /* Обновляем цвет текста для режима списка */
-  :global(.list-view) .habit-card h3 {
-    color: #333;
-  }
-
-  /* Обновляем стили для completed состояния */
-  :global(.list-view) .habit-card.completed {
-    background: var(--habit-gradient);
-    color: white;
-  }
-
-  /* Обновляем streak для completed состояния */
-  :global(.list-view) .habit-wrapper:has(.habit-card.completed) .streak-counter {
-    background: white;
-    color: #8B5CF6;
-  }
-
-  /* Обновляем цвет текста */
-  :global(.list-view) .habit-card h3 {
-    color: #333;
   }
 
   :global(.list-view) .habit-card.completed h3 {
@@ -570,11 +576,12 @@
     right: 8px;
     background: none;
     border: none;
-    color: black;
+    color: #333;
     font-size: 24px;
     padding: 8px;
     cursor: pointer;
-    z-index: 3;
+    z-index: 1;
+    mix-blend-mode: difference;
   }
 
   .hidden {
@@ -693,10 +700,38 @@
     right: 8px;
     background: none;
     border: none;
-    color: black;
+    color: #333;
     font-size: 24px;
     padding: 8px;
     cursor: pointer;
-    z-index: 3;
+    z-index: 1;
+  }
+
+  /* Обновляем стили для текста в режиме списка */
+  :global(.list-view) .habit-card h3 {
+    font-size: 20px;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    margin-right: 50px;
+    margin-left: 65px;
+    line-height: 1.2;
+    color: #333;
+  }
+
+  :global(.list-view) .habit-card.completed h3,
+  :global(.list-view) .habit-card[style*="--progress: 1"] h3 {
+    color: white;
+  }
+
+  /* Обновляем цвет кнопки для заполненных карточек */
+  :global(.list-view) .habit-card.completed .more-list-view-button,
+  :global(.list-view) .habit-card:not(.completed)[style*="--progress: 1"] .more-list-view-button {
+    color: white;
+  }
+
+  :global(.list-view) .habit-card.completed .more-list-view-button,
+  :global(.list-view) .habit-card:not(.completed)::before[style*="width: 100%"] ~ .more-list-view-button {
+    color: white;
   }
 </style>

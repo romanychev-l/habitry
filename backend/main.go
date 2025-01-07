@@ -47,13 +47,16 @@ func main() {
 	defer client.Disconnect(context.Background())
 
 	// Инициализация обработчиков
-	usersCollection := client.Database(dbName).Collection("users")
-	historyCollection := client.Database(dbName).Collection("history")
+	database := client.Database(dbName)
+	usersCollection := database.Collection("users")
+	historyCollection := database.Collection("history")
+	habitsCollection := database.Collection("habits")
+
 	b, err := bot.New(botToken)
 	if err != nil {
 		log.Fatal(err)
 	}
-	handler := handlers.NewHandler(usersCollection, historyCollection, b)
+	handler := handlers.NewHandler(usersCollection, historyCollection, habitsCollection, b)
 
 	// Настройка CORS
 	corsMiddleware := cors.New(cors.Options{
@@ -70,6 +73,7 @@ func main() {
 	http.HandleFunc("/habit/delete", handler.HandleHabitDelete)
 	http.HandleFunc("/create-invoice", handler.HandleCreateInvoice)
 	http.HandleFunc("/habit/undo", handler.HandleHabitUndo)
+	http.HandleFunc("/habit/join", handler.HandleHabitJoin)
 
 	// Запуск сервера
 	wrappedHandler := corsMiddleware.Handler(http.DefaultServeMux)

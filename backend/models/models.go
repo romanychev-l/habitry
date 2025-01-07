@@ -10,16 +10,24 @@ type InvoiceResponse struct {
 	URL string `json:"url"`
 }
 
+type HabitParticipant struct {
+	TelegramID    int64  `bson:"telegram_id" json:"telegram_id"`
+	LastClickDate string `bson:"last_click_date" json:"last_click_date"`
+	Streak        int    `bson:"streak" json:"streak"`
+	Score         int    `bson:"score" json:"score"`
+}
+
 type Habit struct {
-	ID            string    `bson:"id" json:"id"`
-	Title         string    `bson:"title" json:"title"`
-	WantToBecome  string    `bson:"want_to_become" json:"want_to_become"`
-	Days          []int     `bson:"days" json:"days"`
-	IsOneTime     bool      `bson:"is_one_time" json:"is_one_time"`
-	LastClickDate string    `bson:"last_click_date" json:"last_click_date"`
-	Streak        int       `bson:"streak" json:"streak"`
-	Score         int       `bson:"score" json:"score"`
-	CreatedAt     time.Time `bson:"created_at" json:"created_at"`
+	ID           primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
+	Title        string             `bson:"title" json:"title"`
+	WantToBecome string             `bson:"want_to_become" json:"want_to_become"`
+	Days         []int              `bson:"days" json:"days"`
+	IsOneTime    bool               `bson:"is_one_time" json:"is_one_time"`
+	CreatedAt    time.Time          `bson:"created_at" json:"created_at"`
+	CreatorID    int64              `bson:"creator_id" json:"creator_id"`
+	IsShared     bool               `bson:"is_shared" json:"is_shared"`
+	IsArchived   bool               `bson:"is_archived" json:"is_archived"`
+	Participants []HabitParticipant `bson:"participants" json:"participants"`
 }
 
 type HabitRequest struct {

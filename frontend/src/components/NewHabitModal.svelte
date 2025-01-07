@@ -291,13 +291,13 @@
     transition: transform 0.2s;
   }
 
-  .slider.checked {
+  /* .slider.checked {
     background: #00D5A0;
   }
 
   .slider.checked:before {
     transform: translateX(16px);
-  }
+  } */
 
   .footer {
     padding: 16px 20px;
