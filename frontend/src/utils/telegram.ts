@@ -47,7 +47,7 @@ export async function openTelegramInvoice(amount: number) {
     }
 
     try {
-        const API_URL = import.meta.env.API_URL;
+        const API_URL = import.meta.env.VITE_API_URL;
         const response = await fetch(`${API_URL}/create-invoice?amount=${amount}`);
         console.log(response);
         const data = await response.json();

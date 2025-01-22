@@ -10,7 +10,7 @@
     
     let isPressed = false;
     let isPressTimeout: ReturnType<typeof setTimeout>;
-    const API_URL = import.meta.env.API_URL;
+    const API_URL = import.meta.env.VITE_API_URL;
     
     function handlePointerDown() {
         if (navigator.vibrate) {

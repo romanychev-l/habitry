@@ -15,7 +15,7 @@
   let showHabitLinkModal = false;
   let sharedHabitId = '';
   let sharedByTelegramId = '';
-  const API_URL = import.meta.env.API_URL;
+  const API_URL = import.meta.env.VITE_API_URL;
   let isDarkTheme = window.Telegram?.WebApp?.colorScheme === 'dark';
   let isInitialized = false;
   
