@@ -11,6 +11,11 @@
     "compact_view": "Compact view",
     "one_time": "One time task",
     "every_day": "Do every day",
+    "create_new": "Create new",
+    "link": {
+      "title": "Select a habit",
+      "description": "Select one of your habits to link it to the habit you were shared with"
+    },
     "errors": {
       "create": "Failed to create habit. Please try again.",
       "update": "Error updating habit",

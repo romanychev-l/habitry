@@ -1,12 +1,16 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import { createEventDispatcher } from 'svelte';
+  import type { Habit } from '../types';
 
   const dispatch = createEventDispatcher();
-  export let habit: { _id: string; title: string };
+  const BOT_USERNAME = import.meta.env.VITE_BOT_USERNAME;
+  export let habit: Habit;
 
   function handleShare() {
-    const url = `https://t.me/share/url?url=https://t.me/habitry_bot/app?startapp=habit_${habit._id}&text=${encodeURIComponent(`Привычка: ${habit.title}`)}`;
+    const telegram = window.Telegram?.WebApp;
+    const userId = telegram?.initDataUnsafe?.user?.id || '';
+    const url = `https://t.me/share/url?url=https://t.me/${BOT_USERNAME}/app?startapp=habit_${habit._id}_${userId}&text=${encodeURIComponent(`Привычка: ${habit.title}`)}`;
     window.open(url, '_blank');
     dispatch('close');
   }

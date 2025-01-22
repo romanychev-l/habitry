@@ -14,17 +14,31 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type Handler struct {
-	usersCollection   *mongo.Collection
-	historyCollection *mongo.Collection
-	habitsCollection  *mongo.Collection
+const ObjectIDHexRegex = "^[0-9a-fA-F]{24}$"
+
+// Вспомогательная функция для проверки наличия элемента в массиве
+func contains(arr []int, val int) bool {
+	for _, a := range arr {
+		if a == val {
+			return true
+		}
+	}
+	return false
 }
 
-func NewHandler(usersCollection, historyCollection, habitsCollection *mongo.Collection) *Handler {
+type Handler struct {
+	usersCollection     *mongo.Collection
+	historyCollection   *mongo.Collection
+	habitsCollection    *mongo.Collection
+	followersCollection *mongo.Collection
+}
+
+func NewHandler(usersCollection, historyCollection, habitsCollection, followersCollection *mongo.Collection) *Handler {
 	return &Handler{
-		usersCollection:   usersCollection,
-		historyCollection: historyCollection,
-		habitsCollection:  habitsCollection,
+		usersCollection:     usersCollection,
+		historyCollection:   historyCollection,
+		habitsCollection:    habitsCollection,
+		followersCollection: followersCollection,
 	}
 }
 
@@ -51,7 +65,6 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 		user.CreatedAt = time.Now()
 		user.Credit = 0
 		user.LastVisit = time.Now().Format("2006-01-02")
-		user.Habits = []models.Habit{}
 
 		result, err := h.usersCollection.InsertOne(context.Background(), user)
 		if err != nil {
@@ -81,20 +94,48 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 		pipeline := []bson.M{
 			{
 				"$match": bson.M{
-					"participants.telegram_id": user.TelegramID,
-					"$or": []bson.M{
-						{"is_archived": false},
-						{"$and": []bson.M{
-							{"is_archived": true},
-							{"creator_id": bson.M{"$ne": user.TelegramID}},
-						}},
+					"telegram_id": user.TelegramID,
+					"habit_id": bson.M{
+						"$regex": ObjectIDHexRegex,
 					},
+				},
+			},
+			{
+				"$addFields": bson.M{
+					"objectId": bson.M{"$toObjectId": "$habit_id"},
+				},
+			},
+			{
+				"$lookup": bson.M{
+					"from":         "habits",
+					"localField":   "objectId",
+					"foreignField": "_id",
+					"as":           "habit",
+				},
+			},
+			{
+				"$unwind": "$habit",
+			},
+			{
+				"$project": bson.M{
+					"habit": bson.M{
+						"_id":            "$habit._id",
+						"title":          "$habit.title",
+						"want_to_become": "$habit.want_to_become",
+						"days":           "$habit.days",
+						"is_one_time":    "$habit.is_one_time",
+						"created_at":     "$habit.created_at",
+						"creator_id":     "$habit.creator_id",
+					},
+					"last_click_date": 1,
+					"streak":          1,
+					"score":           1,
 				},
 			},
 		}
 
 		log.Printf("Ищем привычки для пользователя %d", user.TelegramID)
-		cursor, err := h.habitsCollection.Aggregate(context.Background(), pipeline)
+		cursor, err := h.followersCollection.Aggregate(context.Background(), pipeline)
 		if err != nil {
 			log.Printf("Ошибка при получении привычек: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -102,13 +143,14 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 		}
 		defer cursor.Close(context.Background())
 
-		var habits []models.Habit
+		var habits []models.HabitWithStats
 		if err = cursor.All(context.Background(), &habits); err != nil {
 			log.Printf("Ошибка при декодировании привычек: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		log.Printf("Найдено %d привычек", len(habits))
+		log.Printf("Привычки: %+v", habits)
 
 		// Проверяем кредит только если последний визит был не сегодня
 		userTimezone := user.Timezone
@@ -192,12 +234,14 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Фильтруем привычки для текущего дня
-		todayHabits := []models.Habit{}
+		todayHabits := []models.HabitWithStats{}
 		today = time.Now().In(loc).Format("2006-01-02")
 
 		for _, habit := range habits {
+			log.Printf("Проверяем привычку: %+v", habit)
 			if habit.IsOneTime {
 				habitDate := habit.CreatedAt.Format("2006-01-02")
+				log.Printf("Одноразовая привычка: %s vs %s", habitDate, today)
 				if habitDate == today {
 					todayHabits = append(todayHabits, habit)
 				}
@@ -208,12 +252,10 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 				} else {
 					weekday--
 				}
-
-				for _, day := range habit.Days {
-					if day == weekday {
-						todayHabits = append(todayHabits, habit)
-						break
-					}
+				log.Printf("Регулярная привычка, текущий день: %d, дни привычки: %v", weekday, habit.Days)
+				// Если массив дней пустой или содержит текущий день
+				if len(habit.Days) == 0 || contains(habit.Days, weekday) {
+					todayHabits = append(todayHabits, habit)
 				}
 			}
 		}
@@ -221,17 +263,17 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 
 		// Создаем структуру ответа
 		type UserResponse struct {
-			ID         primitive.ObjectID `json:"_id"`
-			TelegramID int64              `json:"telegram_id"`
-			Username   string             `json:"username"`
-			FirstName  string             `json:"first_name"`
-			Language   string             `json:"language_code"`
-			PhotoURL   string             `json:"photo_url"`
-			CreatedAt  time.Time          `json:"created_at"`
-			Credit     int                `json:"credit"`
-			LastVisit  string             `json:"last_visit"`
-			Timezone   string             `json:"timezone"`
-			Habits     []models.Habit     `json:"habits"`
+			ID         primitive.ObjectID      `json:"_id"`
+			TelegramID int64                   `json:"telegram_id"`
+			Username   string                  `json:"username"`
+			FirstName  string                  `json:"first_name"`
+			Language   string                  `json:"language_code"`
+			PhotoURL   string                  `json:"photo_url"`
+			CreatedAt  time.Time               `json:"created_at"`
+			Credit     int                     `json:"credit"`
+			LastVisit  string                  `json:"last_visit"`
+			Timezone   string                  `json:"timezone"`
+			Habits     []models.HabitWithStats `json:"habits"`
 		}
 
 		response := UserResponse{

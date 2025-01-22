@@ -9,6 +9,7 @@ import (
 
 	"backend/bot"
 	"backend/db"
+	"backend/handlers/follower"
 	"backend/handlers/habit"
 	"backend/handlers/invoice"
 	"backend/handlers/user"
@@ -53,6 +54,7 @@ func main() {
 	usersCollection := database.Collection("users")
 	historyCollection := database.Collection("history")
 	habitsCollection := database.Collection("habits")
+	followersCollection := database.Collection("followers")
 
 	b, err := bot.New(botToken)
 	if err != nil {
@@ -60,9 +62,10 @@ func main() {
 	}
 
 	// Инициализация хендлеров
-	userHandler := user.NewHandler(usersCollection, historyCollection, habitsCollection)
-	habitHandler := habit.NewHandler(habitsCollection, historyCollection)
+	userHandler := user.NewHandler(usersCollection, historyCollection, habitsCollection, followersCollection)
+	habitHandler := habit.NewHandler(habitsCollection, historyCollection, followersCollection)
 	invoiceHandler := invoice.NewHandler(b)
+	followerHandler := follower.NewHandler(followersCollection)
 
 	// Настройка CORS
 	corsMiddleware := cors.New(cors.Options{
@@ -80,6 +83,8 @@ func main() {
 	http.HandleFunc("/create-invoice", invoiceHandler.HandleCreateInvoice)
 	http.HandleFunc("/habit/undo", habitHandler.HandleUndo)
 	http.HandleFunc("/habit/join", habitHandler.HandleJoin)
+	http.HandleFunc("/followers", followerHandler.HandleFollowers)
+	http.HandleFunc("/habit/progress", followerHandler.HandleHabitProgress)
 
 	// Запуск сервера
 	wrappedHandler := corsMiddleware.Handler(http.DefaultServeMux)

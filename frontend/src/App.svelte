@@ -1,15 +1,20 @@
 <script lang="ts">
   import HabitCard from './components/HabitCard.svelte';
   import NewHabitModal from './components/NewHabitModal.svelte';
+  import HabitLinkModal from './components/HabitLinkModal.svelte';
   import { user } from './stores/user';
   import { isListView } from './stores/view';
   import { openTelegramInvoice } from './utils/telegram';
   import { _ } from 'svelte-i18n';
   import { habits } from './stores/habit';
+  import type { HabitWithStats } from './types';
   
   // Инициализируем значение из localStorage
   $isListView = localStorage.getItem('isListView') === 'true';
   let showModal = false;
+  let showHabitLinkModal = false;
+  let sharedHabitId = '';
+  let sharedByTelegramId = '';
   const API_URL = import.meta.env.VITE_API_URL;
   let isDarkTheme = window.Telegram?.WebApp?.colorScheme === 'dark';
   let isInitialized = false;
@@ -20,26 +25,44 @@
       console.log('Start param:', startParam);
       
       if (startParam && startParam.startsWith('habit_') && $user?.id) {
-        const habitId = startParam.replace('habit_', '');
-        console.log('Присоединяемся к привычке:', habitId);
+        const [_, habitId, sharedByUserId] = startParam.split('_');
+        console.log('Показываем окно выбора привычки:', { habitId, sharedByUserId });
         
-        const response = await fetch(`${API_URL}/habit/join`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            telegram_id: $user.id,
-            habit_id: habitId
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error('Ошибка при присоединении к привычке');
-        }
+        sharedHabitId = habitId;
+        sharedByTelegramId = sharedByUserId;
+        showHabitLinkModal = true;
       }
     } catch (error) {
       console.error('Ошибка при обработке shared habit:', error);
+    }
+  }
+
+  async function handleHabitLink(event: CustomEvent) {
+    try {
+      if (!$user?.id) return;
+      
+      const response = await fetch(`${API_URL}/habit/join`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          telegram_id: $user.id,
+          habit_id: event.detail.habitId,
+          shared_by_telegram_id: sharedByTelegramId,
+          shared_by_habit_id: sharedHabitId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Ошибка при присоединении к привычке');
+      }
+      
+      const data = await response.json();
+      habits.update(currentHabits => data.habits || []);
+      showHabitLinkModal = false;
+    } catch (error) {
+      console.error('Ошибка при присоединении к привычке:', error);
     }
   }
 
@@ -50,7 +73,7 @@
       console.log('initializeUser', $user);
       const telegramId = $user?.id;
       if (!telegramId) return;
-
+      
       await handleSharedHabit();
 
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -80,7 +103,6 @@
       } else {
         const data = await response.json();
         habits.update(currentHabits => data.habits || []);
-        console.log('habits', habits);
         
         const now = new Date();
         const userDate = now.toLocaleString('en-US', { timeZone: userTimezone }).split(',')[0];
@@ -170,7 +192,7 @@
     document.documentElement.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
   }
 
-  $: habitsList = $habits;
+  $: habitsList = $habits as HabitWithStats[];
 </script>
 
 <main>
@@ -201,8 +223,11 @@
 
   <div class="habit-container" class:list-view={$isListView}>
     {#if $user}
-      {#each habitsList as habit}
-        <HabitCard {habit} telegramId={$user.id} />
+      {#each habitsList as habitWithStats}
+        <HabitCard 
+          {habitWithStats}
+          telegramId={$user.id} 
+        />
       {/each}
     {/if}
   </div>
@@ -218,6 +243,16 @@
     <NewHabitModal 
       on:save={handleNewHabit}
       on:close={() => showModal = false}
+    />
+  {/if}
+
+  {#if showHabitLinkModal}
+    <HabitLinkModal
+      habits={habitsList}
+      {sharedHabitId}
+      {sharedByTelegramId}
+      on:select={handleHabitLink}
+      on:close={() => showHabitLinkModal = false}
     />
   {/if}
 </main>

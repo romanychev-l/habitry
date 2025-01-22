@@ -18,120 +18,127 @@
     selectedDays = selectedDays;
   }
 
-  function handleSubmit() {
-    if (isOneTime) {
-      const today = new Date();
-      let dayIndex = today.getDay() - 1;
-      if (dayIndex === -1) dayIndex = 6;
-      
-      dispatch('save', {
-        title,
-        want_to_become: wantToBecome,
-        days: [dayIndex],
-        is_one_time: true
-      });
-    } else {
-      dispatch('save', {
+  function handleSave() {
+    if (!title.trim()) {
+        alert($_('habits.errors.title_required'));
+        return;
+    }
+
+    dispatch('save', {
         title,
         want_to_become: wantToBecome,
         days: Array.from(selectedDays),
-        is_one_time: false
-      });
-    }
+        is_one_time: isOneTime
+    });
   }
 
   function handleOverlayClick(event: MouseEvent) {
+    // Закрываем только если клик был именно по оверлею
     if (event.target === event.currentTarget) {
       dispatch('close');
     }
   }
 </script>
 
-<div 
-  class="overlay" 
-  on:click={handleOverlayClick}
-  on:keydown={(e) => e.key === 'Escape' && dispatch('close')}
-  role="button"
-  tabindex="0"
->
-  <div class="modal">
-    <div class="header">
-      <h2>{$_('habits.add')}</h2>
-    </div>
+<div class="wrapper">
+  <div 
+    class="overlay" 
+    role="button"
+    tabindex="0"
+    on:click={() => dispatch('close')}
+    on:keydown={e => e.key === 'Enter' && dispatch('close')}
+  ></div>
+  <div class="modal-container">
+    <div class="modal">
+      <div class="header">
+        <h2>{$_('habits.add')}</h2>
+      </div>
 
-    <div class="content">
-      <input 
-        type="text" 
-        bind:value={title} 
-        placeholder={$_('habits.title')}
-        autofocus
-        class="input-field"
-      />
-      
-      <input 
-        type="text" 
-        bind:value={wantToBecome} 
-        placeholder={$_('habits.want_to_become')}
-        class="input-field"
-      />
-      
-      <!-- <button class="type-selector" on:click={() => isOneTime = !isOneTime}>
-        <span>{$_('habits.one_time')}</span>
-        <div class="switch">
-          <span class="slider" class:checked={isOneTime}></span>
-        </div>
-      </button> -->
-      
-      {#if !isOneTime}
-        <div class="days-wrapper">
-          <div class="days-selector">
-            {#each [0, 1, 2, 3, 4, 5, 6] as day}
-              <button 
-                class:selected={selectedDays.has(day)}
-                on:click={() => toggleDay(day)}
-              >
-                {$_(`days.${['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][day]}`)}
-              </button>
-            {/each}
-            <button 
-              class:selected={selectedDays.size === 7}
-              on:click={() => {
-                if (selectedDays.size === 7) {
-                  selectedDays = new Set();
-                } else {
-                  selectedDays = new Set([0, 1, 2, 3, 4, 5, 6]);
-                }
-              }}
-            >
-              All
-            </button>
+      <div class="content">
+        <input 
+          type="text" 
+          bind:value={title} 
+          placeholder={$_('habits.title')}
+          autofocus
+          class="input-field"
+        />
+        
+        <input 
+          type="text" 
+          bind:value={wantToBecome} 
+          placeholder={$_('habits.want_to_become')}
+          class="input-field"
+        />
+        
+        <!-- <button class="type-selector" on:click={() => isOneTime = !isOneTime}>
+          <span>{$_('habits.one_time')}</span>
+          <div class="switch">
+            <span class="slider" class:checked={isOneTime}></span>
           </div>
-        </div>
-      {/if}
-    </div>
+        </button> -->
+        
+        {#if !isOneTime}
+          <div class="days-wrapper">
+            <div class="days-selector">
+              {#each [0, 1, 2, 3, 4, 5, 6] as day}
+                <button 
+                  class:selected={selectedDays.has(day)}
+                  on:click={() => toggleDay(day)}
+                >
+                  {$_(`days.${['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][day]}`)}
+                </button>
+              {/each}
+              <button 
+                class:selected={selectedDays.size === 7}
+                on:click={() => {
+                  if (selectedDays.size === 7) {
+                    selectedDays = new Set();
+                  } else {
+                    selectedDays = new Set([0, 1, 2, 3, 4, 5, 6]);
+                  }
+                }}
+              >
+                All
+              </button>
+            </div>
+          </div>
+        {/if}
+      </div>
 
-    <div class="footer">
-      <button 
-        class="save-btn" 
-        on:click={handleSubmit}
-        disabled={!title || (!isOneTime && selectedDays.size === 0)}
-      >
-        {$_('habits.save')}
-      </button>
+      <div class="footer">
+        <button 
+          class="save-btn" 
+          on:click={handleSave}
+          disabled={!title || (!isOneTime && selectedDays.size === 0)}
+        >
+          {$_('habits.save')}
+        </button>
+      </div>
     </div>
   </div>
 </div>
 
 <style>
-  .overlay {
+  .wrapper {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
     display: flex;
     align-items: flex-end;
     height: 100dvh;
     z-index: 1000;
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-container {
+    position: relative;
+    width: 100%;
+    z-index: 1;
   }
 
   .modal {
@@ -142,14 +149,15 @@
   }
 
   @supports (-webkit-touch-callout: none) {
-    .overlay {
+    .wrapper {
       position: absolute;
       height: 100vh;
       min-height: -webkit-fill-available;
     }
 
-    .modal:focus-within {
+    .modal-container:focus-within {
       transform: translateY(-35vh);
+      transition: transform 0.3s ease-out;
     }
   }
 
