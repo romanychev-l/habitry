@@ -19,6 +19,7 @@ interface TelegramWebApp {
         photo_url?: string;
       };
     };
+    openInvoice: (url: string, callback: (status: string) => void) => void;
   }
   
   interface Window {

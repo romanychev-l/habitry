@@ -38,44 +38,26 @@ async def cmd_stats(msg: Message):
             return
 
         # Получаем всех пользователей
-        users = list(db['users'].find({}))
-        logging.info(f"Found {len(users)} users in database")
-        
-        if not users:
-            await msg.answer("В базе данных нет пользователей")
-            return
+        total_users = db['users'].count_documents({})
+        logging.info(f"Found {total_users} users in database")
 
-        total_users = len(users)
-        
-        # Пол��чаем все привычки
-        all_habits = []
-        for user in users:
-            if "habits" in user:
-                all_habits.extend(user["habits"])
-        
-        total_habits = len(all_habits)
+        # Получаем все записи из коллекции followers
+        followers = list(db['followers'].find({}))
+        total_habits = len(followers)
         
         # Считаем выполненные привычки за последние 24 часа
         now = datetime.utcnow()
         yesterday = now - timedelta(days=1)
-        completed_today = 0
-        for user in users:
-            user_timezone = ZoneInfo(user.get('timezone', 'UTC'))
-            user_now = datetime.now(user_timezone)
-            user_start_of_day = user_now.replace(hour=0, minute=0, second=0, microsecond=0)
-            user_end_of_day = user_start_of_day + timedelta(days=1)
-
-            if "habits" in user:
-                completed_today += sum(
-                    1 for habit in user["habits"]
-                    if habit.get("last_click_date") and 
-                    user_start_of_day <= datetime.fromisoformat(
-                        habit["last_click_date"].replace('Z', '+00:00')
-                    ).astimezone(user_timezone) < user_end_of_day
-                )
+        
+        completed_today = db['followers'].count_documents({
+            "last_click_date": {
+                "$gte": yesterday.isoformat(),
+                "$lt": now.isoformat()
+            }
+        })
         
         # Считаем общее количество выполнений
-        total_completions = sum(habit.get("score", 0) for habit in all_habits)
+        total_completions = sum(follower.get("score", 0) for follower in followers)
         
         logging.info(f"Stats collected: users={total_users}, habits={total_habits}, "
                     f"completed_today={completed_today}, total_completions={total_completions}")
@@ -84,7 +66,7 @@ async def cmd_stats(msg: Message):
         stats_message = (
             f"📊 Статистика Habitry:\n\n"
             f"👥 Всего пользователей: {total_users}\n"
-            f"📝 Всего привычек: {total_habits}\n"
+            f"📝 Всего отслеживаемых привычек: {total_habits}\n"
             f"✅ Выполнено за 24 часа: {completed_today}\n"
             f"🏆 Общее количество выполнений: {total_completions}\n"
         )
@@ -137,7 +119,7 @@ async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery,
     except Exception as e:
         logging.error(f"Error in pre_checkout_query: {e}")
 
-# Обработчик успешного пла��ежа
+# Обработчик успешного платежа
 @other_router.message(F.successful_payment)
 async def successful_payment(message: types.Message, i18n: TranslatorRunner):
     print(message)
