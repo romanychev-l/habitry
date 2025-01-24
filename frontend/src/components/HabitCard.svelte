@@ -1,6 +1,7 @@
 <script lang="ts">
     import { _ } from 'svelte-i18n';
     import { isListView } from '../stores/view';
+    import { habits } from '../stores/habit';
     import HabitActionsModal from './HabitActionsModal.svelte';
     import DeleteConfirmModal from './DeleteConfirmModal.svelte';
     import type { HabitWithStats } from '../types';
@@ -21,11 +22,8 @@
         isPressTimeout = setTimeout(async () => {
             try {
                 const data = await updateHabitOnServer();
-                if (data.habit) {
-                    habitWithStats = data.habit;
-                    if (navigator.vibrate) {
-                        navigator.vibrate(200);
-                    }
+                if (data.habit && navigator.vibrate) {
+                    navigator.vibrate(200);
                 }
             } catch (error) {
                 // Ошибка уже обработана в updateHabitOnServer
@@ -46,23 +44,14 @@
     async function updateProgress() {
         progress = await calculateProgress();
     }
-
-    // Обновляем completed и прогресс при изменении habitWithStats
+    
+    // Обновляем состояние при изменении habitWithStats
     $: {
         if (habitWithStats) {
-            completed = isCompletedToday();
-            console.log('completed', completed);
+            const today = new Date().toISOString().split('T')[0];
+            completed = habitWithStats.last_click_date === today;
             updateProgress();
         }
-    }
-    
-    function isCompletedToday(): boolean {
-        if (!habitWithStats.last_click_date) return false;
-        
-        const today = new Date().toISOString().split('T')[0];
-        const lastClick = habitWithStats.last_click_date.split('T')[0];
-        
-        return lastClick === today;
     }
     
     async function updateHabitOnServer() {
@@ -88,11 +77,16 @@
             console.log('Update response:', data);
             
             if (data.habit) {
-                habitWithStats = data.habit;
-                console.log('HabitWithStats:', habitWithStats);
-                // Обновляем прогресс после обновления привычки
-                progress = await calculateProgress();
-                console.log('progress', progress);
+                // Обновляем store habits для пересортировки
+                habits.update(currentHabits => {
+                    const updatedHabits = currentHabits.map(h => 
+                        h.habit._id === data.habit.habit._id ? data.habit : h
+                    );
+                    return updatedHabits;
+                });
+                
+                // После обновления store пересчитываем прогресс
+                await updateProgress();
                 
                 if (navigator.vibrate) {
                     navigator.vibrate(200);
@@ -127,8 +121,16 @@
             
             const data = await response.json();
             if (data.habit) {
-                habitWithStats = { ...data.habit }; // Создаем новый объект для гарантированного обновления
-                progress = 0; // Сразу сбрасываем прогресс
+                // Обновляем store habits для пересортировки
+                habits.update(currentHabits => {
+                    const updatedHabits = currentHabits.map(h => 
+                        h.habit._id === data.habit.habit._id ? data.habit : h
+                    );
+                    return updatedHabits;
+                });
+                
+                // После обновления store пересчитываем прогресс
+                await updateProgress();
             }
         } catch (error) {
             console.error('Ошибка:', error);
@@ -174,12 +176,10 @@
         return `hsl(${h}, 70%, 60%)`; // Используем HSL для сохранения яркости
     }
 
-    // Получаем два цвета для градиента
-    const color1 = stringToColor(habitWithStats.habit._id);
-    const color2 = stringToColor(habitWithStats.habit._id.split('').reverse().join(''));
-
-    // Создаем строку градиента
-    const gradientStyle = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
+    // Получаем два цвета для градиента и мемоизируем их
+    $: color1 = stringToColor(habitWithStats.habit._id);
+    $: color2 = stringToColor(habitWithStats.habit._id.split('').reverse().join(''));
+    $: gradientStyle = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
 
     let showActions = false;
     let showDeleteConfirm = false;
@@ -210,7 +210,8 @@
       class:pressed={isPressed}
       on:pointerdown={handlePointerDown}
       on:pointerup={handlePointerUp}
-      on:pointerleave={handlePointerUp}>
+      on:pointerleave={handlePointerUp}
+      style="--habit-gradient: {gradientStyle}">
       <div class="content">
         <h3>{habitWithStats.habit.title}</h3>
         
@@ -234,7 +235,7 @@
       </button>
     </div>
   </div>
-  <div class="streak-counter" style="--progress: {progress}">
+  <div class="streak-counter" style="--habit-gradient: {gradientStyle}">
     {habitWithStats.streak || 0}
   </div>
 </div>

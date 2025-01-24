@@ -192,7 +192,19 @@
     document.documentElement.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
   }
 
-  $: habitsList = $habits as HabitWithStats[];
+  $: habitsList = ($habits as HabitWithStats[]).sort((a, b) => {
+    // Сначала проверяем выполненность за сегодня
+    const today = new Date().toISOString().split('T')[0];
+    const aCompletedToday = a.last_click_date == today;
+    const bCompletedToday = b.last_click_date == today;
+    
+    if (aCompletedToday === bCompletedToday) {
+      // Если статус выполнения одинаковый, сохраняем исходный порядок
+      return 0;
+    }
+    // Невыполненные привычки идут вверх (false перед true)
+    return aCompletedToday ? 1 : -1;
+  });
 </script>
 
 <main>
