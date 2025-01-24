@@ -221,18 +221,39 @@ func (h *Handler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		} else {
-			// Если запись существует, обновляем её
+			// Если запись существует, проверяем есть ли привычка в массиве
+			habitExists := false
+			for _, h := range existingHistory.Habits {
+				if h.HabitID == habit.ID.Hex() {
+					habitExists = true
+					break
+				}
+			}
+
 			update := bson.M{
 				"$set": bson.M{
 					"habits.$[habit].done": true,
 				},
 			}
-			arrayFilters := options.ArrayFilters{
+			opts := options.Update().SetArrayFilters(options.ArrayFilters{
 				Filters: []interface{}{
 					bson.M{"habit.habit_id": habit.ID.Hex()},
 				},
+			})
+
+			if !habitExists {
+				// Если привычки нет в массиве, добавляем её
+				update = bson.M{
+					"$push": bson.M{
+						"habits": models.HabitHistory{
+							HabitID: habit.ID.Hex(),
+							Title:   habit.Title,
+							Done:    true,
+						},
+					},
+				}
+				opts = options.Update()
 			}
-			opts := options.Update().SetArrayFilters(arrayFilters)
 
 			_, err = h.historyCollection.UpdateOne(
 				context.Background(),
