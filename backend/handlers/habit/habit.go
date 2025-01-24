@@ -159,9 +159,11 @@ func (h *Handler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("follower: %+v", follower)
 	// Обновляем статистику участника
 	today := time.Now().Format("2006-01-02")
 	if follower.LastClickDate != today {
+		log.Printf("follower.LastClickDate != today")
 		// Если это первое выполнение или новый день
 		follower.LastClickDate = today
 		follower.Streak++
@@ -187,48 +189,62 @@ func (h *Handler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Обновляем историю
-		update := bson.M{
-			"$set": bson.M{
-				"habits.$[habit].done": true,
-			},
-		}
-		arrayFilters := options.ArrayFilters{
-			Filters: []interface{}{
-				bson.M{"habit.habit_id": habit.ID.Hex()},
-			},
-		}
-		opts := options.Update().SetArrayFilters(arrayFilters)
-
-		_, err = h.historyCollection.UpdateOne(
+		// Сначала проверяем существование записи
+		var existingHistory models.History
+		err = h.historyCollection.FindOne(
 			context.Background(),
 			bson.M{
 				"telegram_id": habitRequest.TelegramID,
 				"date":        today,
 			},
-			update,
-			opts,
-		)
+		).Decode(&existingHistory)
 
-		if err != nil {
-			// Если записи в истории нет, создаем новую
-			if err == mongo.ErrNoDocuments {
-				history := models.History{
-					TelegramID: habitRequest.TelegramID,
-					Date:       today,
-					Habits: []models.HabitHistory{
-						{
-							HabitID: habit.ID.Hex(),
-							Title:   habit.Title,
-							Done:    true,
-						},
+		if err == mongo.ErrNoDocuments {
+			// Если записи нет, создаем новую
+			history := models.History{
+				TelegramID: habitRequest.TelegramID,
+				Date:       today,
+				Habits: []models.HabitHistory{
+					{
+						HabitID: habit.ID.Hex(),
+						Title:   habit.Title,
+						Done:    true,
 					},
-				}
-				_, err = h.historyCollection.InsertOne(context.Background(), history)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-			} else {
+				},
+			}
+			_, err = h.historyCollection.InsertOne(context.Background(), history)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else {
+			// Если запись существует, обновляем её
+			update := bson.M{
+				"$set": bson.M{
+					"habits.$[habit].done": true,
+				},
+			}
+			arrayFilters := options.ArrayFilters{
+				Filters: []interface{}{
+					bson.M{"habit.habit_id": habit.ID.Hex()},
+				},
+			}
+			opts := options.Update().SetArrayFilters(arrayFilters)
+
+			_, err = h.historyCollection.UpdateOne(
+				context.Background(),
+				bson.M{
+					"telegram_id": habitRequest.TelegramID,
+					"date":        today,
+				},
+				update,
+				opts,
+			)
+
+			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
