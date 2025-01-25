@@ -358,7 +358,8 @@
     transform: translateY(-50%);
   }
 
-  .streak-counter[style*="--progress: 1"]{
+  /* Изменяем цвет счетчика стрика при полном выполнении */
+  .habit-wrapper[style*="--progress: 1"] .streak-counter {
     background: white;
     color: black;
   }

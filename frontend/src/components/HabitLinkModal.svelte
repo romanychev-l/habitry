@@ -81,6 +81,9 @@
     background: var(--tg-theme-bg-color, #F9F8F3);
     border-radius: 24px 24px 0 0;
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
   }
 
   @supports (-webkit-touch-callout: none) {
@@ -99,6 +102,7 @@
     padding: 32px 16px 16px 16px;
     border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
     text-align: center;
+    flex-shrink: 0;
   }
 
   h2 {
@@ -110,6 +114,8 @@
 
   .content {
     padding: 24px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .description {
