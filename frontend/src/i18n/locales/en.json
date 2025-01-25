@@ -12,6 +12,7 @@
     "one_time": "One time task",
     "every_day": "Do every day",
     "create_new": "Create new",
+    "join_habit": "🤝 Join habit: ",
     "link": {
       "title": "Select a habit",
       "description": "Select one of your habits to link it to the habit you were shared with"

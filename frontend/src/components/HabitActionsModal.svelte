@@ -10,7 +10,12 @@
   function handleShare() {
     const telegram = window.Telegram?.WebApp;
     const userId = telegram?.initDataUnsafe?.user?.id || '';
-    const url = `https://t.me/share/url?url=https://t.me/${BOT_USERNAME}/app?startapp=habit_${habit._id}_${userId}&text=${encodeURIComponent(`Привычка: ${habit.title}`)}`;
+    const baseUrl = `https://t.me/${BOT_USERNAME}/app`;
+    const startAppParam = `startapp=habit_${habit._id}_${userId}`;
+    const appUrl = `${baseUrl}?${startAppParam}`;
+    const shareText = `${$_('habits.join_habit')} ${habit.title}`;
+    
+    const url = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(shareText)}`;
     window.open(url, '_blank');
     dispatch('close');
   }
