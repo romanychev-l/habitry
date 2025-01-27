@@ -505,6 +505,8 @@
     flex-direction: column;
     gap: 8px;
     color: #333;
+    position: relative;
+    z-index: 1;
   }
 
   .want-to-become .label {
