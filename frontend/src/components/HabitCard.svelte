@@ -54,6 +54,8 @@
         }
     }
     
+    let isAnimating = false;
+    
     async function updateHabitOnServer() {
         try {
             const response = await fetch(`${API_URL}/habit/update`, {
@@ -77,6 +79,12 @@
             console.log('Update response:', data);
             
             if (data.habit) {
+                isAnimating = true;
+                // Сбрасываем флаг анимации после её завершения
+                setTimeout(() => {
+                    isAnimating = false;
+                }, 800);
+
                 // Обновляем store habits для пересортировки
                 habits.update(currentHabits => {
                     const updatedHabits = currentHabits.map(h => 
@@ -121,6 +129,12 @@
             
             const data = await response.json();
             if (data.habit) {
+                isAnimating = true;
+                // Сбрасываем флаг анимации после её завершения
+                setTimeout(() => {
+                    isAnimating = false;
+                }, 800);
+
                 // Обновляем store habits для пересортировки
                 habits.update(currentHabits => {
                     const updatedHabits = currentHabits.map(h => 
@@ -208,6 +222,7 @@
   <div class="card-shadow">
     <div class="habit-card"
       class:pressed={isPressed}
+      class:animating={isAnimating}
       on:pointerdown={handlePointerDown}
       on:pointerup={handlePointerUp}
       on:pointerleave={handlePointerUp}
@@ -312,8 +327,12 @@
     width: 100%;
     height: calc(var(--progress) * 100%);
     background: var(--habit-gradient);
+    transition: none;
+    z-index: 0;
+  }
+
+  .habit-card.animating::before {
     transition: height 0.8s ease;
-    z-index: -1;
   }
 
   :global(.list-view) .habit-card {
@@ -329,8 +348,12 @@
   :global(.list-view) .habit-card::before {
     width: calc(var(--progress) * 100%);
     height: 100%;
-    transition: width 0.8s ease;
+    transition: none;
     z-index: 0;
+  }
+
+  :global(.list-view) .habit-card.animating::before {
+    transition: width 0.8s ease;
   }
 
   .streak-counter {
