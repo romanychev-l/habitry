@@ -242,7 +242,7 @@
 
 {#if showActions}
   <HabitActionsModal 
-    habit={habitWithStats.habit}
+    habitWithStats={habitWithStats}
     on:close={() => showActions = false}
     on:showDeleteConfirm={() => {
       showActions = false;  // Закрываем окно действий
