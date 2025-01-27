@@ -281,7 +281,7 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 			TelegramID: user.TelegramID,
 			Username:   user.Username,
 			FirstName:  user.FirstName,
-			Language:   user.Language,
+			Language:   user.LanguageCode,
 			PhotoURL:   user.PhotoURL,
 			CreatedAt:  user.CreatedAt,
 			Credit:     user.Credit,
@@ -354,4 +354,94 @@ func (h *Handler) HandleUpdateLastVisit(w http.ResponseWriter, r *http.Request) 
 
 	log.Printf("Update result: %+v", result)
 	w.WriteHeader(http.StatusOK)
+}
+
+type UserSettingsRequest struct {
+	TelegramID           int64  `json:"telegram_id"`
+	NotificationsEnabled bool   `json:"notifications_enabled"`
+	NotificationTime     string `json:"notification_time"`
+}
+
+// HandleSettings обрабатывает запросы для получения и обновления настроек пользователя
+func (h *Handler) HandleSettings(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	switch r.Method {
+	case "GET":
+		telegramID := r.URL.Query().Get("telegram_id")
+		if telegramID == "" {
+			http.Error(w, "telegram_id is required", http.StatusBadRequest)
+			return
+		}
+
+		id, err := strconv.ParseInt(telegramID, 10, 64)
+		if err != nil {
+			http.Error(w, "invalid telegram_id", http.StatusBadRequest)
+			return
+		}
+
+		var user models.User
+		err = h.usersCollection.FindOne(context.Background(), bson.M{"telegram_id": id}).Decode(&user)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				http.Error(w, "user not found", http.StatusNotFound)
+				return
+			}
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"notifications_enabled": user.NotificationsEnabled,
+			"notification_time":     user.NotificationTime,
+		})
+
+	case "PUT":
+		var req UserSettingsRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		if req.TelegramID == 0 {
+			http.Error(w, "telegram_id is required", http.StatusBadRequest)
+			return
+		}
+
+		// Проверяем формат времени, если оно указано
+		if req.NotificationTime != "" {
+			_, err := time.Parse("15:04", req.NotificationTime)
+			if err != nil {
+				http.Error(w, "invalid time format", http.StatusBadRequest)
+				return
+			}
+		}
+
+		// Обновляем настройки в базе данных
+		filter := bson.M{"telegram_id": req.TelegramID}
+		update := bson.M{
+			"$set": bson.M{
+				"notifications_enabled": req.NotificationsEnabled,
+				"notification_time":     req.NotificationTime,
+			},
+		}
+
+		_, err := h.usersCollection.UpdateOne(context.Background(), filter, update)
+		if err != nil {
+			http.Error(w, "failed to update settings", http.StatusInternalServerError)
+			return
+		}
+
+		json.NewEncoder(w).Encode(map[string]bool{"success": true})
+
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
 }

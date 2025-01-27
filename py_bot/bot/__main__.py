@@ -13,6 +13,7 @@ from bot.handlers.commands import commands_router
 from bot.handlers.other import other_router
 from bot.middlewares.i18n import TranslatorRunnerMiddleware
 from bot.utils.i18n import create_translator_hub
+from bot.services.notification_manager import NotificationManager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,15 +25,19 @@ logger = logging.getLogger(__name__)
 
 
 async def main() -> None:
-
     bot = Bot(
         token=config_settings.BOT_TOKEN.get_secret_value(),
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
     # await bot.delete_webhook(drop_pending_updates=True)
     dp = Dispatcher()
-
     translator_hub: TranslatorHub = create_translator_hub()
+
+    # Инициализируем и запускаем менеджер уведомлений
+    notification_manager = NotificationManager(bot)
+    notification_manager.start()
+    # Загружаем существующие уведомления
+    await notification_manager.load_existing_notifications()
 
     dp.include_router(commands_router)
     dp.include_router(other_router)

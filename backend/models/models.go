@@ -54,16 +54,18 @@ type History struct {
 }
 
 type User struct {
-	ID         primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
-	TelegramID int64              `bson:"telegram_id" json:"telegram_id"`
-	Username   string             `bson:"username" json:"username"`
-	FirstName  string             `bson:"first_name" json:"first_name"`
-	Language   string             `bson:"language_code" json:"language_code"`
-	PhotoURL   string             `bson:"photo_url" json:"photo_url"`
-	CreatedAt  time.Time          `bson:"created_at" json:"created_at"`
-	Credit     int                `bson:"credit" json:"credit"`
-	LastVisit  string             `bson:"last_visit" json:"last_visit"`
-	Timezone   string             `bson:"timezone" json:"timezone"`
+	ID                   primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
+	TelegramID           int64              `bson:"telegram_id" json:"telegram_id"`
+	FirstName            string             `bson:"first_name" json:"first_name"`
+	Username             string             `bson:"username" json:"username"`
+	LanguageCode         string             `bson:"language_code" json:"language_code"`
+	PhotoURL             string             `bson:"photo_url" json:"photo_url"`
+	CreatedAt            time.Time          `bson:"created_at" json:"created_at"`
+	Credit               int                `bson:"credit" json:"credit"`
+	LastVisit            string             `bson:"last_visit" json:"last_visit"`
+	Timezone             string             `bson:"timezone" json:"timezone"`
+	NotificationsEnabled bool               `bson:"notifications_enabled" json:"notifications_enabled"`
+	NotificationTime     string             `bson:"notification_time" json:"notification_time"`
 }
 
 type HabitWithStats struct {

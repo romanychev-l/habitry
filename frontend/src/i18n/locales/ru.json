@@ -41,5 +41,15 @@
     "saturday": "Сб",
     "sunday": "Вс"
   },
-  "premium": "Премиум"
+  "premium": "Премиум",
+  "settings": {
+    "title": "Настройки",
+    "notifications": "Уведомления",
+    "notification_time": "Время уведомлений",
+    "notifications_enabled": "Включить уведомления",
+    "notification_time_placeholder": "Выберите время",
+    "save": "Сохранить",
+    "saved": "Сохранено",
+    "error": "Ошибка при сохранении настроек"
+  }
 } 

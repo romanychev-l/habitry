@@ -39,5 +39,15 @@
     "saturday": "Sat",
     "sunday": "Sun"
   },
-  "premium": "Premium"
+  "premium": "Premium",
+  "settings": {
+    "title": "Settings",
+    "notifications": "Notifications",
+    "notification_time": "Notification time",
+    "notifications_enabled": "Enable notifications",
+    "notification_time_placeholder": "Select time",
+    "save": "Save",
+    "saved": "Saved",
+    "error": "Error saving settings"
+  }
 } 

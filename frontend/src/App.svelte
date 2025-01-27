@@ -2,6 +2,7 @@
   import HabitCard from './components/HabitCard.svelte';
   import NewHabitModal from './components/NewHabitModal.svelte';
   import HabitLinkModal from './components/HabitLinkModal.svelte';
+  import SettingsPage from './components/SettingsPage.svelte';
   import { user } from './stores/user';
   import { isListView } from './stores/view';
   import { openTelegramInvoice } from './utils/telegram';
@@ -13,6 +14,7 @@
   $isListView = localStorage.getItem('isListView') === 'true';
   let showModal = false;
   let showHabitLinkModal = false;
+  let showSettings = false;
   let sharedHabitId = '';
   let sharedByTelegramId = '';
   const API_URL = import.meta.env.VITE_API_URL;
@@ -212,17 +214,22 @@
   <header>
     {#if $user}
       <div class="user-info">
-        {#if $user.photoUrl}
-          <img 
-            src={$user.photoUrl} 
-            alt="Profile" 
-            class="profile-photo"
-          />
-        {:else}
-          <div class="profile-placeholder">
-            {$user.firstName?.[0] || $user.username?.[0] || '?'}
-          </div>
-        {/if}
+        <button 
+          class="profile-button"
+          on:click={() => showSettings = true}
+        >
+          {#if $user.photoUrl}
+            <img 
+              src={$user.photoUrl} 
+              alt="Profile" 
+              class="profile-photo"
+            />
+          {:else}
+            <div class="profile-placeholder">
+              {$user.firstName?.[0] || $user.username?.[0] || '?'}
+            </div>
+          {/if}
+        </button>
       </div>
     {/if}
     <div class="view-toggle">
@@ -267,6 +274,10 @@
       on:select={handleHabitLink}
       on:close={() => showHabitLinkModal = false}
     />
+  {/if}
+
+  {#if showSettings}
+    <SettingsPage on:back={() => showSettings = false} />
   {/if}
 </main>
 
@@ -408,6 +419,16 @@
   .user-info {
     display: flex;
     align-items: center;
+  }
+
+  .profile-button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .profile-photo {
