@@ -213,6 +213,44 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 
 			missedHabits := len(scheduledHabits) - len(completedHabits)
 
+			// Обнуляем streak для пропущенных привычек
+			for habitID := range scheduledHabits {
+				if !completedHabits[habitID] {
+					_, err = h.followersCollection.UpdateOne(
+						context.Background(),
+						bson.M{
+							"telegram_id": id,
+							"habit_id":    habitID,
+						},
+						bson.M{
+							"$set": bson.M{
+								"streak": 0,
+							},
+						},
+					)
+					if err != nil {
+						log.Printf("Ошибка при обнулении streak для привычки %s: %v", habitID, err)
+					}
+				}
+			}
+
+			// Получаем обновленные данные привычек
+			cursor, err = h.followersCollection.Aggregate(context.Background(), pipeline)
+			if err != nil {
+				log.Printf("Ошибка при получении обновленных привычек: %v", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			defer cursor.Close(context.Background())
+
+			habits = nil // Очищаем старые данные
+			if err = cursor.All(context.Background(), &habits); err != nil {
+				log.Printf("Ошибка при декодировании обновленных привычек: %v", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			log.Printf("Получены обновленные привычки: %+v", habits)
+
 			update := bson.M{
 				"$set": bson.M{
 					"credit":     missedHabits,
