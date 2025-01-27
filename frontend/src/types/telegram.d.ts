@@ -1,6 +1,7 @@
 interface TelegramWebApp {
     ready: () => void;
     expand: () => void;
+    disableVerticalSwipes: () => void;
     close: () => void;
     backgroundColor: string;
     textColor: string;

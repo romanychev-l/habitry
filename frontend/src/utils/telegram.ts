@@ -27,6 +27,7 @@ export const initTelegram = () => {
   
     // Расширяем на весь экран
     webapp.expand();
+    webapp.disableVerticalSwipes();
   
     // Устанавливаем тему
     document.documentElement.classList.add(webapp.colorScheme);
