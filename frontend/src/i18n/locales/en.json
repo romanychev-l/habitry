@@ -19,7 +19,7 @@
     },
     "link": {
       "title": "Select a habit",
-      "description": "Select one of your habits to link it to the habit you were shared with"
+      "description": "Select one of your habits to link it to the habit you were shared with. Or create a new habit"
     },
     "errors": {
       "create": "Failed to create habit. Please try again.",
@@ -57,5 +57,22 @@
     "save": "Save",
     "saved": "Saved",
     "error": "Error saving settings"
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Welcome to Habitry!",
+      "description": "We'll help you create and maintain good habits together with friends"
+    },
+    "social": {
+      "title": "Share Habits",
+      "description": "Track each other's progress and motivate to achieve goals"
+    },
+    "start": {
+      "title": "Let's Start!",
+      "description": "Create your first habit and invite friends to join you",
+      "action": "Create Habit"
+    },
+    "skip": "Skip",
+    "next": "Next"
   }
 } 

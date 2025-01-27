@@ -3,6 +3,7 @@
   import NewHabitModal from './components/NewHabitModal.svelte';
   import HabitLinkModal from './components/HabitLinkModal.svelte';
   import SettingsPage from './components/SettingsPage.svelte';
+  import OnboardingModal from './components/OnboardingModal.svelte';
   import { user } from './stores/user';
   import { isListView } from './stores/view';
   import { openTelegramInvoice } from './utils/telegram';
@@ -15,6 +16,7 @@
   let showModal = false;
   let showHabitLinkModal = false;
   let showSettings = false;
+  let showOnboarding = false;
   let sharedHabitId = '';
   let sharedByTelegramId = '';
   const API_URL = import.meta.env.VITE_API_URL;
@@ -83,6 +85,7 @@
       
       if (response.status === 404) {
         console.log('create user');
+        showOnboarding = true;
         const createResponse = await fetch(`${API_URL}/user`, {
           method: 'POST',
           headers: {
@@ -208,6 +211,17 @@
   //   // Невыполненные привычки идут вверх (false перед true)
   //   return aCompletedToday ? 1 : -1;
   // });
+
+  function handleOnboardingFinish() {
+    showOnboarding = false;
+    if (!showHabitLinkModal) {
+      showModal = true;
+    }
+  }
+
+  function handleOnboardingSkip() {
+    showOnboarding = false;
+  }
 </script>
 
 <main>
@@ -278,6 +292,14 @@
 
   {#if showSettings}
     <SettingsPage on:back={() => showSettings = false} />
+  {/if}
+
+  {#if showOnboarding}
+    <OnboardingModal 
+      on:finish={handleOnboardingFinish}
+      on:skip={handleOnboardingSkip}
+      isSharedHabit={showHabitLinkModal}
+    />
   {/if}
 </main>
 
