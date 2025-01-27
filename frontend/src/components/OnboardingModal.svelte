@@ -7,7 +7,7 @@
   export let isSharedHabit = false;
   
   let currentStep = 0;
-  $: totalSteps = isSharedHabit ? 2 : 3;
+  $: totalSteps = isSharedHabit ? 3 : 4;
 
   function nextStep() {
     if (currentStep < totalSteps - 1) {
@@ -39,7 +39,13 @@
             <h2>{$_('onboarding.social.title')}</h2>
             <p>{$_('onboarding.social.description')}</p>
           </div>
-        {:else if currentStep === 2 && !isSharedHabit}
+        {:else if currentStep === 2}
+          <div class="step">
+            <div class="illustration">✨</div>
+            <h2>{$_('onboarding.interaction.title')}</h2>
+            <p>{$_('onboarding.interaction.description')}</p>
+          </div>
+        {:else if currentStep === 3 && !isSharedHabit}
           <div class="step">
             <div class="illustration">🎯</div>
             <h2>{$_('onboarding.start.title')}</h2>

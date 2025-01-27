@@ -64,8 +64,12 @@
       "description": "We'll help you create and maintain good habits together with friends"
     },
     "social": {
-      "title": "Share Habits",
-      "description": "Track each other's progress and motivate to achieve goals"
+      "title": "Mutual Support",
+      "description": "Share your habit with friends via link. When a friend links your habit to theirs, they'll see your progress. To see their progress, you'll need to link their habit to yours too"
+    },
+    "interaction": {
+      "title": "How to Mark Habits",
+      "description": "To mark a habit as done, press and hold its card"
     },
     "start": {
       "title": "Let's Start!",
