@@ -84,6 +84,7 @@
       <h2>{$_('settings.notifications')}</h2>
       
       <div class="setting-item">
+        <span class="setting-label">{$_('settings.notifications_enabled')}</span>
         <label class="switch">
           <input 
             type="checkbox" 
@@ -92,11 +93,11 @@
           >
           <span class="slider"></span>
         </label>
-        <span class="setting-label">{$_('settings.notifications_enabled')}</span>
       </div>
 
       {#if notificationsEnabled}
         <div class="setting-item">
+          <span class="setting-label">{$_('settings.notification_time')}</span>
           <input 
             type="time" 
             class="time-input"
@@ -104,7 +105,6 @@
             on:change={saveSettings}
             placeholder={$_('settings.notification_time_placeholder')}
           >
-          <span class="setting-label">{$_('settings.notification_time')}</span>
         </div>
       {/if}
 
@@ -154,7 +154,7 @@
   header {
     display: flex;
     align-items: center;
-    padding: 16px;
+    padding: 12px;
     border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
   }
 
@@ -195,15 +195,16 @@
   .setting-item {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     margin-bottom: 16px;
-    padding: 12px;
+    /* padding: 12px; */
     background: var(--tg-theme-secondary-bg-color, rgba(0, 0, 0, 0.05));
     border-radius: 12px;
   }
 
   .setting-label {
-    margin-left: 12px;
     color: var(--tg-theme-text-color);
+    font-size: 14px;
   }
 
   .switch {
@@ -244,7 +245,7 @@
   }
 
   input:checked + .slider {
-    background-color: var(--tg-theme-button-color, #00D5A0);
+    background-color: #00D5A0;
   }
 
   input:checked + .slider:before {
@@ -258,6 +259,7 @@
     border-radius: 8px;
     color: var(--tg-theme-text-color);
     font-size: 16px;
+    width: 70px;
   }
 
   :global([data-theme="dark"]) .time-input {
