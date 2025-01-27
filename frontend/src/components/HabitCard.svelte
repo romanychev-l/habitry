@@ -4,7 +4,9 @@
     import { habits } from '../stores/habit';
     import HabitActionsModal from './HabitActionsModal.svelte';
     import DeleteConfirmModal from './DeleteConfirmModal.svelte';
+    import NewHabitModal from './NewHabitModal.svelte';
     import type { HabitWithStats } from '../types';
+    import type { Habit } from '../types';
     
     export let habitWithStats: HabitWithStats;
     export let telegramId: number;
@@ -197,6 +199,7 @@
 
     let showActions = false;
     let showDeleteConfirm = false;
+    let showEditModal = false;
 
     // Добавляем функцию подсчета прогресса
     async function calculateProgress(): Promise<number> {
@@ -214,6 +217,47 @@
         } catch (error) {
             console.error('Error fetching progress:', error);
             return 0;
+        }
+    }
+
+    async function handleEdit(event: { detail: Partial<Habit> }) {
+        try {
+            const response = await fetch(`${API_URL}/habit/edit`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    telegram_id: telegramId,
+                    habit: {
+                        _id: habitWithStats.habit._id,
+                        ...event.detail
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                if (response.status === 403) {
+                    alert($_('habits.errors.edit_forbidden'));
+                    return;
+                }
+                throw new Error($_('habits.errors.update'));
+            }
+
+            const data = await response.json();
+            if (data.habit) {
+                habits.update(currentHabits => {
+                    const updatedHabits = currentHabits.map(h => 
+                        h.habit._id === data.habit.habit._id ? data.habit : h
+                    );
+                    return updatedHabits;
+                });
+            }
+
+            showEditModal = false;
+        } catch (error) {
+            console.error('Error:', error);
+            alert($_('habits.errors.update'));
         }
     }
 </script>
@@ -260,8 +304,12 @@
     habitWithStats={habitWithStats}
     on:close={() => showActions = false}
     on:showDeleteConfirm={() => {
-      showActions = false;  // Закрываем окно действий
-      showDeleteConfirm = true;  // Показываем окно подтверждения
+      showActions = false;
+      showDeleteConfirm = true;
+    }}
+    on:showEditModal={() => {
+      showActions = false;
+      showEditModal = true;
     }}
   />
 {/if}
@@ -270,6 +318,14 @@
   <DeleteConfirmModal 
     on:close={() => showDeleteConfirm = false}
     on:delete={handleDelete}
+  />
+{/if}
+
+{#if showEditModal}
+  <NewHabitModal
+    habit={habitWithStats.habit}
+    on:close={() => showEditModal = false}
+    on:save={handleEdit}
   />
 {/if}
 

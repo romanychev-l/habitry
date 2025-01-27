@@ -298,6 +298,101 @@ func (h *Handler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handler) HandleEdit(w http.ResponseWriter, r *http.Request) {
+	log.Println("handleHabitEdit", r.Method)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "PUT, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "PUT" {
+		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var habitRequest models.HabitRequest
+	if err := json.NewDecoder(r.Body).Decode(&habitRequest); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Получаем привычку
+	var habit models.Habit
+	habitID, err := primitive.ObjectIDFromHex(habitRequest.Habit.ID.Hex())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = h.habitsCollection.FindOne(context.Background(), bson.M{"_id": habitID}).Decode(&habit)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	// Проверяем, является ли пользователь создателем привычки
+	if habit.CreatorID != habitRequest.TelegramID {
+		http.Error(w, "Только создатель может изменять привычку", http.StatusForbidden)
+		return
+	}
+
+	// Обновляем поля привычки
+	if habitRequest.Habit.Title != "" {
+		habit.Title = habitRequest.Habit.Title
+	}
+	if habitRequest.Habit.WantToBecome != "" {
+		habit.WantToBecome = habitRequest.Habit.WantToBecome
+	}
+	if len(habitRequest.Habit.Days) > 0 {
+		habit.Days = habitRequest.Habit.Days
+	}
+	if habitRequest.Habit.IsOneTime {
+		habit.IsOneTime = habitRequest.Habit.IsOneTime
+	}
+
+	// Сохраняем обновленную привычку
+	_, err = h.habitsCollection.UpdateOne(
+		context.Background(),
+		bson.M{"_id": habitID},
+		bson.M{"$set": habit},
+	)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Находим запись в followers для получения статистики
+	var follower models.HabitFollowers
+	err = h.followersCollection.FindOne(
+		context.Background(),
+		bson.M{
+			"telegram_id": habitRequest.TelegramID,
+			"habit_id":    habit.ID.Hex(),
+		},
+	).Decode(&follower)
+
+	if err != nil {
+		http.Error(w, "Участник не найден", http.StatusNotFound)
+		return
+	}
+
+	// Возвращаем обновленную привычку со статистикой
+	habitWithStats := models.HabitWithStats{
+		Habit:         habit,
+		LastClickDate: follower.LastClickDate,
+		Streak:        follower.Streak,
+		Score:         follower.Score,
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"habit": habitWithStats,
+	})
+}
+
 func (h *Handler) HandleUndo(w http.ResponseWriter, r *http.Request) {
 	log.Println("handleHabitUndo", r.Method)
 	w.Header().Set("Access-Control-Allow-Origin", "*")

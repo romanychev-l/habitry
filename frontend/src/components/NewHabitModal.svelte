@@ -1,12 +1,14 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { _ } from 'svelte-i18n';
+  import type { Habit } from '../types';
   
   const dispatch = createEventDispatcher();
-  let title = '';
-  let selectedDays = new Set();
-  let isOneTime = false;
-  let wantToBecome = '';
+  export let habit: Habit | undefined = undefined;
+  let title = habit?.title || '';
+  let selectedDays = new Set(habit?.days || []);
+  let isOneTime = habit?.is_one_time || false;
+  let wantToBecome = habit?.want_to_become || '';
   let isDarkTheme = window.Telegram?.WebApp?.colorScheme === 'dark';
 
   function toggleDay(index: number) {
@@ -51,7 +53,7 @@
   <div class="modal-container">
     <div class="modal">
       <div class="header">
-        <h2>{$_('habits.add')}</h2>
+        <h2>{habit ? $_('habits.edit') : $_('habits.add')}</h2>
       </div>
 
       <div class="content">

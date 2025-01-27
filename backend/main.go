@@ -86,6 +86,7 @@ func main() {
 	http.HandleFunc("/habit/join", habitHandler.HandleJoin)
 	http.HandleFunc("/followers", followerHandler.HandleFollowers)
 	http.HandleFunc("/habit/progress", followerHandler.HandleHabitProgress)
+	http.HandleFunc("/habit/edit", habitHandler.HandleEdit)
 
 	// Запуск сервера
 	wrappedHandler := corsMiddleware.Handler(http.DefaultServeMux)

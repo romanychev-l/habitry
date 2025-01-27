@@ -40,6 +40,15 @@
         {$_('habits.share')}
       </button>
       <button 
+        class="dialog-button edit"
+        on:click={() => {
+          dispatch('close');
+          dispatch('showEditModal');
+        }}
+      >
+        {$_('habits.edit')}
+      </button>
+      <button 
         class="dialog-button delete"
         on:click={() => {
           dispatch('close');
@@ -95,6 +104,12 @@
     font-size: 16px;
     font-weight: 500;
     text-align: center;
+  }
+
+  .dialog-button.edit {
+    background: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+    margin-bottom: 12px;
   }
 
   .dialog-button.share {
