@@ -238,7 +238,7 @@
         {/if}
 
         {#if completed}
-          <button class="undo-button" on:click={handleUndo}>↩</button>
+          <button class="undo-button" on:click={handleUndo}>&larr;</button>
         {/if}
       </div>
 
@@ -342,7 +342,8 @@
     -webkit-mask: none !important;
     min-height: 85px;
     text-align: left;
-    overflow: hidden;
+    position: relative;
+    isolation: isolate;
   }
 
   :global(.list-view) .habit-card::before {
@@ -350,6 +351,7 @@
     height: 100%;
     transition: none;
     z-index: 0;
+    border-radius: inherit;
   }
 
   :global(.list-view) .habit-card.animating::before {
@@ -421,11 +423,19 @@
   }
 
   :global(.list-view) .undo-button {
-    bottom: 47%;
+    position: absolute;
+    top: 50%;
     right: 30px;
     left: auto;
-    transform: translateY(50%);
+    transform: translateY(-50%);
     font-size: 20px;
+    color: #000;
+    margin: 0;
+    padding: 8px;
+    height: 24px;
+    line-height: 24px;
+    display: flex;
+    align-items: center;
   }
 
   .undo-button:hover {
