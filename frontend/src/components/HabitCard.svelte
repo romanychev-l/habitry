@@ -486,7 +486,6 @@
     left: auto;
     transform: translateY(-50%);
     font-size: 20px;
-    /* color: #000; */
     margin: 0;
     padding: 8px;
     height: 24px;
