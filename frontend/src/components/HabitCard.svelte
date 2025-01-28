@@ -466,6 +466,7 @@
 
   .undo-button {
     position: absolute;
+    color: #333;
     bottom: 16px;
     left: 50%;
     transform: translateX(-50%);
@@ -485,7 +486,7 @@
     left: auto;
     transform: translateY(-50%);
     font-size: 20px;
-    color: #000;
+    /* color: #000; */
     margin: 0;
     padding: 8px;
     height: 24px;
