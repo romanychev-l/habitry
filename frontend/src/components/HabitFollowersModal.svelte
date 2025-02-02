@@ -115,7 +115,14 @@
                     <ul class="followers-list">
                         {#each followers as follower}
                             <li class="follower-item">
-                                <span class="username">@{follower.username}</span>
+                                <a 
+                                    href="https://t.me/{follower.username}" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    class="username"
+                                >
+                                    @{follower.username}
+                                </a>
                                 {#if follower.telegram_id !== habit.creator_id}
                                     <button 
                                         class="unfollow-button"
@@ -211,6 +218,12 @@
     
     .username {
         font-size: 16px;
+        text-decoration: none;
+        color: var(--tg-theme-text-color);
+    }
+    
+    .username:hover {
+        text-decoration: underline;
     }
     
     .unfollow-button {
