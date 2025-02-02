@@ -19,13 +19,15 @@ type Handler struct {
 	habitsCollection    *mongo.Collection
 	historyCollection   *mongo.Collection
 	followersCollection *mongo.Collection
+	usersCollection     *mongo.Collection
 }
 
-func NewHandler(habitsCollection, historyCollection, followersCollection *mongo.Collection) *Handler {
+func NewHandler(habitsCollection, historyCollection, followersCollection, usersCollection *mongo.Collection) *Handler {
 	return &Handler{
 		habitsCollection:    habitsCollection,
 		historyCollection:   historyCollection,
 		followersCollection: followersCollection,
+		usersCollection:     usersCollection,
 	}
 }
 
@@ -729,4 +731,110 @@ func (h *Handler) HandleJoin(w http.ResponseWriter, r *http.Request) {
 		"message": "Успешно присоединился к привычке",
 		"habits":  habits,
 	})
+}
+
+func (h *Handler) HandleGetFollowers(w http.ResponseWriter, r *http.Request) {
+	log.Println("HandleGetFollowers", r.Method)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Получаем ID привычки из параметров запроса
+	habitID := r.URL.Query().Get("habit_id")
+	if habitID == "" {
+		http.Error(w, "ID привычки не указан", http.StatusBadRequest)
+		return
+	}
+
+	// Находим запись в followers
+	var follower models.HabitFollowers
+	err := h.followersCollection.FindOne(
+		context.Background(),
+		bson.M{"habit_id": habitID},
+	).Decode(&follower)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			// Если записи нет, возвращаем пустой массив
+			json.NewEncoder(w).Encode([]interface{}{})
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Получаем информацию о пользователях
+	var users []map[string]interface{}
+
+	// Получаем информацию о подписчиках
+	for _, f := range follower.Followers {
+		var user models.User
+		err := h.usersCollection.FindOne(
+			context.Background(),
+			bson.M{"telegram_id": f.TelegramID},
+		).Decode(&user)
+
+		if err == nil {
+			users = append(users, map[string]interface{}{
+				"username":    user.Username,
+				"telegram_id": user.TelegramID,
+			})
+		}
+	}
+
+	// Добавляем создателя привычки
+	var habit models.Habit
+	habitObjID, err := primitive.ObjectIDFromHex(habitID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = h.habitsCollection.FindOne(
+		context.Background(),
+		bson.M{"_id": habitObjID},
+	).Decode(&habit)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Получаем информацию о создателе привычки
+	var creator models.User
+	err = h.usersCollection.FindOne(
+		context.Background(),
+		bson.M{"telegram_id": habit.CreatorID},
+	).Decode(&creator)
+
+	if err == nil {
+		// Проверяем, не добавлен ли уже создатель в список
+		creatorExists := false
+		for _, u := range users {
+			if u["telegram_id"] == creator.TelegramID {
+				creatorExists = true
+				break
+			}
+		}
+
+		// Добавляем создателя в начало списка, если его еще нет
+		if !creatorExists {
+			users = append([]map[string]interface{}{{
+				"username":    creator.Username,
+				"telegram_id": creator.TelegramID,
+			}}, users...)
+		}
+	}
+
+	json.NewEncoder(w).Encode(users)
 }

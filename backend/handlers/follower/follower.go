@@ -211,3 +211,80 @@ func (h *Handler) HandleHabitProgress(w http.ResponseWriter, r *http.Request) {
 		"progress":        progress,
 	})
 }
+
+func (h *Handler) HandleUnfollow(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	var request struct {
+		TelegramID int64  `json:"telegram_id"`
+		HabitID    string `json:"habit_id"`
+		UnfollowID int64  `json:"unfollow_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	// Находим запись с фолловерами для данной привычки
+	var result bson.M
+	err := h.followersCollection.FindOne(context.Background(), bson.M{
+		"telegram_id": request.TelegramID,
+		"habit_id":    request.HabitID,
+	}).Decode(&result)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]string{"error": "habit not found"})
+			return
+		}
+		log.Printf("Error finding followers: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Получаем текущий список фолловеров
+	followers, ok := result["followers"].(primitive.A)
+	if !ok {
+		followers = primitive.A{}
+	}
+
+	// Создаем новый список фолловеров без отписавшегося пользователя
+	newFollowers := make(primitive.A, 0, len(followers))
+	for _, follower := range followers {
+		if f, ok := follower.(bson.M); ok {
+			if telegramID, ok := f["telegram_id"].(int64); ok {
+				if telegramID != request.UnfollowID {
+					newFollowers = append(newFollowers, follower)
+				}
+			}
+		}
+	}
+
+	// Обновляем запись в базе данных
+	_, err = h.followersCollection.UpdateOne(
+		context.Background(),
+		bson.M{
+			"telegram_id": request.TelegramID,
+			"habit_id":    request.HabitID,
+		},
+		bson.M{
+			"$set": bson.M{
+				"followers": newFollowers,
+			},
+		},
+	)
+
+	if err != nil {
+		log.Printf("Error updating followers: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}

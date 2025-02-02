@@ -12,6 +12,11 @@
     "one_time": "One time task",
     "every_day": "Do every day",
     "create_new": "Create new",
+    "followers_list": "Followers",
+    "no_followers": "This habit has no followers yet",
+    "unfollow": "Unfollow",
+    "confirm_unfollow": "Confirm Unfollow",
+    "unfollow_user": "Are you sure you want to unfollow @{username}?",
     "join_habit": {
       "0": "I'm doing habit",
       "1": "already",
@@ -29,7 +34,9 @@
       "delete": "Error deleting habit",
       "delete_forbidden": "Only the creator can delete the habit",
       "edit_forbidden": "Only the creator can edit the habit",
-      "title_required": "Enter the habit name"
+      "title_required": "Enter the habit name",
+      "load_followers": "Failed to load followers",
+      "unfollow": "Failed to unfollow user"
     },
     "modals": {
       "delete_title": "Delete Habit",
@@ -48,6 +55,11 @@
     "sunday": "Sun"
   },
   "premium": "Premium",
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "loading": "Loading..."
+  },
   "settings": {
     "title": "Settings",
     "notifications": "Notifications",

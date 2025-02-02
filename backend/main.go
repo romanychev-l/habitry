@@ -63,7 +63,7 @@ func main() {
 
 	// Инициализация хендлеров
 	userHandler := user.NewHandler(usersCollection, historyCollection, habitsCollection, followersCollection)
-	habitHandler := habit.NewHandler(habitsCollection, historyCollection, followersCollection)
+	habitHandler := habit.NewHandler(habitsCollection, historyCollection, followersCollection, usersCollection)
 	invoiceHandler := invoice.NewHandler(b)
 	followerHandler := follower.NewHandler(followersCollection)
 
@@ -87,6 +87,8 @@ func main() {
 	http.HandleFunc("/followers", followerHandler.HandleFollowers)
 	http.HandleFunc("/habit/progress", followerHandler.HandleHabitProgress)
 	http.HandleFunc("/habit/edit", habitHandler.HandleEdit)
+	http.HandleFunc("/habit/followers", habitHandler.HandleGetFollowers)
+	http.HandleFunc("/habit/unfollow", followerHandler.HandleUnfollow)
 
 	// Запуск сервера
 	wrappedHandler := corsMiddleware.Handler(http.DefaultServeMux)

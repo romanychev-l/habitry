@@ -5,27 +5,43 @@
     import HabitActionsModal from './HabitActionsModal.svelte';
     import DeleteConfirmModal from './DeleteConfirmModal.svelte';
     import NewHabitModal from './NewHabitModal.svelte';
+    import HabitFollowersModal from './HabitFollowersModal.svelte';
     import type { HabitWithStats } from '../types';
     import type { Habit } from '../types';
+    import { onMount } from 'svelte';
     
     export let habitWithStats: HabitWithStats;
     export let telegramId: number;
     
     let isPressed = false;
     let isPressTimeout: ReturnType<typeof setTimeout>;
+    let clickTimeout: ReturnType<typeof setTimeout> | undefined;
+    let showFollowersModal = false;
+    let pressStartTime: number;
+    let startY: number;
+    let isSwiping = false;
+    let preloadedFollowers: Array<{ username: string; telegram_id: number }> = [];
     const API_URL = import.meta.env.VITE_API_URL;
     
-    function handlePointerDown() {
-        if (navigator.vibrate) {
-            navigator.vibrate([100, 30, 100]);
+    function handlePointerDown(event: PointerEvent) {
+        // Проверяем, не является ли цель клика кнопкой more или undo
+        const target = event.target as HTMLElement;
+        if (target.closest('.more-button') || target.closest('.more-list-view-button') || target.closest('.undo-button')) {
+            return;
         }
-        
+
+        pressStartTime = Date.now();
+        startY = event.clientY;
+        isSwiping = false;
         isPressed = true;
         isPressTimeout = setTimeout(async () => {
             try {
+                if (navigator.vibrate) {
+                    navigator.vibrate([50]); // Более мягкая начальная вибрация
+                }
                 const data = await updateHabitOnServer();
                 if (data.habit && navigator.vibrate) {
-                    navigator.vibrate(200);
+                    navigator.vibrate(50); // Короткая финальная вибрация
                 }
             } catch (error) {
                 // Ошибка уже обработана в updateHabitOnServer
@@ -35,9 +51,38 @@
         }, 800);
     }
 
-    function handlePointerUp() {
+    function handlePointerMove(event: PointerEvent) {
+        if (isPressed) {
+            const deltaY = Math.abs(event.clientY - startY);
+            if (deltaY > 10) { // Если палец сдвинулся более чем на 10 пикселей
+                isSwiping = true;
+                clearTimeout(isPressTimeout);
+                isPressed = false;
+            }
+        }
+    }
+
+    function handlePointerUp(event: PointerEvent) {
         clearTimeout(isPressTimeout);
+        
+        // Проверяем, не является ли цель клика кнопкой more или undo
+        const target = event.target as HTMLElement;
+        if (target.closest('.more-button') || target.closest('.more-list-view-button') || target.closest('.undo-button')) {
+            isPressed = false;
+            return;
+        }
+
+        // Вычисляем длительность нажатия
+        const pressDuration = Date.now() - pressStartTime;
         isPressed = false;
+
+        // Открываем модальное окно только если это был короткий клик (меньше 800мс) и не было свайпа
+        if (pressDuration < 800 && !clickTimeout && !isSwiping) {
+            clickTimeout = setTimeout(() => {
+                showFollowersModal = true;
+                clickTimeout = undefined;
+            }, 300);
+        }
     }
 
     let progress = 0;
@@ -47,12 +92,16 @@
         progress = await calculateProgress();
     }
     
+    // Загружаем данные при монтировании компонента
+    onMount(loadFollowers);
+
     // Обновляем состояние при изменении habitWithStats
     $: {
         if (habitWithStats) {
             const today = new Date().toISOString().split('T')[0];
             completed = habitWithStats.last_click_date === today;
             updateProgress();
+            loadFollowers(); // Обновляем список подписчиков при изменении привычки
         }
     }
     
@@ -260,6 +309,23 @@
             alert($_('habits.errors.update'));
         }
     }
+
+    async function loadFollowers() {
+        try {
+            const response = await fetch(`${API_URL}/habit/followers?habit_id=${habitWithStats.habit._id}`);
+            if (!response.ok) {
+                throw new Error($_('habits.errors.load_followers'));
+            }
+            const data = await response.json();
+            preloadedFollowers = data;
+        } catch (error) {
+            console.error('Error loading followers:', error);
+        }
+    }
+
+    function handleFollowersUpdated(event: CustomEvent) {
+        preloadedFollowers = event.detail.followers;
+    }
 </script>
   
 <div class="habit-wrapper" style="--habit-gradient: {gradientStyle}; --progress: {progress}">
@@ -267,8 +333,11 @@
     <div class="habit-card"
       class:pressed={isPressed}
       class:animating={isAnimating}
+      class:list-view={$isListView}
       on:pointerdown={handlePointerDown}
+      on:pointermove={handlePointerMove}
       on:pointerup={handlePointerUp}
+      on:pointercancel={handlePointerUp}
       on:pointerleave={handlePointerUp}
       style="--habit-gradient: {gradientStyle}">
       <div class="content">
@@ -326,6 +395,17 @@
     habit={habitWithStats.habit}
     on:close={() => showEditModal = false}
     on:save={handleEdit}
+  />
+{/if}
+
+{#if showFollowersModal}
+  <HabitFollowersModal
+    show={showFollowersModal}
+    habit={habitWithStats.habit}
+    telegramId={telegramId}
+    initialFollowers={preloadedFollowers}
+    on:close={() => showFollowersModal = false}
+    on:followersUpdated={handleFollowersUpdated}
   />
 {/if}
 
