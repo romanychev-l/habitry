@@ -605,6 +605,48 @@ func (h *Handler) HandleJoin(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Присоединяемся к привычке: telegram_id=%d, habit_id=%s, shared_by=%d",
 		request.TelegramID, request.HabitID, sharedByTelegramID)
 
+	// Если HabitID равен SharedByHabitID, создаем новую привычку
+	if request.HabitID == request.SharedByHabitID {
+		// Получаем оригинальную привычку
+		originalHabitID, err := primitive.ObjectIDFromHex(request.SharedByHabitID)
+		if err != nil {
+			log.Printf("Ошибка при преобразовании habit_id: %v", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		var originalHabit models.Habit
+		err = h.habitsCollection.FindOne(context.Background(), bson.M{"_id": originalHabitID}).Decode(&originalHabit)
+		if err != nil {
+			log.Printf("Ошибка при получении оригинальной привычки: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Создаем новую привычку
+		newHabit := models.Habit{
+			ID:           primitive.NewObjectID(),
+			Title:        originalHabit.Title,
+			WantToBecome: originalHabit.WantToBecome,
+			Days:         originalHabit.Days,
+			IsOneTime:    originalHabit.IsOneTime,
+			CreatedAt:    time.Now(),
+			CreatorID:    request.TelegramID,
+		}
+
+		// Сохраняем новую привычку
+		_, err = h.habitsCollection.InsertOne(context.Background(), newHabit)
+		if err != nil {
+			log.Printf("Ошибка при создании новой привычки: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Обновляем request.HabitID на ID новой привычки
+		request.HabitID = newHabit.ID.Hex()
+		log.Printf("Создана новая привычка с ID: %s", request.HabitID)
+	}
+
 	// Проверяем, существует ли запись в followers
 	var existingFollower models.HabitFollowers
 	err = h.followersCollection.FindOne(
