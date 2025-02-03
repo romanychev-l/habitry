@@ -11,8 +11,11 @@ type InvoiceResponse struct {
 }
 
 type Follower struct {
-	TelegramID int64  `bson:"telegram_id" json:"telegram_id"`
-	HabitID    string `bson:"habit_id" json:"habit_id"`
+	TelegramID    int64  `bson:"telegram_id" json:"telegram_id"`
+	HabitID       string `bson:"habit_id" json:"habit_id"`
+	Streak        int    `bson:"streak" json:"streak"`
+	Score         int    `bson:"score" json:"score"`
+	LastClickDate string `bson:"last_click_date" json:"last_click_date"`
 }
 
 type HabitFollowers struct {

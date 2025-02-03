@@ -4,6 +4,7 @@
   import HabitLinkModal from './components/HabitLinkModal.svelte';
   import SettingsPage from './components/SettingsPage.svelte';
   import OnboardingModal from './components/OnboardingModal.svelte';
+  import UserProfilePage from './components/UserProfilePage.svelte';
   import { user } from './stores/user';
   import { isListView } from './stores/view';
   import { openTelegramInvoice } from './utils/telegram';
@@ -19,29 +20,40 @@
   let showOnboarding = false;
   let sharedHabitId = '';
   let sharedByTelegramId = '';
+  let showUserProfile = false;
+  let profileUsername = '';
   const API_URL = import.meta.env.VITE_API_URL;
   let isDarkTheme = window.Telegram?.WebApp?.colorScheme === 'dark';
   let isInitialized = false;
   
-  async function handleSharedHabit() {
+  async function handleStartParam() {
     try {
       const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
       console.log('Start param:', startParam);
       
-      if (startParam && startParam.startsWith('habit_') && $user?.id) {
-        const [_, habitId, sharedByUserId] = startParam.split('_');
-        console.log('Показываем окно выбора привычки:', { habitId, sharedByUserId });
-        
-        sharedHabitId = habitId;
-        sharedByTelegramId = sharedByUserId;
-        showHabitLinkModal = true;
+      if (startParam) {
+        if (startParam.startsWith('habit_')) {
+          const [_, habitId, sharedByUserId] = startParam.split('_');
+          console.log('Показываем окно выбора привычки:', { habitId, sharedByUserId });
+          
+          sharedHabitId = habitId;
+          sharedByTelegramId = sharedByUserId;
+          showHabitLinkModal = true;
+        } else if (startParam.startsWith('profile_')) {
+          const username = startParam.split('_')[1];
+          console.log('Показываем профиль пользователя:', username);
+          
+          profileUsername = username;
+          showUserProfile = true;
+        }
       }
     } catch (error) {
-      console.error('Ошибка при обработке shared habit:', error);
+      console.error('Ошибка при обработке start param:', error);
     }
   }
 
   async function handleHabitLink(event: CustomEvent) {
+    console.log('handleHabitLink in App.svelte', event.detail);
     try {
       if (!$user?.id) return;
       
@@ -78,7 +90,7 @@
       const telegramId = $user?.id;
       if (!telegramId) return;
       
-      await handleSharedHabit();
+      await handleStartParam();
 
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const response = await fetch(`${API_URL}/user?telegram_id=${telegramId}&timezone=${userTimezone}`);
@@ -290,16 +302,21 @@
     />
   {/if}
 
-  {#if showSettings}
-    <SettingsPage on:back={() => showSettings = false} />
-  {/if}
-
-  {#if showOnboarding}
-    <OnboardingModal 
-      on:finish={handleOnboardingFinish}
-      on:skip={handleOnboardingSkip}
-      isSharedHabit={showHabitLinkModal}
+  {#if showUserProfile && profileUsername}
+    <UserProfilePage 
+      username={profileUsername} 
+      on:back={() => showUserProfile = false} 
     />
+  {:else if showSettings}
+    <SettingsPage on:back={() => showSettings = false} />
+  {:else}
+    {#if showOnboarding}
+      <OnboardingModal 
+        on:finish={handleOnboardingFinish}
+        on:skip={handleOnboardingSkip}
+        isSharedHabit={showHabitLinkModal}
+      />
+    {/if}
   {/if}
 </main>
 

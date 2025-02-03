@@ -749,18 +749,29 @@ func (h *Handler) HandleGetFollowers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Получаем ID привычки из параметров запроса
+	// Получаем ID привычки и telegram_id из параметров запроса
 	habitID := r.URL.Query().Get("habit_id")
-	if habitID == "" {
-		http.Error(w, "ID привычки не указан", http.StatusBadRequest)
+	telegramIDStr := r.URL.Query().Get("telegram_id")
+
+	if habitID == "" || telegramIDStr == "" {
+		http.Error(w, "ID привычки и telegram_id должны быть указаны", http.StatusBadRequest)
+		return
+	}
+
+	telegramID, err := strconv.ParseInt(telegramIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Некорректный формат telegram_id", http.StatusBadRequest)
 		return
 	}
 
 	// Находим запись в followers
 	var follower models.HabitFollowers
-	err := h.followersCollection.FindOne(
+	err = h.followersCollection.FindOne(
 		context.Background(),
-		bson.M{"habit_id": habitID},
+		bson.M{
+			"telegram_id": telegramID,
+			"habit_id":    habitID,
+		},
 	).Decode(&follower)
 
 	if err != nil {
@@ -789,50 +800,6 @@ func (h *Handler) HandleGetFollowers(w http.ResponseWriter, r *http.Request) {
 				"username":    user.Username,
 				"telegram_id": user.TelegramID,
 			})
-		}
-	}
-
-	// Добавляем создателя привычки
-	var habit models.Habit
-	habitObjID, err := primitive.ObjectIDFromHex(habitID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	err = h.habitsCollection.FindOne(
-		context.Background(),
-		bson.M{"_id": habitObjID},
-	).Decode(&habit)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Получаем информацию о создателе привычки
-	var creator models.User
-	err = h.usersCollection.FindOne(
-		context.Background(),
-		bson.M{"telegram_id": habit.CreatorID},
-	).Decode(&creator)
-
-	if err == nil {
-		// Проверяем, не добавлен ли уже создатель в список
-		creatorExists := false
-		for _, u := range users {
-			if u["telegram_id"] == creator.TelegramID {
-				creatorExists = true
-				break
-			}
-		}
-
-		// Добавляем создателя в начало списка, если его еще нет
-		if !creatorExists {
-			users = append([]map[string]interface{}{{
-				"username":    creator.Username,
-				"telegram_id": creator.TelegramID,
-			}}, users...)
 		}
 	}
 

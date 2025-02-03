@@ -22,10 +22,20 @@ interface TelegramWebApp {
       };
     };
     openInvoice: (url: string, callback: (status: string) => void) => void;
-  }
-  
-  interface Window {
-    Telegram?: {
-      WebApp: TelegramWebApp;
-  };
+    openLink: (url: string) => void;
+    shareUrl: (url: string) => void;
+    MainButton: {
+      setText: (text: string) => void;
+      show: () => void;
+      hide: () => void;
+      onClick: (callback: () => void) => void;
+    };
+    share: (url: string) => void;
+    showAlert: (message: string) => void;
+}
+
+interface Window {
+  Telegram?: {
+    WebApp: TelegramWebApp;
+};
 }

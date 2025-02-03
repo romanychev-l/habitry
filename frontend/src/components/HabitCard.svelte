@@ -6,23 +6,40 @@
     import DeleteConfirmModal from './DeleteConfirmModal.svelte';
     import NewHabitModal from './NewHabitModal.svelte';
     import HabitFollowersModal from './HabitFollowersModal.svelte';
+    import HabitLinkModal from './HabitLinkModal.svelte';
     import type { HabitWithStats } from '../types';
     import type { Habit } from '../types';
     import { onMount } from 'svelte';
     
     export let habitWithStats: HabitWithStats;
     export let telegramId: number;
+    export let readonly: boolean = false;
     
     let isPressed = false;
     let isPressTimeout: ReturnType<typeof setTimeout>;
     let clickTimeout: ReturnType<typeof setTimeout> | undefined;
     let showFollowersModal = false;
+    let showLinkModal = false;
     let pressStartTime: number;
     let startY: number;
     let isSwiping = false;
     let preloadedFollowers: Array<{ username: string; telegram_id: number }> = [];
     const API_URL = import.meta.env.VITE_API_URL;
     
+    function handleClick(event: MouseEvent) {
+        // Проверяем, не является ли цель клика кнопкой more или undo
+        const target = event.target as HTMLElement;
+        if (target.closest('.more-button') || target.closest('.more-list-view-button') || target.closest('.undo-button')) {
+            return;
+        }
+
+        if (readonly) {
+            showLinkModal = true;
+        } else {
+            showFollowersModal = true;
+        }
+    }
+
     function handlePointerDown(event: PointerEvent) {
         // Проверяем, не является ли цель клика кнопкой more или undo
         const target = event.target as HTMLElement;
@@ -30,31 +47,33 @@
             return;
         }
 
-        pressStartTime = Date.now();
-        startY = event.clientY;
-        isSwiping = false;
-        isPressed = true;
-        isPressTimeout = setTimeout(async () => {
-            try {
-                if (navigator.vibrate) {
-                    navigator.vibrate([50]); // Более мягкая начальная вибрация
+        if (!readonly) {
+            pressStartTime = Date.now();
+            startY = event.clientY;
+            isSwiping = false;
+            isPressed = true;
+            isPressTimeout = setTimeout(async () => {
+                try {
+                    if (navigator.vibrate) {
+                        navigator.vibrate([50]);
+                    }
+                    const data = await updateHabitOnServer();
+                    if (data.habit && navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+                } catch (error) {
+                    // Ошибка уже обработана в updateHabitOnServer
+                } finally {
+                    isPressed = false;
                 }
-                const data = await updateHabitOnServer();
-                if (data.habit && navigator.vibrate) {
-                    navigator.vibrate(50); // Короткая финальная вибрация
-                }
-            } catch (error) {
-                // Ошибка уже обработана в updateHabitOnServer
-            } finally {
-                isPressed = false;
-            }
-        }, 800);
+            }, 800);
+        }
     }
 
     function handlePointerMove(event: PointerEvent) {
         if (isPressed) {
             const deltaY = Math.abs(event.clientY - startY);
-            if (deltaY > 10) { // Если палец сдвинулся более чем на 10 пикселей
+            if (deltaY > 10) {
                 isSwiping = true;
                 clearTimeout(isPressTimeout);
                 isPressed = false;
@@ -64,25 +83,7 @@
 
     function handlePointerUp(event: PointerEvent) {
         clearTimeout(isPressTimeout);
-        
-        // Проверяем, не является ли цель клика кнопкой more или undo
-        const target = event.target as HTMLElement;
-        if (target.closest('.more-button') || target.closest('.more-list-view-button') || target.closest('.undo-button')) {
-            isPressed = false;
-            return;
-        }
-
-        // Вычисляем длительность нажатия
-        const pressDuration = Date.now() - pressStartTime;
         isPressed = false;
-
-        // Открываем модальное окно только если это был короткий клик (меньше 800мс) и не было свайпа
-        if (pressDuration < 800 && !clickTimeout && !isSwiping) {
-            clickTimeout = setTimeout(() => {
-                showFollowersModal = true;
-                clickTimeout = undefined;
-            }, 300);
-        }
     }
 
     let progress = 0;
@@ -312,7 +313,7 @@
 
     async function loadFollowers() {
         try {
-            const response = await fetch(`${API_URL}/habit/followers?habit_id=${habitWithStats.habit._id}`);
+            const response = await fetch(`${API_URL}/habit/followers?habit_id=${habitWithStats.habit._id}&telegram_id=${telegramId}`);
             if (!response.ok) {
                 throw new Error($_('habits.errors.load_followers'));
             }
@@ -326,16 +327,62 @@
     function handleFollowersUpdated(event: CustomEvent) {
         preloadedFollowers = event.detail.followers;
     }
+
+    async function handleHabitLink(event: CustomEvent<{habitId: string; sharedHabitId: string; sharedByTelegramId: string}>) {
+      console.log('handleHabitLink in HabitCard.svelte', event.detail);
+        try {
+            const currentUserId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+            if (!currentUserId) {
+                throw new Error($_('habits.errors.link'));
+            }
+
+            const response = await fetch(`${API_URL}/habit/join`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    telegram_id: currentUserId,
+                    habit_id: event.detail.habitId,
+                    shared_by_telegram_id: event.detail.sharedByTelegramId,
+                    shared_by_habit_id: event.detail.sharedHabitId
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error($_('habits.errors.link'));
+            }
+
+            const data = await response.json();
+            habits.update(currentHabits => data.habits || []);
+
+            showLinkModal = false;
+            window.Telegram?.WebApp?.showAlert($_('habits.link_success'));
+        } catch (error) {
+            console.error('Error:', error);
+            window.Telegram?.WebApp?.showAlert($_('habits.errors.link'));
+        }
+    }
 </script>
   
 <div class="habit-wrapper" style="--habit-gradient: {gradientStyle}; --progress: {progress}">
   <div class="card-shadow">
-    <div class="habit-card"
+    <div
+      class="habit-card"
       class:pressed={isPressed}
       class:animating={isAnimating}
       class:list-view={$isListView}
+      class:readonly={readonly}
+      role="button"
+      tabindex="0"
+      on:click={handleClick}
+      on:keydown={e => {
+        if (e.key === 'Enter') {
+          handleClick(new MouseEvent('click'));
+        }
+      }}
       on:pointerdown={handlePointerDown}
-      on:pointermove={handlePointerMove}
+      on:pointermove={readonly ? null : handlePointerMove}
       on:pointerup={handlePointerUp}
       on:pointercancel={handlePointerUp}
       on:pointerleave={handlePointerUp}
@@ -350,17 +397,19 @@
           </div>
         {/if}
 
-        {#if completed}
+        {#if completed && !readonly}
           <button class="undo-button" on:click={handleUndo}>&larr;</button>
         {/if}
       </div>
 
-      <button 
-        class={!$isListView ? 'more-button' : 'more-list-view-button'}
-        on:click={() => showActions = true}
-      >
-        {!$isListView ? '…' : '⋮'}
-      </button>
+      {#if !readonly}
+        <button 
+          class={!$isListView ? 'more-button' : 'more-list-view-button'}
+          on:click={() => showActions = true}
+        >
+          {!$isListView ? '…' : '⋮'}
+        </button>
+      {/if}
     </div>
   </div>
   <div class="streak-counter" style="--habit-gradient: {gradientStyle}">
@@ -368,7 +417,17 @@
   </div>
 </div>
 
-{#if showActions}
+{#if showLinkModal}
+  <HabitLinkModal
+    habits={$habits}
+    sharedHabitId={habitWithStats.habit._id}
+    sharedByTelegramId={telegramId.toString()}
+    on:close={() => showLinkModal = false}
+    on:select={handleHabitLink}
+  />
+{/if}
+
+{#if showActions && !readonly}
   <HabitActionsModal 
     habitWithStats={habitWithStats}
     on:close={() => showActions = false}
@@ -383,14 +442,14 @@
   />
 {/if}
 
-{#if showDeleteConfirm}
+{#if showDeleteConfirm && !readonly}
   <DeleteConfirmModal 
     on:close={() => showDeleteConfirm = false}
     on:delete={handleDelete}
   />
 {/if}
 
-{#if showEditModal}
+{#if showEditModal && !readonly}
   <NewHabitModal
     habit={habitWithStats.habit}
     on:close={() => showEditModal = false}
@@ -398,7 +457,7 @@
   />
 {/if}
 
-{#if showFollowersModal}
+{#if showFollowersModal && !readonly}
   <HabitFollowersModal
     show={showFollowersModal}
     habit={habitWithStats.habit}
@@ -651,5 +710,13 @@
 
   :global(.list-view) .habit-card[style*="--progress: 1"] .more-list-view-button {
     color: white;
+  }
+
+  .habit-card.readonly {
+    cursor: pointer;
+  }
+
+  .habit-card.readonly:active {
+    opacity: 0.8;
   }
 </style>

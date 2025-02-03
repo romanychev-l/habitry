@@ -26,7 +26,7 @@
 
         try {
             loading = true;
-            const response = await fetch(`${API_URL}/habit/followers?habit_id=${habit._id}`);
+            const response = await fetch(`${API_URL}/habit/followers?habit_id=${habit._id}&telegram_id=${telegramId}`);
             if (!response.ok) {
                 throw new Error($_('habits.errors.load_followers'));
             }
@@ -123,14 +123,12 @@
                                 >
                                     @{follower.username}
                                 </a>
-                                {#if follower.telegram_id !== habit.creator_id}
-                                    <button 
-                                        class="unfollow-button"
-                                        on:click={() => handleUnfollowClick(follower)}
-                                    >
-                                        {$_('habits.unfollow')}
-                                    </button>
-                                {/if}
+                                <button 
+                                    class="unfollow-button"
+                                    on:click={() => handleUnfollowClick(follower)}
+                                >
+                                    {$_('habits.unfollow')}
+                                </button>
                             </li>
                         {/each}
                     </ul>

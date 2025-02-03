@@ -78,6 +78,7 @@ func main() {
 	http.HandleFunc("/user", userHandler.HandleUser)
 	http.HandleFunc("/user/visit", userHandler.HandleUpdateLastVisit)
 	http.HandleFunc("/user/settings", userHandler.HandleSettings)
+	http.HandleFunc("/user/profile", userHandler.HandleUserProfile)
 	http.HandleFunc("/habit", habitHandler.HandleCreate)
 	http.HandleFunc("/habit/update", habitHandler.HandleUpdate)
 	http.HandleFunc("/habit/delete", habitHandler.HandleDelete)

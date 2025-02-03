@@ -63,12 +63,22 @@
   "settings": {
     "title": "Настройки",
     "notifications": "Уведомления",
-    "notification_time": "Время уведомлений",
     "notifications_enabled": "Включить уведомления",
+    "notification_time": "Время уведомлений",
     "notification_time_placeholder": "Выберите время",
-    "save": "Сохранить",
-    "saved": "Сохранено",
-    "error": "Ошибка сохранения настроек"
+    "saved": "Настройки сохранены",
+    "error": "Ошибка при сохранении",
+    "share_profile": "Поделиться профилем",
+    "share_profile_description": "Отправить ссылку на профиль",
+    "share": "Поделиться",
+    "username_required": "Для шаринга профиля нужен username в Telegram"
+  },
+  "profile": {
+    "title": "Профиль пользователя",
+    "habits": "Привычки",
+    "no_habits": "У пользователя пока нет привычек",
+    "loading": "Загрузка профиля...",
+    "not_found": "Пользователь не найден"
   },
   "onboarding": {
     "welcome": {

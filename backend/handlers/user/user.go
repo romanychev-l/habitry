@@ -483,3 +483,105 @@ func (h *Handler) HandleSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
+
+// HandleUserProfile обрабатывает GET запрос для получения публичного профиля пользователя
+func (h *Handler) HandleUserProfile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	log.Println("HandleUserProfile called")
+	username := r.URL.Query().Get("username")
+	if username == "" {
+		http.Error(w, "Username is required", http.StatusBadRequest)
+		return
+	}
+
+	filter := bson.M{"username": username}
+	var user models.User
+	err := h.usersCollection.FindOne(r.Context(), filter).Decode(&user)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+		log.Printf("Error finding user: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Получаем привычки пользователя
+	habitsFilter := bson.M{"creator_id": user.TelegramID}
+	log.Printf("Looking for habits with filter: %+v", habitsFilter)
+	cursor, err := h.habitsCollection.Find(r.Context(), habitsFilter)
+	if err != nil {
+		log.Printf("Error finding habits: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer cursor.Close(r.Context())
+
+	var habits []models.Habit
+	if err = cursor.All(r.Context(), &habits); err != nil {
+		log.Printf("Error decoding habits: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	log.Printf("Found %d habits for user", len(habits))
+
+	// Получаем статистику для каждой привычки
+	var habitsWithStats []struct {
+		Habit         models.Habit `json:"habit"`
+		Streak        int          `json:"streak"`
+		Score         int          `json:"score"`
+		LastClickDate string       `json:"last_click_date"`
+	}
+
+	for _, habit := range habits {
+		var follower models.Follower
+		err := h.followersCollection.FindOne(r.Context(), bson.M{
+			"telegram_id": user.TelegramID,
+			"habit_id":    habit.ID.Hex(),
+		}).Decode(&follower)
+
+		stats := struct {
+			Habit         models.Habit `json:"habit"`
+			Streak        int          `json:"streak"`
+			Score         int          `json:"score"`
+			LastClickDate string       `json:"last_click_date"`
+		}{
+			Habit:         habit,
+			Streak:        0,
+			Score:         0,
+			LastClickDate: "",
+		}
+
+		if err == nil {
+			stats.Streak = follower.Streak
+			stats.Score = follower.Score
+			stats.LastClickDate = follower.LastClickDate
+		}
+
+		habitsWithStats = append(habitsWithStats, stats)
+	}
+
+	response := struct {
+		TelegramID string      `json:"telegram_id"`
+		Username   string      `json:"username"`
+		FirstName  string      `json:"first_name"`
+		PhotoURL   string      `json:"photo_url"`
+		Habits     interface{} `json:"habits"`
+	}{
+		TelegramID: strconv.FormatInt(user.TelegramID, 10),
+		Username:   user.Username,
+		FirstName:  user.FirstName,
+		PhotoURL:   user.PhotoURL,
+		Habits:     habitsWithStats,
+	}
+
+	log.Printf("Response: %+v", response)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}

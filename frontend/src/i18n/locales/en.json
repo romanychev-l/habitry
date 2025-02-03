@@ -63,12 +63,22 @@
   "settings": {
     "title": "Settings",
     "notifications": "Notifications",
-    "notification_time": "Notification time",
     "notifications_enabled": "Enable notifications",
-    "notification_time_placeholder": "Select time",
-    "save": "Save",
-    "saved": "Saved",
-    "error": "Error saving settings"
+    "notification_time": "Notification time",
+    "notification_time_placeholder": "Choose time",
+    "saved": "Settings saved",
+    "error": "Error saving settings",
+    "share_profile": "Share profile",
+    "share_profile_description": "Share profile link",
+    "share": "Share",
+    "username_required": "Telegram username is required to share profile"
+  },
+  "profile": {
+    "title": "User Profile",
+    "habits": "Habits",
+    "no_habits": "User has no habits yet",
+    "loading": "Loading profile...",
+    "not_found": "User not found"
   },
   "onboarding": {
     "welcome": {

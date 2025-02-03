@@ -5,6 +5,7 @@
 
   const dispatch = createEventDispatcher();
   const API_URL = import.meta.env.VITE_API_URL;
+  const BOT_USERNAME = import.meta.env.VITE_BOT_USERNAME;
 
   let notificationsEnabled = false;
   let notificationTime = "";
@@ -107,13 +108,40 @@
           >
         </div>
       {/if}
+    </section>
 
-      {#if saveMessage}
-        <div class="save-message" class:error={saveMessage === $_('settings.error')}>
-          {saveMessage}
-        </div>
+    <section class="settings-section">
+      <h2>{$_('settings.share_profile')}</h2>
+      <div class="setting-item">
+        <span class="setting-label">{$_('settings.share_profile_description')}</span>
+        <button 
+          class="share-button"
+          on:click={() => {
+            if ($user?.username) {
+              const baseUrl = `https://t.me/${BOT_USERNAME}/app`;
+              const startAppParam = `startapp=profile_${$user.username}`;
+              const appUrl = `${baseUrl}?${startAppParam}`;
+              const shareText = $_('settings.share_profile_description');
+              
+              const url = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(shareText)}`;
+              window.open(url, '_blank');
+            }
+          }}
+          disabled={!$user?.username}
+        >
+          {$_('settings.share')}
+        </button>
+      </div>
+      {#if !$user?.username}
+        <p class="warning">{$_('settings.username_required')}</p>
       {/if}
     </section>
+
+    {#if saveMessage}
+      <div class="save-message" class:error={saveMessage === $_('settings.error')}>
+        {saveMessage}
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -283,5 +311,26 @@
 
   .save-message.error {
     background: #ff4d4d;
+  }
+
+  .share-button {
+    background-color: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .share-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .warning {
+    color: #e53935;
+    font-size: 12px;
+    margin-top: 4px;
   }
 </style> 
