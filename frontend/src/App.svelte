@@ -11,6 +11,7 @@
   import { _ } from 'svelte-i18n';
   import { habits } from './stores/habit';
   import type { Habit } from './types';
+  import { api } from './utils/api';
   
   // Инициализируем значение из localStorage
   $isListView = localStorage.getItem('isListView') === 'true';
@@ -57,24 +58,13 @@
     try {
       if (!$user?.id) return;
       
-      const response = await fetch(`${API_URL}/habit/join`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          telegram_id: $user.id,
-          habit_id: event.detail.habitId,
-          shared_by_telegram_id: sharedByTelegramId,
-          shared_by_habit_id: sharedHabitId
-        })
+      const data = await api.joinHabit({
+        telegram_id: $user.id,
+        habit_id: event.detail.habitId,
+        shared_by_telegram_id: sharedByTelegramId,
+        shared_by_habit_id: sharedHabitId
       });
 
-      if (!response.ok) {
-        throw new Error('Ошибка при присоединении к привычке');
-      }
-      
-      const data = await response.json();
       habits.update(currentHabits => data.habits || []);
       showHabitLinkModal = false;
     } catch (error) {
@@ -87,38 +77,19 @@
     
     try {
       console.log('initializeUser', $user);
+      console.log('Telegram WebApp:', window.Telegram?.WebApp);
+      console.log('Telegram initData:', window.Telegram?.WebApp?.initData);
+      console.log('Telegram initDataUnsafe:', window.Telegram?.WebApp?.initDataUnsafe);
+      
       const telegramId = $user?.id;
       if (!telegramId) return;
       
       await handleStartParam();
 
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const response = await fetch(`${API_URL}/user?telegram_id=${telegramId}&timezone=${userTimezone}`);
       
-      if (response.status === 404) {
-        console.log('create user');
-        showOnboarding = true;
-        const createResponse = await fetch(`${API_URL}/user`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            telegram_id: telegramId,
-            first_name: $user.firstName,
-            username: $user.username,
-            language_code: $user.languageCode,
-            photo_url: $user.photoUrl,
-            timezone: userTimezone
-          })
-        });
-        if (!createResponse.ok) {
-          throw new Error($_('habits.errors.user_create'));
-        }
-
-        habits.update(currentHabits => []);
-      } else {
-        const data = await response.json();
+      try {
+        const data = await api.getUser(telegramId, userTimezone);
         habits.update(currentHabits => data.habits || []);
         
         const now = new Date();
@@ -130,27 +101,33 @@
           openTelegramInvoice(data.credit);
           
           try {
-            const visitResponse = await fetch(`${API_URL}/user/visit`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                telegram_id: telegramId,
-                timezone: userTimezone
-              })
+            await api.updateLastVisit({
+              telegram_id: telegramId,
+              timezone: userTimezone
             });
-            
-            if (!visitResponse.ok) {
-              console.error('Failed to update last_visit:', await visitResponse.text());
-            } else {
-              console.log('Last visit updated successfully');
-            }
+            console.log('Last visit updated successfully');
           } catch (error) {
             console.error('Error updating last_visit:', error);
           }
         }
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('404')) {
+          console.log('create user');
+          showOnboarding = true;
+          await api.createUser({
+            telegram_id: telegramId,
+            first_name: $user.firstName,
+            username: $user.username,
+            language_code: $user.languageCode,
+            photo_url: $user.photoUrl,
+            timezone: userTimezone
+          });
+          habits.update(currentHabits => []);
+        } else {
+          throw error;
+        }
       }
+      
       isInitialized = true;
     } catch (error) {
       console.error('Ошибка при инициаизации пользователя:', error);
@@ -183,24 +160,8 @@
 
       console.log('Request payload:', JSON.stringify(habitData));
 
-      const response = await fetch(`${API_URL}/habit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(habitData)
-      });
-
-      console.log('Response status:', response.status);
-      const responseText = await response.text();
-      console.log('Response text:', responseText);
-
-      if (!response.ok) {
-        throw new Error($_('habits.errors.create'));
-      }
-
-      const data = JSON.parse(responseText);
-      console.log('Parsed response:', data);
+      const data = await api.createHabit(habitData);
+      console.log('Response:', data);
       
       if (data.habit) {
         habits.update(currentHabits => [...currentHabits, data.habit]);

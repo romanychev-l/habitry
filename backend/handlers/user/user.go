@@ -355,11 +355,11 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 
 		// Создаем структуру ответа
 		type UserResponse struct {
-			ID                   primitive.ObjectID `json:"_id"`
+			ID                   primitive.ObjectID `json:"_id,omitempty"`
 			TelegramID           int64              `json:"telegram_id"`
 			Username             string             `json:"username"`
 			FirstName            string             `json:"first_name"`
-			Language             string             `json:"language_code"`
+			LanguageCode         string             `json:"language_code"`
 			PhotoURL             string             `json:"photo_url"`
 			CreatedAt            time.Time          `json:"created_at"`
 			Credit               int                `json:"credit"`
@@ -375,7 +375,7 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 			TelegramID:           user.TelegramID,
 			Username:             user.Username,
 			FirstName:            user.FirstName,
-			Language:             user.LanguageCode,
+			LanguageCode:         user.LanguageCode,
 			PhotoURL:             user.PhotoURL,
 			CreatedAt:            user.CreatedAt,
 			Credit:               user.Credit,

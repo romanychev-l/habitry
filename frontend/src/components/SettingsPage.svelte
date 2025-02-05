@@ -2,6 +2,7 @@
   import { _ } from 'svelte-i18n';
   import { createEventDispatcher } from 'svelte';
   import { user } from '../stores/user';
+  import { api } from '../utils/api';
 
   const dispatch = createEventDispatcher();
   const API_URL = import.meta.env.VITE_API_URL;
@@ -17,12 +18,9 @@
     try {
       if (!$user?.id) return;
       
-      const response = await fetch(`${API_URL}/user/settings?telegram_id=${$user.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        notificationsEnabled = data.notifications_enabled || false;
-        notificationTime = data.notification_time || "";
-      }
+      const data = await api.getUserSettings($user.id);
+      notificationsEnabled = data.notifications_enabled || false;
+      notificationTime = data.notification_time || "";
     } catch (error) {
       console.error('Error loading settings:', error);
     }
@@ -36,26 +34,16 @@
       isSaving = true;
       saveMessage = "";
 
-      const response = await fetch(`${API_URL}/user/settings`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          telegram_id: $user.id,
-          notifications_enabled: notificationsEnabled,
-          notification_time: notificationTime
-        })
+      await api.updateUserSettings({
+        telegram_id: $user.id,
+        notifications_enabled: notificationsEnabled,
+        notification_time: notificationTime
       });
 
-      if (response.ok) {
-        saveMessage = $_('settings.saved');
-        setTimeout(() => {
-          saveMessage = "";
-        }, 3000);
-      } else {
-        throw new Error($_('settings.error'));
-      }
+      saveMessage = $_('settings.saved');
+      setTimeout(() => {
+        saveMessage = "";
+      }, 3000);
     } catch (error) {
       console.error('Error saving settings:', error);
       saveMessage = $_('settings.error');

@@ -7,13 +7,14 @@ import (
 	"net/http"
 	"os"
 
-	"backend/bot"
 	"backend/db"
 	"backend/handlers/follower"
 	"backend/handlers/habit"
 	"backend/handlers/invoice"
 	"backend/handlers/user"
+	"backend/middleware"
 
+	tgbot "github.com/go-telegram/bot"
 	"github.com/joho/godotenv"
 	"github.com/rs/cors"
 )
@@ -55,7 +56,7 @@ func main() {
 	historyCollection := database.Collection("history")
 	habitsCollection := database.Collection("habits")
 
-	b, err := bot.New(botToken)
+	b, err := tgbot.New(botToken)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -73,23 +74,19 @@ func main() {
 		AllowedHeaders: []string{"*"},
 	})
 
-	// Роутинг
-	http.HandleFunc("/user", userHandler.HandleUser)
-	http.HandleFunc("/user/visit", userHandler.HandleUpdateLastVisit)
-	http.HandleFunc("/user/settings", userHandler.HandleSettings)
-	http.HandleFunc("/user/profile", userHandler.HandleUserProfile)
-	http.HandleFunc("/habit", habitHandler.HandleCreate)
-	http.HandleFunc("/habit/update", habitHandler.HandleUpdate)
-	http.HandleFunc("/habit/delete", habitHandler.HandleDelete)
-	http.HandleFunc("/create-invoice", invoiceHandler.HandleCreateInvoice)
-	http.HandleFunc("/habit/undo", habitHandler.HandleUndo)
-	http.HandleFunc("/habit/join", habitHandler.HandleJoin)
-	http.HandleFunc("/followers", followerHandler.HandleGetFollowers)
-	http.HandleFunc("/habit/progress", followerHandler.HandleHabitProgress)
-	http.HandleFunc("/habit/edit", habitHandler.HandleEdit)
-	http.HandleFunc("/habit/followers", habitHandler.HandleGetFollowers)
-	http.HandleFunc("/habit/unfollow", followerHandler.HandleUnfollow)
-	http.HandleFunc("/habit/activity", habitHandler.HandleGetActivity)
+	// Настройка маршрутов
+	http.HandleFunc("/api/user", middleware.TelegramAuthMiddleware(userHandler.HandleUser))
+	http.HandleFunc("/api/user/settings", middleware.TelegramAuthMiddleware(userHandler.HandleSettings))
+	http.HandleFunc("/api/user/last-visit", middleware.TelegramAuthMiddleware(userHandler.HandleUpdateLastVisit))
+	http.HandleFunc("/api/user/profile", middleware.TelegramAuthMiddleware(userHandler.HandleUserProfile))
+	http.HandleFunc("/api/habit", middleware.TelegramAuthMiddleware(habitHandler.HandleCreate))
+	http.HandleFunc("/api/habit/join", middleware.TelegramAuthMiddleware(habitHandler.HandleJoin))
+	http.HandleFunc("/api/habit/click", middleware.TelegramAuthMiddleware(habitHandler.HandleUpdate))
+	http.HandleFunc("/api/habit/followers", middleware.TelegramAuthMiddleware(followerHandler.HandleGetFollowers))
+	http.HandleFunc("/api/habit/following", middleware.TelegramAuthMiddleware(followerHandler.HandleGetFollowing))
+	http.HandleFunc("/api/habit/progress", middleware.TelegramAuthMiddleware(followerHandler.HandleHabitProgress))
+	http.HandleFunc("/api/habit/unfollow", middleware.TelegramAuthMiddleware(followerHandler.HandleUnfollow))
+	http.HandleFunc("/api/invoice", middleware.TelegramAuthMiddleware(invoiceHandler.HandleCreateInvoice))
 
 	// Запуск сервера
 	wrappedHandler := corsMiddleware.Handler(http.DefaultServeMux)

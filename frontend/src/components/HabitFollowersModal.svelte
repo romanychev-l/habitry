@@ -4,6 +4,7 @@
     import { habits } from '../stores/habit';
     import { createEventDispatcher } from 'svelte';
     import ActivityHeatmap from './ActivityHeatmap.svelte';
+    import { api } from '../utils/api';
     
     const dispatch = createEventDispatcher();
     
@@ -47,15 +48,7 @@
     async function loadActivityData() {
         console.log("Loading activity data for habit:", habit);
         try {
-            const url = `${API_URL}/habit/activity?habit_id=${habit._id}&telegram_id=${telegramId}`;
-            console.log("Activity data URL:", url);
-            const response = await fetch(url);
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Server error:', errorText);
-                throw new Error('Failed to load activity data');
-            }
-            const data = await response.json();
+            const data = await api.getHabitActivity(habit._id, telegramId);
             console.log("Activity data response:", data);
             activityData = [...data];
         } catch (err) {
@@ -78,40 +71,20 @@
         console.log('Отправляем запрос на отписку:', requestData);
         
         try {
-            const response = await fetch(`${API_URL}/habit/unfollow`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestData)
-            });
+            await api.unfollowHabit(requestData);
+            console.log('Успешно отписались');
             
-            console.log('Получен ответ:', response.status);
+            // Обновляем список подписчиков
+            const data = await api.getHabitFollowers(habit._id, telegramId);
+            dispatch('followersUpdated', { followers: data });
             
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Ошибка от сервера:', errorText);
-                throw new Error($_('habits.errors.unfollow'));
-            }
-
-            const data = await response.json();
-            
-            // Обновляем стор с привычками
-            habits.update(currentHabits => 
-                currentHabits.map(h => h._id === data.habit._id ? data.habit : h)
-            );
-            
-            const currentFollower = selectedFollower;
-            followers = followers.filter(f => f.telegram_id !== currentFollower.telegram_id);
-            dispatch('followersUpdated', { followers });
+            // Закрываем модальное окно
             showUnfollowConfirm = false;
             selectedFollower = null;
-            
             success = $_('habits.unfollow_success');
-            console.log('Успешно отписались');
-        } catch (err: any) {
-            error = err.message || $_('habits.errors.unfollow');
-            console.error('Ошибка при отписке:', err);
+        } catch (error) {
+            console.error('Error unfollowing:', error);
+            error = $_('habits.errors.unfollow');
         }
     }
     

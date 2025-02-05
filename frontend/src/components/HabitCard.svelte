@@ -9,6 +9,7 @@
     import HabitLinkModal from './HabitLinkModal.svelte';
     import type { Habit } from '../types';
     import { onMount } from 'svelte';
+    import { api } from '../utils/api';
     
     export let habit: Habit;
     export let telegramId: number;
@@ -109,24 +110,13 @@
     
     async function updateHabitOnServer() {
         try {
-            const response = await fetch(`${API_URL}/habit/update`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    telegram_id: telegramId,
-                    habit: {
-                        _id: habit._id
-                    }
-                })
+            const data = await api.updateHabit({
+                telegram_id: telegramId,
+                habit: {
+                    _id: habit._id
+                }
             });
             
-            if (!response.ok) {
-                throw new Error($_('habits.errors.update'));
-            }
-            
-            const data = await response.json();
             console.log('Update response:', data);
             
             if (data.habit) {
@@ -135,7 +125,7 @@
                 setTimeout(() => {
                     isAnimating = false;
                 }, 800);
-
+                
                 // Обновляем store habits для пересортировки
                 habits.update(currentHabits => {
                     const updatedHabits = currentHabits.map(h => 
@@ -146,12 +136,7 @@
                 
                 // После обновления store пересчитываем прогресс
                 await updateProgress();
-                
-                if (navigator.vibrate) {
-                    navigator.vibrate(200);
-                }
             }
-            
             return data;
         } catch (error) {
             console.error('Ошибка:', error);
@@ -161,24 +146,13 @@
     
     async function handleUndo() {
         try {
-            const response = await fetch(`${API_URL}/habit/undo`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    telegram_id: telegramId,
-                    habit: {
-                        _id: habit._id
-                    }
-                })
+            const data = await api.undoHabit({
+                telegram_id: telegramId,
+                habit: {
+                    _id: habit._id
+                }
             });
             
-            if (!response.ok) {
-                throw new Error($_('habits.errors.undo'));
-            }
-            
-            const data = await response.json();
             if (data.habit) {
                 isAnimating = true;
                 // Сбрасываем флаг анимации после её завершения
@@ -199,33 +173,24 @@
             }
         } catch (error) {
             console.error('Ошибка:', error);
+            alert($_('habits.errors.undo'));
         }
     }
     
     async function handleDelete() {
         try {
-            const response = await fetch(`${API_URL}/habit/delete`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    telegram_id: telegramId,
-                    habit_id: habit._id
-                })
+            const data = await api.deleteHabit({
+                telegram_id: telegramId,
+                habit_id: habit._id
             });
-            
-            if (!response.ok) {
-                if (response.status === 403) {
-                    alert($_('habits.errors.delete_forbidden'));
-                    return;
-                }
-                throw new Error($_('habits.errors.delete'));
-            }
             
             // Перезагружаем страницу после успешного удаления
             window.location.reload();
         } catch (error) {
+            if (error instanceof Error && error.message.includes('403')) {
+                alert($_('habits.errors.delete_forbidden'));
+                return;
+            }
             console.error('Error:', error);
             alert($_('habits.errors.delete'));
         }
@@ -255,12 +220,7 @@
         console.log('calculateProgress', completed);
         
         try {
-            const response = await fetch(`${API_URL}/habit/progress?habit_id=${habit._id}&telegram_id=${telegramId}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch progress');
-            }
-            
-            const data = await response.json();
+            const data = await api.getHabitProgress(habit._id, telegramId);
             console.log('Progress data:', data);
             return data.progress;
         } catch (error) {
@@ -271,29 +231,14 @@
 
     async function handleEdit(event: { detail: Partial<Habit> }) {
         try {
-            const response = await fetch(`${API_URL}/habit/edit`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    telegram_id: telegramId,
-                    habit: {
-                        _id: habit._id,
-                        ...event.detail
-                    }
-                })
+            const data = await api.updateHabit({
+                telegram_id: telegramId,
+                habit: {
+                    _id: habit._id,
+                    ...event.detail
+                }
             });
 
-            if (!response.ok) {
-                if (response.status === 403) {
-                    alert($_('habits.errors.edit_forbidden'));
-                    return;
-                }
-                throw new Error($_('habits.errors.update'));
-            }
-
-            const data = await response.json();
             if (data.habit) {
                 habits.update(currentHabits => {
                     const updatedHabits = currentHabits.map(h => 
@@ -305,6 +250,10 @@
 
             showEditModal = false;
         } catch (error) {
+            if (error instanceof Error && error.message.includes('403')) {
+                alert($_('habits.errors.edit_forbidden'));
+                return;
+            }
             console.error('Error:', error);
             alert($_('habits.errors.update'));
         }
@@ -312,11 +261,7 @@
 
     async function loadFollowers() {
         try {
-            const response = await fetch(`${API_URL}/habit/followers?habit_id=${habit._id}&telegram_id=${telegramId}`);
-            if (!response.ok) {
-                throw new Error($_('habits.errors.load_followers'));
-            }
-            const data = await response.json();
+            const data = await api.getHabitFollowers(habit._id, telegramId);
             preloadedFollowers = data;
         } catch (error) {
             console.error('Error loading followers:', error);

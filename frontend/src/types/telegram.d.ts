@@ -1,26 +1,32 @@
+interface TelegramUser {
+    id: number;
+    first_name: string;
+    last_name?: string;
+    username?: string;
+    language_code?: string;
+    photo_url?: string;
+}
+
 interface TelegramWebApp {
-    ready: () => void;
-    expand: () => void;
-    disableVerticalSwipes: () => void;
-    requestFullscreen: () => void;
-    close: () => void;
+    initData: string;
+    initDataUnsafe: {
+        query_id?: string;
+        user?: TelegramUser;
+        auth_date?: number;
+        hash?: string;
+        start_param?: string;
+    };
+    colorScheme: 'light' | 'dark';
     backgroundColor: string;
     textColor: string;
     buttonColor: string;
     buttonTextColor: string;
     secondaryBackgroundColor: string;
-    colorScheme: 'light' | 'dark';
-    initDataUnsafe: {
-      start_param?: string;
-      user?: {
-        id: number;
-        first_name: string;
-        last_name?: string;
-        username?: string;
-        language_code?: string;
-        photo_url?: string;
-      };
-    };
+    ready: () => void;
+    expand: () => void;
+    disableVerticalSwipes: () => void;
+    requestFullscreen: () => void;
+    close: () => void;
     openInvoice: (url: string, callback: (status: string) => void) => void;
     openLink: (url: string) => void;
     shareUrl: (url: string) => void;
@@ -35,7 +41,7 @@ interface TelegramWebApp {
 }
 
 interface Window {
-  Telegram?: {
-    WebApp: TelegramWebApp;
-};
+    Telegram?: {
+        WebApp: TelegramWebApp;
+    };
 }

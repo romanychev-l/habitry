@@ -1,4 +1,5 @@
 import { user } from '../stores/user';
+import { api } from './api';
 
 export const initTelegram = () => {
     // Проверяем, что window.Telegram.WebApp существует
@@ -12,12 +13,15 @@ export const initTelegram = () => {
     // Получаем данные пользователя
     const userData = webapp.initDataUnsafe?.user;
     if (userData) {
+      // Исправляем URL фотографии, заменяя экранированные слэши на обычные
+      const photoUrl = userData.photo_url?.replace(/\\\//g, '/');
+      
       user.set({
         id: userData.id,
         firstName: userData.first_name,
         username: userData.username,
         languageCode: userData.language_code,
-        photoUrl: userData.photo_url
+        photoUrl: photoUrl
       });
     }
     console.log('user', userData);
@@ -49,11 +53,12 @@ export async function openTelegramInvoice(amount: number) {
     }
 
     try {
-        const API_URL = import.meta.env.VITE_API_URL;
-        const response = await fetch(`${API_URL}/create-invoice?amount=${amount}`);
-        console.log(response);
-        const data = await response.json();
-        console.log(data);
+        const data = await api.createInvoice(amount);
+        console.log('Invoice data:', data);
+        
+        if (!data.url) {
+            throw new Error('No invoice URL in response');
+        }
         
         window.Telegram.WebApp.openInvoice(data.url, (status: string) => {
             if (status === 'paid') {
