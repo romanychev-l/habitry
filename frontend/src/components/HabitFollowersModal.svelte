@@ -3,41 +3,64 @@
     import type { Habit } from '../types';
     import { habits } from '../stores/habit';
     import { createEventDispatcher } from 'svelte';
+    import ActivityHeatmap from './ActivityHeatmap.svelte';
     
     const dispatch = createEventDispatcher();
     
     export let show = false;
     export let habit: Habit;
     export let telegramId: number;
-    export let initialFollowers: Array<{ username: string; telegram_id: number }> = [];
+    export let initialFollowers: Array<{ username: string; telegram_id: number }> | null = null;
     
-    let followers = initialFollowers;
+    let followers: Array<{ username: string; telegram_id: number }> = [];
     let loading = false;
     let error = '';
     let success = '';
     let showUnfollowConfirm = false;
     let selectedFollower: { username: string; telegram_id: number } | null = null;
+    let activityData: { date: string; count: number }[] = [];
     
     const API_URL = import.meta.env.VITE_API_URL;
     
     async function loadFollowers() {
-        if (initialFollowers.length > 0) {
-            followers = initialFollowers;
-            return;
-        }
-
         try {
             loading = true;
-            const response = await fetch(`${API_URL}/habit/followers?habit_id=${habit._id}&telegram_id=${telegramId}`);
-            if (!response.ok) {
-                throw new Error($_('habits.errors.load_followers'));
+            if (initialFollowers && initialFollowers.length > 0) {
+                followers = initialFollowers.map(f => ({ ...f }));
+            } else {
+                const response = await fetch(`${API_URL}/habit/followers?habit_id=${habit._id}&telegram_id=${telegramId}`);
+                if (!response.ok) {
+                    throw new Error($_('habits.errors.load_followers'));
+                }
+                const data = await response.json();
+                followers = Array.isArray(data) ? data : [];
             }
-            followers = await response.json();
         } catch (err: any) {
             error = err.message || $_('habits.errors.load_followers');
             console.error('Error loading followers:', err);
+            followers = [];
         } finally {
             loading = false;
+        }
+    }
+
+    async function loadActivityData() {
+        console.log("Loading activity data for habit:", habit);
+        try {
+            const url = `${API_URL}/habit/activity?habit_id=${habit._id}&telegram_id=${telegramId}`;
+            console.log("Activity data URL:", url);
+            const response = await fetch(url);
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Server error:', errorText);
+                throw new Error('Failed to load activity data');
+            }
+            const data = await response.json();
+            console.log("Activity data response:", data);
+            activityData = [...data];
+        } catch (err) {
+            console.error('Error loading activity data:', err);
+            activityData = [];
         }
     }
     
@@ -110,6 +133,7 @@
     
     $: if (show) {
         loadFollowers();
+        loadActivityData();
     }
 </script>
 
@@ -127,36 +151,44 @@
             </div>
             
             <div class="dialog-content">
-                {#if loading}
-                    <div class="loading">{$_('common.loading')}</div>
-                {:else if error}
-                    <div class="error">{error}</div>
-                {:else if success}
-                    <div class="success">{success}</div>
-                {:else if followers.length === 0}
-                    <div class="empty">{$_('habits.no_followers')}</div>
-                {:else}
-                    <ul class="followers-list">
-                        {#each followers as follower}
-                            <li class="follower-item">
-                                <a 
-                                    href="https://t.me/{follower.username}" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    class="username"
-                                >
-                                    @{follower.username}
-                                </a>
-                                <button 
-                                    class="unfollow-button"
-                                    on:click={() => handleUnfollowClick(follower)}
-                                >
-                                    {$_('habits.unfollow')}
-                                </button>
-                            </li>
-                        {/each}
-                    </ul>
-                {/if}
+                <div class="activity-section">
+                    <h3>{$_('habits.activity')}</h3>
+                    <ActivityHeatmap data={activityData} />
+                </div>
+                
+                <div class="followers-section">
+                    <h3>{$_('habits.followers_list')}</h3>
+                    {#if loading}
+                        <div class="loading">{$_('common.loading')}</div>
+                    {:else if error}
+                        <div class="error">{error}</div>
+                    {:else if success}
+                        <div class="success">{success}</div>
+                    {:else if followers.length === 0}
+                        <div class="empty">{$_('habits.no_followers')}</div>
+                    {:else}
+                        <ul class="followers-list">
+                            {#each followers as follower}
+                                <li class="follower-item">
+                                    <a 
+                                        href="https://t.me/{follower.username}" 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        class="username"
+                                    >
+                                        @{follower.username}
+                                    </a>
+                                    <button 
+                                        class="unfollow-button"
+                                        on:click={() => handleUnfollowClick(follower)}
+                                    >
+                                        {$_('habits.unfollow')}
+                                    </button>
+                                </li>
+                            {/each}
+                        </ul>
+                    {/if}
+                </div>
             </div>
         </div>
     </div>
@@ -209,7 +241,7 @@
     }
 
     .dialog-header {
-        padding: 32px 16px 16px 16px;
+        padding: 24px 16px 16px 16px;
         border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
         text-align: center;
     }
@@ -221,7 +253,7 @@
     }
 
     .dialog-content {
-        padding: 24px;
+        padding: 16px 24px;
     }
 
     .followers-list {
@@ -318,5 +350,30 @@
 
     :global([data-theme="dark"]) .dialog * {
         color: white !important;
+    }
+
+    .activity-section {
+        margin-bottom: 1rem;
+        padding: 1rem;
+        background-color: var(--background-secondary);
+        border-radius: 8px;
+    }
+    
+    .activity-section h3 {
+        margin-top: 0;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+    
+    .followers-section {
+        padding: 1rem;
+        background-color: var(--background-secondary);
+        border-radius: 8px;
+    }
+    
+    .followers-section h3 {
+        margin-top: 0;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
     }
 </style> 

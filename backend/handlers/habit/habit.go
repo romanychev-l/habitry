@@ -796,6 +796,81 @@ func (h *Handler) HandleGetFollowers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
+// HandleGetActivity возвращает данные об активности привычки за последний год
+func (h *Handler) HandleGetActivity(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	habitID := r.URL.Query().Get("habit_id")
+	if habitID == "" {
+		http.Error(w, "habit_id is required", http.StatusBadRequest)
+		return
+	}
+
+	telegramID, err := strconv.ParseInt(r.URL.Query().Get("telegram_id"), 10, 64)
+	if err != nil {
+		http.Error(w, "invalid telegram_id", http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+
+	// Получаем историю за последний год
+	endDate := time.Now()
+	startDate := endDate.AddDate(-1, 0, 0)
+
+	// Создаем фильтр для поиска истории
+	filter := bson.M{
+		"telegram_id": telegramID,
+		"date": bson.M{
+			"$gte": startDate.Format("2006-01-02"),
+			"$lte": endDate.Format("2006-01-02"),
+		},
+	}
+
+	// Получаем историю из базы данных
+	cursor, err := h.historyCollection.Find(ctx, filter)
+	if err != nil {
+		http.Error(w, "Failed to get history", http.StatusInternalServerError)
+		return
+	}
+	defer cursor.Close(ctx)
+
+	// Создаем карту для подсчета выполнений по дням
+	activityMap := make(map[string]int)
+
+	// Обрабатываем каждую запись истории
+	for cursor.Next(ctx) {
+		var history models.History
+		if err := cursor.Decode(&history); err != nil {
+			continue
+		}
+
+		// Проверяем каждую привычку в истории
+		for _, habit := range history.Habits {
+			if habit.HabitID.Hex() == habitID && habit.Done {
+				activityMap[history.Date]++
+			}
+		}
+	}
+
+	// Преобразуем карту в массив для ответа
+	var activity []map[string]interface{}
+	for date, count := range activityMap {
+		activity = append(activity, map[string]interface{}{
+			"date":  date,
+			"count": count,
+		})
+	}
+	log.Printf("Activity: %v", activity)
+
+	// Отправляем ответ
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(activity)
+}
+
 // Вспомогательная функция для обогащения данных привычки информацией о подписчиках
 func (h *Handler) enrichHabitWithFollowers(ctx context.Context, habit models.Habit) (models.HabitResponse, error) {
 	response := models.HabitResponse{
