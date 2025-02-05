@@ -26,7 +26,7 @@ func main() {
 	}
 
 	// Запускаем миграцию
-	if err := migrations.MigrateHabitsToFollowers(client, "ht_db"); err != nil {
+	if err := migrations.MigrateHistory(client, "ht_db"); err != nil {
 		log.Printf("Ошибка при выполнении миграции: %v", err)
 		os.Exit(1)
 	}

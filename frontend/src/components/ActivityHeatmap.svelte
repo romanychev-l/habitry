@@ -125,7 +125,7 @@
     </div>
   </div>
   
-  <div class="legend">
+  <!-- <div class="legend">
     <span>Less</span>
     <div class="square" style="background-color: #ebedf0"></div>
     <div class="square" style="background-color: #9be9a8"></div>
@@ -133,7 +133,7 @@
     <div class="square" style="background-color: #30a14e"></div>
     <div class="square" style="background-color: #216e39"></div>
     <span>More</span>
-  </div>
+  </div> -->
 </div>
 
 {#if tooltip.visible}
