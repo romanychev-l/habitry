@@ -7,11 +7,10 @@
     import NewHabitModal from './NewHabitModal.svelte';
     import HabitFollowersModal from './HabitFollowersModal.svelte';
     import HabitLinkModal from './HabitLinkModal.svelte';
-    import type { HabitWithStats } from '../types';
     import type { Habit } from '../types';
     import { onMount } from 'svelte';
     
-    export let habitWithStats: HabitWithStats;
+    export let habit: Habit;
     export let telegramId: number;
     export let readonly: boolean = false;
     
@@ -96,11 +95,11 @@
     // Загружаем данные при монтировании компонента
     onMount(loadFollowers);
 
-    // Обновляем состояние при изменении habitWithStats
+    // Обновляем состояние при изменении habit
     $: {
-        if (habitWithStats) {
+        if (habit) {
             const today = new Date().toISOString().split('T')[0];
-            completed = habitWithStats.last_click_date === today;
+            completed = habit.last_click_date === today;
             updateProgress();
             loadFollowers(); // Обновляем список подписчиков при изменении привычки
         }
@@ -118,7 +117,7 @@
                 body: JSON.stringify({
                     telegram_id: telegramId,
                     habit: {
-                        _id: habitWithStats.habit._id
+                        _id: habit._id
                     }
                 })
             });
@@ -140,7 +139,7 @@
                 // Обновляем store habits для пересортировки
                 habits.update(currentHabits => {
                     const updatedHabits = currentHabits.map(h => 
-                        h.habit._id === data.habit.habit._id ? data.habit : h
+                        h._id === data.habit._id ? data.habit : h
                     );
                     return updatedHabits;
                 });
@@ -170,7 +169,7 @@
                 body: JSON.stringify({
                     telegram_id: telegramId,
                     habit: {
-                        _id: habitWithStats.habit._id
+                        _id: habit._id
                     }
                 })
             });
@@ -190,7 +189,7 @@
                 // Обновляем store habits для пересортировки
                 habits.update(currentHabits => {
                     const updatedHabits = currentHabits.map(h => 
-                        h.habit._id === data.habit.habit._id ? data.habit : h
+                        h._id === data.habit._id ? data.habit : h
                     );
                     return updatedHabits;
                 });
@@ -212,7 +211,7 @@
                 },
                 body: JSON.stringify({
                     telegram_id: telegramId,
-                    habit_id: habitWithStats.habit._id
+                    habit_id: habit._id
                 })
             });
             
@@ -243,8 +242,8 @@
     }
 
     // Получаем два цвета для градиента и мемоизируем их
-    $: color1 = stringToColor(habitWithStats.habit._id);
-    $: color2 = stringToColor(habitWithStats.habit._id.split('').reverse().join(''));
+    $: color1 = stringToColor(habit._id);
+    $: color2 = stringToColor(habit._id.split('').reverse().join(''));
     $: gradientStyle = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
 
     let showActions = false;
@@ -256,7 +255,7 @@
         console.log('calculateProgress', completed);
         
         try {
-            const response = await fetch(`${API_URL}/habit/progress?habit_id=${habitWithStats.habit._id}&telegram_id=${telegramId}`);
+            const response = await fetch(`${API_URL}/habit/progress?habit_id=${habit._id}&telegram_id=${telegramId}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch progress');
             }
@@ -280,7 +279,7 @@
                 body: JSON.stringify({
                     telegram_id: telegramId,
                     habit: {
-                        _id: habitWithStats.habit._id,
+                        _id: habit._id,
                         ...event.detail
                     }
                 })
@@ -298,7 +297,7 @@
             if (data.habit) {
                 habits.update(currentHabits => {
                     const updatedHabits = currentHabits.map(h => 
-                        h.habit._id === data.habit.habit._id ? data.habit : h
+                        h._id === data.habit._id ? data.habit : h
                     );
                     return updatedHabits;
                 });
@@ -313,7 +312,7 @@
 
     async function loadFollowers() {
         try {
-            const response = await fetch(`${API_URL}/habit/followers?habit_id=${habitWithStats.habit._id}&telegram_id=${telegramId}`);
+            const response = await fetch(`${API_URL}/habit/followers?habit_id=${habit._id}&telegram_id=${telegramId}`);
             if (!response.ok) {
                 throw new Error($_('habits.errors.load_followers'));
             }
@@ -388,12 +387,12 @@
       on:pointerleave={handlePointerUp}
       style="--habit-gradient: {gradientStyle}">
       <div class="content">
-        <h3>{habitWithStats.habit.title}</h3>
+        <h3>{habit.title}</h3>
         
-        {#if !$isListView && habitWithStats.habit.want_to_become}
+        {#if !$isListView && habit.want_to_become}
           <div class="want-to-become">
             <span class="label">{$_('habits.want_to_become')}</span>
-            <span class="value">{habitWithStats.habit.want_to_become}</span>
+            <span class="value">{habit.want_to_become}</span>
           </div>
         {/if}
 
@@ -413,14 +412,14 @@
     </div>
   </div>
   <div class="streak-counter" style="--habit-gradient: {gradientStyle}">
-    {habitWithStats.streak || 0}
+    {habit.streak || 0}
   </div>
 </div>
 
 {#if showLinkModal}
   <HabitLinkModal
     habits={$habits}
-    sharedHabitId={habitWithStats.habit._id}
+    sharedHabitId={habit._id}
     sharedByTelegramId={telegramId.toString()}
     on:close={() => showLinkModal = false}
     on:select={handleHabitLink}
@@ -429,7 +428,7 @@
 
 {#if showActions && !readonly}
   <HabitActionsModal 
-    habitWithStats={habitWithStats}
+    habit={habit}
     on:close={() => showActions = false}
     on:showDeleteConfirm={() => {
       showActions = false;
@@ -451,7 +450,7 @@
 
 {#if showEditModal && !readonly}
   <NewHabitModal
-    habit={habitWithStats.habit}
+    habit={habit}
     on:close={() => showEditModal = false}
     on:save={handleEdit}
   />
@@ -460,7 +459,7 @@
 {#if showFollowersModal && !readonly}
   <HabitFollowersModal
     show={showFollowersModal}
-    habit={habitWithStats.habit}
+    habit={habit}
     telegramId={telegramId}
     initialFollowers={preloadedFollowers}
     on:close={() => showFollowersModal = false}

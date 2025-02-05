@@ -54,7 +54,6 @@ func main() {
 	usersCollection := database.Collection("users")
 	historyCollection := database.Collection("history")
 	habitsCollection := database.Collection("habits")
-	followersCollection := database.Collection("followers")
 
 	b, err := bot.New(botToken)
 	if err != nil {
@@ -62,10 +61,10 @@ func main() {
 	}
 
 	// Инициализация хендлеров
-	userHandler := user.NewHandler(usersCollection, historyCollection, habitsCollection, followersCollection)
-	habitHandler := habit.NewHandler(habitsCollection, historyCollection, followersCollection, usersCollection)
+	userHandler := user.NewHandler(usersCollection, historyCollection, habitsCollection)
+	habitHandler := habit.NewHandler(habitsCollection, historyCollection, usersCollection)
 	invoiceHandler := invoice.NewHandler(b)
-	followerHandler := follower.NewHandler(followersCollection)
+	followerHandler := follower.NewHandler(habitsCollection, usersCollection)
 
 	// Настройка CORS
 	corsMiddleware := cors.New(cors.Options{
@@ -85,7 +84,7 @@ func main() {
 	http.HandleFunc("/create-invoice", invoiceHandler.HandleCreateInvoice)
 	http.HandleFunc("/habit/undo", habitHandler.HandleUndo)
 	http.HandleFunc("/habit/join", habitHandler.HandleJoin)
-	http.HandleFunc("/followers", followerHandler.HandleFollowers)
+	http.HandleFunc("/followers", followerHandler.HandleGetFollowers)
 	http.HandleFunc("/habit/progress", followerHandler.HandleHabitProgress)
 	http.HandleFunc("/habit/edit", habitHandler.HandleEdit)
 	http.HandleFunc("/habit/followers", habitHandler.HandleGetFollowers)

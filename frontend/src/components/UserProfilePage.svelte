@@ -2,7 +2,7 @@
   import { _ } from 'svelte-i18n';
   import { createEventDispatcher } from 'svelte';
   import HabitCard from './HabitCard.svelte';
-  import type { HabitWithStats } from '../types';
+  import type { Habit } from '../types';
   
   const dispatch = createEventDispatcher();
   export let username: string;
@@ -12,7 +12,7 @@
     username: string;
     first_name: string;
     photo_url: string;
-    habits: HabitWithStats[];
+    habits: Habit[];
   }
   
   let userProfile: UserProfile | null = null;
@@ -76,7 +76,7 @@
           <div class="habit-container">
             {#each userProfile.habits as habit}
               <HabitCard 
-                habitWithStats={habit} 
+                habit={habit} 
                 telegramId={parseInt(userProfile.telegram_id)} 
                 readonly={userProfile.telegram_id !== window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()}
               />

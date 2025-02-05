@@ -27,18 +27,16 @@ func contains(arr []int, val int) bool {
 }
 
 type Handler struct {
-	usersCollection     *mongo.Collection
-	historyCollection   *mongo.Collection
-	habitsCollection    *mongo.Collection
-	followersCollection *mongo.Collection
+	usersCollection   *mongo.Collection
+	historyCollection *mongo.Collection
+	habitsCollection  *mongo.Collection
 }
 
-func NewHandler(usersCollection, historyCollection, habitsCollection, followersCollection *mongo.Collection) *Handler {
+func NewHandler(usersCollection, historyCollection, habitsCollection *mongo.Collection) *Handler {
 	return &Handler{
-		usersCollection:     usersCollection,
-		historyCollection:   historyCollection,
-		habitsCollection:    habitsCollection,
-		followersCollection: followersCollection,
+		usersCollection:   usersCollection,
+		historyCollection: historyCollection,
+		habitsCollection:  habitsCollection,
 	}
 }
 
@@ -91,51 +89,10 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Загружаем привычки пользователя
-		pipeline := []bson.M{
-			{
-				"$match": bson.M{
-					"telegram_id": user.TelegramID,
-					"habit_id": bson.M{
-						"$regex": ObjectIDHexRegex,
-					},
-				},
-			},
-			{
-				"$addFields": bson.M{
-					"objectId": bson.M{"$toObjectId": "$habit_id"},
-				},
-			},
-			{
-				"$lookup": bson.M{
-					"from":         "habits",
-					"localField":   "objectId",
-					"foreignField": "_id",
-					"as":           "habit",
-				},
-			},
-			{
-				"$unwind": "$habit",
-			},
-			{
-				"$project": bson.M{
-					"habit": bson.M{
-						"_id":            "$habit._id",
-						"title":          "$habit.title",
-						"want_to_become": "$habit.want_to_become",
-						"days":           "$habit.days",
-						"is_one_time":    "$habit.is_one_time",
-						"created_at":     "$habit.created_at",
-						"creator_id":     "$habit.creator_id",
-					},
-					"last_click_date": 1,
-					"streak":          1,
-					"score":           1,
-				},
-			},
-		}
-
-		log.Printf("Ищем привычки для пользователя %d", user.TelegramID)
-		cursor, err := h.followersCollection.Aggregate(context.Background(), pipeline)
+		cursor, err := h.habitsCollection.Find(
+			context.Background(),
+			bson.M{"telegram_id": user.TelegramID},
+		)
 		if err != nil {
 			log.Printf("Ошибка при получении привычек: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -143,7 +100,7 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 		}
 		defer cursor.Close(context.Background())
 
-		var habits []models.HabitWithStats
+		var habits []models.Habit
 		if err = cursor.All(context.Background(), &habits); err != nil {
 			log.Printf("Ошибка при декодировании привычек: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -159,14 +116,16 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 		}
 		loc, err := time.LoadLocation(userTimezone)
 		if err != nil {
+			log.Printf("Ошибка при загрузке таймзоны: %v", err)
 			loc = time.UTC
 		}
 
 		today := time.Now().In(loc).Format("2006-01-02")
 		if user.LastVisit != today {
-			yesterdayStr := time.Now().In(loc).AddDate(0, 0, -1).Format("2006-01-02")
-
 			// Получаем историю за вчера
+			yesterday := time.Now().In(loc).AddDate(0, 0, -1)
+			yesterdayStr := yesterday.Format("2006-01-02")
+
 			var yesterdayHistory models.History
 			err := h.historyCollection.FindOne(
 				context.Background(),
@@ -180,7 +139,7 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 			if err == nil {
 				for _, h := range yesterdayHistory.Habits {
 					if h.Done {
-						completedHabits[h.HabitID] = true
+						completedHabits[h.HabitID.Hex()] = true
 					}
 				}
 			}
@@ -216,11 +175,16 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 			// Обнуляем streak для пропущенных привычек
 			for habitID := range scheduledHabits {
 				if !completedHabits[habitID] {
-					_, err = h.followersCollection.UpdateOne(
+					habitObjectID, err := primitive.ObjectIDFromHex(habitID)
+					if err != nil {
+						log.Printf("Ошибка при преобразовании habit_id: %v", err)
+						continue
+					}
+
+					_, err = h.habitsCollection.UpdateOne(
 						context.Background(),
 						bson.M{
-							"telegram_id": id,
-							"habit_id":    habitID,
+							"_id": habitObjectID,
 						},
 						bson.M{
 							"$set": bson.M{
@@ -235,7 +199,10 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Получаем обновленные данные привычек
-			cursor, err = h.followersCollection.Aggregate(context.Background(), pipeline)
+			cursor, err = h.habitsCollection.Find(
+				context.Background(),
+				bson.M{"telegram_id": user.TelegramID},
+			)
 			if err != nil {
 				log.Printf("Ошибка при получении обновленных привычек: %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -243,25 +210,23 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 			}
 			defer cursor.Close(context.Background())
 
-			habits = nil // Очищаем старые данные
+			habits = nil
 			if err = cursor.All(context.Background(), &habits); err != nil {
 				log.Printf("Ошибка при декодировании обновленных привычек: %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			log.Printf("Получены обновленные привычки: %+v", habits)
 
-			update := bson.M{
-				"$set": bson.M{
-					"credit":     missedHabits,
-					"last_visit": today,
-				},
-			}
-
+			// Обновляем кредит и последний визит пользователя
 			_, err = h.usersCollection.UpdateOne(
 				context.Background(),
 				bson.M{"telegram_id": id},
-				update,
+				bson.M{
+					"$set": bson.M{
+						"credit":     missedHabits,
+						"last_visit": today,
+					},
+				},
 			)
 
 			if err != nil {
@@ -272,7 +237,7 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Фильтруем привычки для текущего дня
-		todayHabits := []models.HabitWithStats{}
+		todayHabits := []models.Habit{}
 		today = time.Now().In(loc).Format("2006-01-02")
 
 		for _, habit := range habits {
@@ -301,33 +266,49 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 
 		// Создаем структуру ответа
 		type UserResponse struct {
-			ID         primitive.ObjectID      `json:"_id"`
-			TelegramID int64                   `json:"telegram_id"`
-			Username   string                  `json:"username"`
-			FirstName  string                  `json:"first_name"`
-			Language   string                  `json:"language_code"`
-			PhotoURL   string                  `json:"photo_url"`
-			CreatedAt  time.Time               `json:"created_at"`
-			Credit     int                     `json:"credit"`
-			LastVisit  string                  `json:"last_visit"`
-			Timezone   string                  `json:"timezone"`
-			Habits     []models.HabitWithStats `json:"habits"`
+			ID                   primitive.ObjectID `json:"_id"`
+			TelegramID           int64              `json:"telegram_id"`
+			Username             string             `json:"username"`
+			FirstName            string             `json:"first_name"`
+			Language             string             `json:"language_code"`
+			PhotoURL             string             `json:"photo_url"`
+			CreatedAt            time.Time          `json:"created_at"`
+			Credit               int                `json:"credit"`
+			LastVisit            string             `json:"last_visit"`
+			Timezone             string             `json:"timezone"`
+			NotificationsEnabled bool               `json:"notifications_enabled"`
+			NotificationTime     string             `json:"notification_time"`
+			Habits               []models.Habit     `json:"habits"`
 		}
 
 		response := UserResponse{
-			ID:         user.ID,
-			TelegramID: user.TelegramID,
-			Username:   user.Username,
-			FirstName:  user.FirstName,
-			Language:   user.LanguageCode,
-			PhotoURL:   user.PhotoURL,
-			CreatedAt:  user.CreatedAt,
-			Credit:     user.Credit,
-			LastVisit:  user.LastVisit,
-			Timezone:   user.Timezone,
-			Habits:     todayHabits,
+			ID:                   user.ID,
+			TelegramID:           user.TelegramID,
+			Username:             user.Username,
+			FirstName:            user.FirstName,
+			Language:             user.LanguageCode,
+			PhotoURL:             user.PhotoURL,
+			CreatedAt:            user.CreatedAt,
+			Credit:               user.Credit,
+			LastVisit:            today,
+			Timezone:             user.Timezone,
+			NotificationsEnabled: user.NotificationsEnabled,
+			NotificationTime:     user.NotificationTime,
+			Habits:               todayHabits,
 		}
 
+		// Обновляем последний визит
+		_, err = h.usersCollection.UpdateOne(
+			context.Background(),
+			bson.M{"telegram_id": id},
+			bson.M{"$set": bson.M{"last_visit": today}},
+		)
+
+		if err != nil {
+			log.Printf("Ошибка при обновлении last_visit: %v", err)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
 	}
 }
@@ -512,7 +493,7 @@ func (h *Handler) HandleUserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Получаем привычки пользователя
-	habitsFilter := bson.M{"creator_id": user.TelegramID}
+	habitsFilter := bson.M{"telegram_id": user.TelegramID}
 	log.Printf("Looking for habits with filter: %+v", habitsFilter)
 	cursor, err := h.habitsCollection.Find(r.Context(), habitsFilter)
 	if err != nil {
@@ -530,54 +511,18 @@ func (h *Handler) HandleUserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("Found %d habits for user", len(habits))
 
-	// Получаем статистику для каждой привычки
-	var habitsWithStats []struct {
-		Habit         models.Habit `json:"habit"`
-		Streak        int          `json:"streak"`
-		Score         int          `json:"score"`
-		LastClickDate string       `json:"last_click_date"`
-	}
-
-	for _, habit := range habits {
-		var follower models.Follower
-		err := h.followersCollection.FindOne(r.Context(), bson.M{
-			"telegram_id": user.TelegramID,
-			"habit_id":    habit.ID.Hex(),
-		}).Decode(&follower)
-
-		stats := struct {
-			Habit         models.Habit `json:"habit"`
-			Streak        int          `json:"streak"`
-			Score         int          `json:"score"`
-			LastClickDate string       `json:"last_click_date"`
-		}{
-			Habit:         habit,
-			Streak:        0,
-			Score:         0,
-			LastClickDate: "",
-		}
-
-		if err == nil {
-			stats.Streak = follower.Streak
-			stats.Score = follower.Score
-			stats.LastClickDate = follower.LastClickDate
-		}
-
-		habitsWithStats = append(habitsWithStats, stats)
-	}
-
 	response := struct {
-		TelegramID string      `json:"telegram_id"`
-		Username   string      `json:"username"`
-		FirstName  string      `json:"first_name"`
-		PhotoURL   string      `json:"photo_url"`
-		Habits     interface{} `json:"habits"`
+		TelegramID string         `json:"telegram_id"`
+		Username   string         `json:"username"`
+		FirstName  string         `json:"first_name"`
+		PhotoURL   string         `json:"photo_url"`
+		Habits     []models.Habit `json:"habits"`
 	}{
 		TelegramID: strconv.FormatInt(user.TelegramID, 10),
 		Username:   user.Username,
 		FirstName:  user.FirstName,
 		PhotoURL:   user.PhotoURL,
-		Habits:     habitsWithStats,
+		Habits:     habits,
 	}
 
 	log.Printf("Response: %+v", response)

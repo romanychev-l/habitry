@@ -1,27 +1,51 @@
-export interface Habit {
-    _id: string;
-    title: string;
-    want_to_become?: string;
-    creator_id: number;
-    created_at: string;
-    days: number[];
-    is_one_time: boolean;
-}
-
-export interface HabitFollower {
+export interface FollowerInfo {
     _id: string;
     telegram_id: number;
-    habit_id: string;
+    title: string;
     last_click_date: string | null;
     streak: number;
     score: number;
+}
+
+export interface Habit {
+    _id: string;
+    telegram_id: number;
+    title: string;
+    want_to_become?: string;
+    days: number[];
+    is_one_time: boolean;
+    created_at: string;
+    last_click_date: string | null;
+    streak: number;
+    score: number;
+    followers: FollowerInfo[];
 }
 
 export type ViewMode = 'card' | 'list';
 
-export interface HabitWithStats {
+export interface User {
+    _id: string;
+    telegram_id: number;
+    username: string;
+    first_name: string;
+    language_code: string;
+    photo_url: string;
+    created_at: string;
+    credit: number;
+    last_visit: string;
+    timezone: string;
+    notifications_enabled: boolean;
+    notification_time: string;
+    habits: Habit[];
+}
+
+export interface HabitProgress {
+    total_followers: number;
+    completed_today: number;
+    progress: number;
+}
+
+export interface HabitRequest {
+    telegram_id: number;
     habit: Habit;
-    last_click_date: string | null;
-    streak: number;
-    score: number;
 }

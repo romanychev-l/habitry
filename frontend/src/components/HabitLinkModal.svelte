@@ -1,11 +1,10 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
-  import type { HabitWithStats } from '../types';
   import { createEventDispatcher } from 'svelte';
-
+  import type { Habit } from '../types';
   const dispatch = createEventDispatcher();
   
-  export let habits: HabitWithStats[] = [];
+  export let habits: Habit[] = [];
   export let sharedHabitId: string;
   export let sharedByTelegramId: string;
 
@@ -51,11 +50,11 @@
         {#each habits as habit}
           <button 
             class="habit-item"
-            on:click={() => handleHabitSelect(habit.habit._id)}
+            on:click={() => handleHabitSelect(habit._id)}
           >
-            <h3>{habit.habit.title}</h3>
-            {#if habit.habit.want_to_become}
-              <p class="want-to-become">{habit.habit.want_to_become}</p>
+            <h3>{habit.title}</h3>
+            {#if habit.want_to_become}
+              <p class="want-to-become">{habit.want_to_become}</p>
             {/if}
           </button>
         {/each}

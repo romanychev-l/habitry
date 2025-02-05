@@ -4,7 +4,7 @@
   import type { Habit } from '../types';
   
   const dispatch = createEventDispatcher();
-  export let habit: Habit | undefined = undefined;
+  export let habit: Habit | null = null;
   let title = habit?.title || '';
   let selectedDays = new Set(habit?.days || []);
   let isOneTime = habit?.is_one_time || false;
@@ -26,12 +26,13 @@
         return;
     }
 
-    dispatch('save', {
-        title,
-        want_to_become: wantToBecome,
-        days: Array.from(selectedDays),
-        is_one_time: isOneTime
-    });
+    const habitData = {
+      title,
+      want_to_become: wantToBecome,
+      days: Array.from(selectedDays),
+      is_one_time: isOneTime
+    };
+    dispatch('save', habitData);
   }
 
   function handleOverlayClick(event: MouseEvent) {

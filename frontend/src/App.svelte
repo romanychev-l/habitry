@@ -10,7 +10,7 @@
   import { openTelegramInvoice } from './utils/telegram';
   import { _ } from 'svelte-i18n';
   import { habits } from './stores/habit';
-  import type { HabitWithStats } from './types';
+  import type { Habit } from './types';
   
   // Инициализируем значение из localStorage
   $isListView = localStorage.getItem('isListView') === 'true';
@@ -209,8 +209,8 @@
     document.documentElement.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
   }
 
-  $: habitsList = $habits as HabitWithStats[];
-  // ($habits as HabitWithStats[]).sort((a, b) => {
+  $: habitsList = $habits as Habit[];
+  // ($habits as Habit[]).sort((a, b) => {
   //   // Сначала проверяем выполненность за сегодня
   //   const today = new Date().toISOString().split('T')[0];
   //   const aCompletedToday = a.last_click_date == today;
@@ -269,9 +269,9 @@
 
   <div class="habit-container" class:list-view={$isListView}>
     {#if $user}
-      {#each habitsList as habitWithStats}
+      {#each habitsList as habit}
         <HabitCard 
-          {habitWithStats}
+          {habit}
           telegramId={$user.id} 
         />
       {/each}

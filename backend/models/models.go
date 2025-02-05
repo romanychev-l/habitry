@@ -28,14 +28,44 @@ type HabitFollowers struct {
 	Followers     []Follower         `bson:"followers" json:"followers"`
 }
 
+// Habit - основная структура для хранения привычки в БД
 type Habit struct {
-	ID           primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
-	Title        string             `bson:"title" json:"title"`
-	WantToBecome string             `bson:"want_to_become" json:"want_to_become"`
-	Days         []int              `bson:"days" json:"days"`
-	IsOneTime    bool               `bson:"is_one_time" json:"is_one_time"`
-	CreatedAt    time.Time          `bson:"created_at" json:"created_at"`
-	CreatorID    int64              `bson:"creator_id" json:"creator_id"`
+	ID            primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
+	TelegramID    int64              `bson:"telegram_id" json:"telegram_id"`
+	Title         string             `bson:"title" json:"title"`
+	WantToBecome  string             `bson:"want_to_become" json:"want_to_become"`
+	Days          []int              `bson:"days" json:"days"`
+	IsOneTime     bool               `bson:"is_one_time" json:"is_one_time"`
+	CreatedAt     time.Time          `bson:"created_at" json:"created_at"`
+	LastClickDate string             `bson:"last_click_date" json:"last_click_date"`
+	Streak        int                `bson:"streak" json:"streak"`
+	Score         int                `bson:"score" json:"score"`
+	Followers     []string           `bson:"followers" json:"followers,omitempty"` // ID других привычек
+}
+
+// HabitResponse - структура для отправки данных на фронтенд
+type HabitResponse struct {
+	ID            primitive.ObjectID `json:"_id"`
+	TelegramID    int64              `json:"telegram_id"`
+	Title         string             `json:"title"`
+	WantToBecome  string             `json:"want_to_become"`
+	Days          []int              `json:"days"`
+	IsOneTime     bool               `json:"is_one_time"`
+	CreatedAt     time.Time          `json:"created_at"`
+	LastClickDate string             `json:"last_click_date"`
+	Streak        int                `json:"streak"`
+	Score         int                `json:"score"`
+	Followers     []FollowerInfo     `json:"followers"` // Обогащенная информация о подписчиках
+}
+
+// FollowerInfo - информация о подписчике для отправки на фронтенд
+type FollowerInfo struct {
+	ID            primitive.ObjectID `json:"_id"`
+	TelegramID    int64              `json:"telegram_id"`
+	Title         string             `json:"title"`
+	LastClickDate string             `json:"last_click_date"`
+	Streak        int                `json:"streak"`
+	Score         int                `json:"score"`
 }
 
 type HabitRequest struct {
@@ -44,9 +74,9 @@ type HabitRequest struct {
 }
 
 type HabitHistory struct {
-	HabitID string `bson:"habit_id" json:"habit_id"`
-	Title   string `bson:"title" json:"title"`
-	Done    bool   `bson:"done" json:"done"`
+	HabitID primitive.ObjectID `bson:"habit_id" json:"habit_id"`
+	Title   string             `bson:"title" json:"title"`
+	Done    bool               `bson:"done" json:"done"`
 }
 
 type History struct {
@@ -69,11 +99,4 @@ type User struct {
 	Timezone             string             `bson:"timezone" json:"timezone"`
 	NotificationsEnabled bool               `bson:"notifications_enabled" json:"notifications_enabled"`
 	NotificationTime     string             `bson:"notification_time" json:"notification_time"`
-}
-
-type HabitWithStats struct {
-	Habit         `bson:"habit" json:"habit"`
-	LastClickDate string `bson:"last_click_date" json:"last_click_date"`
-	Streak        int    `bson:"streak" json:"streak"`
-	Score         int    `bson:"score" json:"score"`
 }

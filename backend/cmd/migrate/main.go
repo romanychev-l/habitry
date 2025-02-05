@@ -1,43 +1,35 @@
 package main
 
 import (
-	"backend/db"
 	"backend/migrations"
-	"fmt"
+	"context"
 	"log"
 	"os"
 
-	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func main() {
-	if err := godotenv.Load(".env"); err != nil {
-		log.Printf("Ошибка загрузки .env файла: %v", err)
-	}
-
-	// Получаем переменные окружения
-	mongoHost := os.Getenv("MONGO_HOST")
-	mongoPort := os.Getenv("MONGO_PORT")
-	dbName := os.Getenv("MONGO_DB_NAME")
-
-	if mongoHost == "" || mongoPort == "" || dbName == "" {
-		log.Fatal("Не все переменные окружения установлены")
-	}
-
-	// Формируем строку подключения к MongoDB
-	mongoURI := fmt.Sprintf("mongodb://%s:%s", mongoHost, mongoPort)
-
-	// Подключение к БД
-	client, err := db.Connect(mongoURI)
+	// Подключаемся к MongoDB
+	ctx := context.Background()
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer client.Disconnect(nil)
+	defer client.Disconnect(ctx)
 
-	// Запускаем миграцию
-	log.Println("Начинаем миграцию привычек...")
-	if err := migrations.MigrateHabits(client, dbName); err != nil {
+	// Проверяем подключение
+	err = client.Ping(ctx, nil)
+	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Ми��рация успешно завершена")
+
+	// Запускаем миграцию
+	if err := migrations.MigrateHabitsToFollowers(client, "ht_db"); err != nil {
+		log.Printf("Ошибка при выполнении миграции: %v", err)
+		os.Exit(1)
+	}
+
+	log.Println("Миграция успешно завершена")
 }

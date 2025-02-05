@@ -1,19 +1,19 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import { createEventDispatcher } from 'svelte';
-  import type { HabitWithStats } from '../types';
+  import type { Habit } from '../types';
 
   const dispatch = createEventDispatcher();
   const BOT_USERNAME = import.meta.env.VITE_BOT_USERNAME;
-  export let habitWithStats: HabitWithStats;
+  export let habit: Habit;
 
   function handleShare() {
     const telegram = window.Telegram?.WebApp;
     const userId = telegram?.initDataUnsafe?.user?.id || '';
     const baseUrl = `https://t.me/${BOT_USERNAME}/app`;
-    const startAppParam = `startapp=habit_${habitWithStats.habit._id}_${userId}`;
+    const startAppParam = `startapp=habit_${habit._id}_${userId}`;
     const appUrl = `${baseUrl}?${startAppParam}`;
-    const shareText = `\n${$_('habits.join_habit.0')} ${habitWithStats.habit.title} ${$_('habits.join_habit.1')} ${habitWithStats.streak} ${$_('habits.join_habit.2')}`;
+    const shareText = `\n${$_('habits.join_habit.0')} ${habit.title} ${$_('habits.join_habit.1')} ${habit.streak} ${$_('habits.join_habit.2')}`;
     
     const url = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(shareText)}`;
     window.open(url, '_blank');
@@ -30,7 +30,7 @@
 >
   <div class="dialog">
     <div class="dialog-header">
-      <h2>{habitWithStats.habit.title}</h2>
+      <h2>{habit.title}</h2>
     </div>
     <div class="dialog-content">
       <button 
