@@ -164,7 +164,10 @@
   async function handleNewHabit(event: { detail: any }) {
     try {
       const telegramId = $user?.id;
-      if (!telegramId) return;
+      if (!telegramId) {
+        console.error('Отсутствует telegramId');
+        return;
+      }
 
       console.log('Sending habit data:', event.detail);
       const habitData = {
@@ -177,6 +180,8 @@
         }
       };
 
+      console.log('Request payload:', JSON.stringify(habitData));
+
       const response = await fetch(`${API_URL}/habit`, {
         method: 'POST',
         headers: {
@@ -185,16 +190,24 @@
         body: JSON.stringify(habitData)
       });
 
+      console.log('Response status:', response.status);
+      const responseText = await response.text();
+      console.log('Response text:', responseText);
+
       if (!response.ok) {
         throw new Error($_('habits.errors.create'));
       }
 
-      const data = await response.json();
-      console.log('Server response:', data);
+      const data = JSON.parse(responseText);
+      console.log('Parsed response:', data);
+      
       if (data.habit) {
         habits.update(currentHabits => [...currentHabits, data.habit]);
+        showModal = false;
+      } else {
+        console.error('No habit in response');
+        throw new Error('No habit in response');
       }
-      showModal = false;
     } catch (error) {
       console.error('Ошибка при создании привычки:', error);
       alert($_('habits.errors.create'));

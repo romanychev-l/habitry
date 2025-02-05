@@ -4,6 +4,7 @@ import (
 	"backend/models"
 	"context"
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -41,13 +42,39 @@ func (h *Handler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method != "POST" {
+		log.Printf("Неверный метод запроса: %s", r.Method)
 		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
 		return
 	}
 
+	// Читаем тело запроса
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Ошибка при чтении тела запроса: %v", err)
+		http.Error(w, "Ошибка при чтении запроса", http.StatusBadRequest)
+		return
+	}
+	log.Printf("Получено тело запроса: %s", string(body))
+
 	var habitRequest models.HabitRequest
-	if err := json.NewDecoder(r.Body).Decode(&habitRequest); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.Unmarshal(body, &habitRequest); err != nil {
+		log.Printf("Ошибка при декодировании JSON: %v", err)
+		http.Error(w, "Неверный формат JSON", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Получен запрос на создание привычки: %+v", habitRequest)
+
+	// Проверяем обязательные поля
+	if habitRequest.TelegramID == 0 {
+		log.Printf("Отсутствует telegram_id")
+		http.Error(w, "telegram_id обязателен", http.StatusBadRequest)
+		return
+	}
+
+	if habitRequest.Habit.Title == "" {
+		log.Printf("Отсутствует название привычки")
+		http.Error(w, "title обязателен", http.StatusBadRequest)
 		return
 	}
 
@@ -61,12 +88,13 @@ func (h *Handler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	habit.Score = 0
 	habit.Followers = []string{} // пустой массив подписчиков
 
-	log.Printf("Создаем привычку для пользователя %d", habitRequest.TelegramID)
+	log.Printf("Создаем привычку для пользователя %d: %+v", habitRequest.TelegramID, habit)
+
 	// Сохраняем привычку
 	result, err := h.habitsCollection.InsertOne(context.Background(), habit)
 	if err != nil {
 		log.Printf("Ошибка при сохранении привычки: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Ошибка при сохранении привычки", http.StatusInternalServerError)
 		return
 	}
 	log.Printf("Привычка создана с ID: %v", result.InsertedID)
@@ -76,23 +104,20 @@ func (h *Handler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	err = h.habitsCollection.FindOne(context.Background(), bson.M{"_id": result.InsertedID}).Decode(&createdHabit)
 	if err != nil {
 		log.Printf("Ошибка при получении созданной привычки: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Ошибка при получении созданной привычки", http.StatusInternalServerError)
 		return
 	}
 	log.Printf("Получена созданная привычка: %+v", createdHabit)
 
-	// Преобразуем в HabitResponse
-	habitResponse, err := h.enrichHabitWithFollowers(r.Context(), createdHabit)
-	if err != nil {
-		log.Printf("Ошибка при обогащении данных привычки: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]interface{}{
+		"habit": createdHabit,
+	}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Ошибка при сериализации ответа: %v", err)
+		http.Error(w, "Ошибка при формировании ответа", http.StatusInternalServerError)
 		return
 	}
-
-	// Возвращаем созданную привычку
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"habit": habitResponse,
-	})
 }
 
 func (h *Handler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
@@ -487,7 +512,7 @@ func (h *Handler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	result, err := h.habitsCollection.DeleteOne(
 		context.Background(),
 		bson.M{
-			"_id":         habitObjectID,
+			"_id": habitObjectID,
 		},
 	)
 
