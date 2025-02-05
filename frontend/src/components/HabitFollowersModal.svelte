@@ -1,6 +1,7 @@
 <script lang="ts">
     import { _ } from 'svelte-i18n';
     import type { Habit } from '../types';
+    import { habits } from '../stores/habit';
     import { createEventDispatcher } from 'svelte';
     
     const dispatch = createEventDispatcher();
@@ -13,6 +14,7 @@
     let followers = initialFollowers;
     let loading = false;
     let error = '';
+    let success = '';
     let showUnfollowConfirm = false;
     let selectedFollower: { username: string; telegram_id: number } | null = null;
     
@@ -42,31 +44,51 @@
     async function unfollowHabit() {
         if (!selectedFollower) return;
         
+        error = '';
+        success = '';
+        
+        const requestData = {
+            habit_id: habit._id,
+            unfollow_id: selectedFollower.telegram_id
+        };
+        
+        console.log('Отправляем запрос на отписку:', requestData);
+        
         try {
             const response = await fetch(`${API_URL}/habit/unfollow`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    telegram_id: telegramId,
-                    habit_id: habit._id,
-                    unfollow_id: selectedFollower.telegram_id
-                })
+                body: JSON.stringify(requestData)
             });
             
+            console.log('Получен ответ:', response.status);
+            
             if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Ошибка от сервера:', errorText);
                 throw new Error($_('habits.errors.unfollow'));
             }
+
+            const data = await response.json();
+            
+            // Обновляем стор с привычками
+            habits.update(currentHabits => 
+                currentHabits.map(h => h._id === data.habit._id ? data.habit : h)
+            );
             
             const currentFollower = selectedFollower;
             followers = followers.filter(f => f.telegram_id !== currentFollower.telegram_id);
             dispatch('followersUpdated', { followers });
             showUnfollowConfirm = false;
             selectedFollower = null;
+            
+            success = $_('habits.unfollow_success');
+            console.log('Успешно отписались');
         } catch (err: any) {
             error = err.message || $_('habits.errors.unfollow');
-            console.error('Error unfollowing habit:', err);
+            console.error('Ошибка при отписке:', err);
         }
     }
     
@@ -109,6 +131,8 @@
                     <div class="loading">{$_('common.loading')}</div>
                 {:else if error}
                     <div class="error">{error}</div>
+                {:else if success}
+                    <div class="success">{success}</div>
                 {:else if followers.length === 0}
                     <div class="empty">{$_('habits.no_followers')}</div>
                 {:else}
@@ -276,6 +300,16 @@
     
     .error {
         color: #ff3b30;
+        text-align: center;
+        padding: 12px;
+        margin-bottom: 16px;
+    }
+
+    .success {
+        color: #34c759;
+        text-align: center;
+        padding: 12px;
+        margin-bottom: 16px;
     }
 
     :global([data-theme="dark"]) .dialog {

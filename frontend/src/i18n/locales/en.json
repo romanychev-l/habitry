@@ -17,6 +17,8 @@
     "unfollow": "Unfollow",
     "confirm_unfollow": "Confirm Unfollow",
     "unfollow_user": "Are you sure you want to unfollow @{username}?",
+    "unfollow_success": "You have successfully unfollowed the user",
+    "link_success": "You have successfully linked the habit",
     "join_habit": {
       "0": "I'm doing habit",
       "1": "already",
