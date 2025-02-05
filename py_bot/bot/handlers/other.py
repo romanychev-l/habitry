@@ -41,33 +41,42 @@ async def cmd_stats(msg: Message):
         total_users = db['users'].count_documents({})
         logging.info(f"Found {total_users} users in database")
 
-        # Получаем все записи из коллекции followers
-        followers = list(db['followers'].find({}))
-        total_habits = len(followers)
+        # Получаем все привычки
+        habits = list(db['habits'].find({}))
+        total_habits = len(habits)
         
-        # Считаем выполненные привычки за последние 24 часа
+        # Подготавливаем даты для фильтрации
         now = datetime.utcnow()
-        yesterday = now - timedelta(days=1)
+        today = now.date()
+        yesterday = (now - timedelta(days=1)).date()
         
-        completed_today = db['followers'].count_documents({
-            "last_click_date": {
-                "$gte": yesterday.isoformat(),
-                "$lt": now.isoformat()
-            }
-        })
+        # Получаем документы за сегодня и считаем сумму выполненных привычек
+        today_docs = list(db['history'].find({"date": today.isoformat()}))
+        completed_today = sum(len(doc.get('habits', [])) for doc in today_docs)
         
-        # Считаем общее количество выполнений
-        total_completions = sum(follower.get("score", 0) for follower in followers)
+        # Получаем документы за вчера и считаем сумму выполненных привычек
+        yesterday_docs = list(db['history'].find({"date": yesterday.isoformat()}))
+        completed_yesterday = sum(len(doc.get('habits', [])) for doc in yesterday_docs)
+        
+        # Считаем общее количество выполнений из истории
+        all_history_docs = list(db['history'].find({}))
+        total_completions = sum(len(doc.get('habits', [])) for doc in all_history_docs)
+        
+        # Считаем общее количество связей между привычками
+        total_links = sum(len(habit.get("followers", [])) for habit in habits)
         
         logging.info(f"Stats collected: users={total_users}, habits={total_habits}, "
-                    f"completed_today={completed_today}, total_completions={total_completions}")
+                    f"completed_today={completed_today}, completed_yesterday={completed_yesterday}, "
+                    f"total_completions={total_completions}, total_links={total_links}")
         
         # Формируем сообщение со статистикой
         stats_message = (
             f"📊 Статистика Habitry:\n\n"
             f"👥 Всего пользователей: {total_users}\n"
-            f"📝 Всего отслеживаемых привычек: {total_habits}\n"
-            f"✅ Выполнено за 24 часа: {completed_today}\n"
+            f"📝 Всего привычек: {total_habits}\n"
+            f"🔗 Всего связей между привычками: {total_links}\n"
+            f"✅ Выполнено привычек сегодня: {completed_today}\n"
+            f"✅ Выполнено привычек вчера: {completed_yesterday}\n"
             f"🏆 Общее количество выполнений: {total_completions}\n"
         )
         
