@@ -16,6 +16,16 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// Вспомогательная функция для проверки наличия элемента в массиве
+func contains(arr []int, val int) bool {
+	for _, a := range arr {
+		if a == val {
+			return true
+		}
+	}
+	return false
+}
+
 type Handler struct {
 	habitsCollection  *mongo.Collection
 	historyCollection *mongo.Collection
@@ -88,9 +98,7 @@ func (h *Handler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	habit.Score = 0
 	habit.Followers = []string{} // пустой массив подписчиков
 
-	log.Printf("Создаем привычку для пользователя %d: %+v", habitRequest.TelegramID, habit)
-
-	// Сохраняем привычку
+	// Сначала сохраняем привычку
 	result, err := h.habitsCollection.InsertOne(context.Background(), habit)
 	if err != nil {
 		log.Printf("Ошибка при сохранении привычки: %v", err)
@@ -99,9 +107,96 @@ func (h *Handler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("Привычка создана с ID: %v", result.InsertedID)
 
-	// Получаем созданную привычку
+	// Если это автопривычка и она должна быть выполнена сегодня, отмечаем её
+	if habit.IsAuto {
+		today := time.Now().Format("2006-01-02")
+		shouldComplete := false
+
+		if habit.IsOneTime {
+			habitDate := habit.CreatedAt.Format("2006-01-02")
+			shouldComplete = habitDate == today
+		} else {
+			weekday := int(time.Now().Weekday())
+			if weekday == 0 {
+				weekday = 6
+			} else {
+				weekday--
+			}
+			shouldComplete = len(habit.Days) == 0 || contains(habit.Days, weekday)
+		}
+
+		if shouldComplete {
+			// Обновляем привычку
+			_, err = h.habitsCollection.UpdateOne(
+				context.Background(),
+				bson.M{"_id": habit.ID},
+				bson.M{
+					"$set": bson.M{
+						"last_click_date": today,
+						"streak":          1,
+						"score":           1,
+					},
+				},
+			)
+			if err != nil {
+				log.Printf("Ошибка при обновлении автопривычки: %v", err)
+			}
+
+			// Создаем запись в истории
+			history := models.History{
+				TelegramID: habit.TelegramID,
+				Date:       today,
+				Habits: []models.HabitHistory{
+					{
+						HabitID: habit.ID,
+						Title:   habit.Title,
+						Done:    true,
+					},
+				},
+			}
+
+			// Проверяем существование записи в истории
+			var existingHistory models.History
+			err = h.historyCollection.FindOne(
+				context.Background(),
+				bson.M{
+					"telegram_id": habit.TelegramID,
+					"date":        today,
+				},
+			).Decode(&existingHistory)
+
+			if err == mongo.ErrNoDocuments {
+				// Если записи нет, создаем новую
+				_, err = h.historyCollection.InsertOne(context.Background(), history)
+			} else if err == nil {
+				// Если запись существует, добавляем привычку
+				_, err = h.historyCollection.UpdateOne(
+					context.Background(),
+					bson.M{
+						"telegram_id": habit.TelegramID,
+						"date":        today,
+					},
+					bson.M{
+						"$push": bson.M{
+							"habits": models.HabitHistory{
+								HabitID: habit.ID,
+								Title:   habit.Title,
+								Done:    true,
+							},
+						},
+					},
+				)
+			}
+
+			if err != nil {
+				log.Printf("Ошибка при обновлении истории для автопривычки: %v", err)
+			}
+		}
+	}
+
+	// Получаем обновленную привычку
 	var createdHabit models.Habit
-	err = h.habitsCollection.FindOne(context.Background(), bson.M{"_id": result.InsertedID}).Decode(&createdHabit)
+	err = h.habitsCollection.FindOne(context.Background(), bson.M{"_id": habit.ID}).Decode(&createdHabit)
 	if err != nil {
 		log.Printf("Ошибка при получении созданной привычки: %v", err)
 		http.Error(w, "Ошибка при получении созданной привычки", http.StatusInternalServerError)
@@ -346,6 +441,7 @@ func (h *Handler) HandleEdit(w http.ResponseWriter, r *http.Request) {
 	if habitRequest.Habit.IsOneTime {
 		habit.IsOneTime = habitRequest.Habit.IsOneTime
 	}
+	habit.IsAuto = habitRequest.Habit.IsAuto
 
 	// Сохраняем обновленную привычку
 	_, err = h.habitsCollection.UpdateOne(

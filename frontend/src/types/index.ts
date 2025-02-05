@@ -14,6 +14,7 @@ export interface Habit {
     want_to_become?: string;
     days: number[];
     is_one_time: boolean;
+    is_auto: boolean;
     created_at: string;
     last_click_date: string | null;
     streak: number;

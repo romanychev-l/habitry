@@ -176,7 +176,8 @@
           title: event.detail.title,
           want_to_become: event.detail.want_to_become,
           days: event.detail.days,
-          is_one_time: event.detail.is_one_time
+          is_one_time: event.detail.is_one_time,
+          is_auto: event.detail.is_auto
         }
       };
 

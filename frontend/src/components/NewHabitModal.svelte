@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   import { _ } from 'svelte-i18n';
   import type { Habit } from '../types';
   
@@ -10,6 +10,12 @@
   let isOneTime = habit?.is_one_time || false;
   let wantToBecome = habit?.want_to_become || '';
   let isDarkTheme = window.Telegram?.WebApp?.colorScheme === 'dark';
+  let isAuto = habit?.is_auto || false;
+  let titleInput: HTMLInputElement;
+
+  onMount(() => {
+    titleInput?.focus();
+  });
 
   function toggleDay(index: number) {
     if (selectedDays.has(index)) {
@@ -30,7 +36,8 @@
       title,
       want_to_become: wantToBecome,
       days: Array.from(selectedDays),
-      is_one_time: isOneTime
+      is_one_time: isOneTime,
+      is_auto: isAuto
     };
     dispatch('save', habitData);
   }
@@ -60,25 +67,38 @@
       <div class="content">
         <input 
           type="text" 
-          bind:value={title} 
+          bind:value={title}
+          bind:this={titleInput}
           placeholder={$_('habits.title')}
-          autofocus
           class="input-field"
         />
         
-        <input 
-          type="text" 
-          bind:value={wantToBecome} 
-          placeholder={$_('habits.want_to_become')}
-          class="input-field"
-        />
+        <div class="form-control w-full">
+          <label class="label" for="want-to-become">
+            <span class="label-text">{$_('habits.want_to_become')}</span>
+          </label>
+          <input
+            type="text"
+            id="want-to-become"
+            bind:value={wantToBecome}
+            class="input input-bordered w-full"
+            placeholder={$_('habits.want_to_become_placeholder')}
+          />
+        </div>
         
-        <!-- <button class="type-selector" on:click={() => isOneTime = !isOneTime}>
-          <span>{$_('habits.one_time')}</span>
-          <div class="switch">
-            <span class="slider" class:checked={isOneTime}></span>
-          </div>
-        </button> -->
+        <!-- <div class="form-control">
+          <label class="label cursor-pointer">
+            <span class="label-text">{$_('habits.one_time')}</span>
+            <input type="checkbox" class="checkbox" bind:checked={isOneTime} />
+          </label>
+        </div> -->
+        
+        <div class="form-control">
+          <label class="label cursor-pointer" for="auto-habit">
+            <span class="label-text">{$_('habits.auto_habit')}</span>
+            <input type="checkbox" id="auto-habit" class="checkbox" bind:checked={isAuto} />
+          </label>
+        </div>
         
         {#if !isOneTime}
           <div class="days-wrapper">

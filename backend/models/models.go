@@ -36,6 +36,7 @@ type Habit struct {
 	WantToBecome  string             `bson:"want_to_become" json:"want_to_become"`
 	Days          []int              `bson:"days" json:"days"`
 	IsOneTime     bool               `bson:"is_one_time" json:"is_one_time"`
+	IsAuto        bool               `bson:"is_auto" json:"is_auto"`
 	CreatedAt     time.Time          `bson:"created_at" json:"created_at"`
 	LastClickDate string             `bson:"last_click_date" json:"last_click_date"`
 	Streak        int                `bson:"streak" json:"streak"`

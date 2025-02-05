@@ -147,6 +147,11 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 			// Проверяем какие привычки были запланированы на вчера
 			scheduledHabits := make(map[string]bool)
 			for _, habit := range habits {
+				// Пропускаем автопривычки при проверке пропущенных
+				if habit.IsAuto {
+					continue
+				}
+
 				yesterday := time.Now().In(loc).AddDate(0, 0, -1)
 				weekday := int(yesterday.Weekday())
 				if weekday == 0 {
@@ -161,16 +166,11 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 						scheduledHabits[habit.ID.Hex()] = true
 					}
 				} else {
-					for _, day := range habit.Days {
-						if day == weekday {
-							scheduledHabits[habit.ID.Hex()] = true
-							break
-						}
+					if len(habit.Days) == 0 || contains(habit.Days, weekday) {
+						scheduledHabits[habit.ID.Hex()] = true
 					}
 				}
 			}
-
-			missedHabits := len(scheduledHabits) - len(completedHabits)
 
 			// Обнуляем streak для пропущенных привычек
 			for habitID := range scheduledHabits {
@@ -198,7 +198,96 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			// Получаем обновленные данные привычек
+			// Автоматически отмечаем автопривычки
+			for _, habit := range habits {
+				if habit.IsAuto {
+					// Проверяем, должна ли привычка быть выполнена сегодня
+					shouldComplete := false
+					if habit.IsOneTime {
+						habitDate := habit.CreatedAt.Format("2006-01-02")
+						shouldComplete = habitDate == today
+					} else {
+						weekday := int(time.Now().In(loc).Weekday())
+						if weekday == 0 {
+							weekday = 6
+						} else {
+							weekday--
+						}
+						shouldComplete = len(habit.Days) == 0 || contains(habit.Days, weekday)
+					}
+
+					if shouldComplete && habit.LastClickDate != today {
+						// Обновляем привычку
+						_, err = h.habitsCollection.UpdateOne(
+							context.Background(),
+							bson.M{"_id": habit.ID},
+							bson.M{
+								"$set": bson.M{
+									"last_click_date": today,
+									"streak":          habit.Streak + 1,
+									"score":           habit.Score + 1,
+								},
+							},
+						)
+						if err != nil {
+							log.Printf("Ошибка при автоматическом выполнении привычки: %v", err)
+							continue
+						}
+
+						// Обновляем историю
+						history := models.History{
+							TelegramID: user.TelegramID,
+							Date:       today,
+							Habits: []models.HabitHistory{
+								{
+									HabitID: habit.ID,
+									Title:   habit.Title,
+									Done:    true,
+								},
+							},
+						}
+
+						// Проверяем существование записи в истории
+						var existingHistory models.History
+						err = h.historyCollection.FindOne(
+							context.Background(),
+							bson.M{
+								"telegram_id": user.TelegramID,
+								"date":        today,
+							},
+						).Decode(&existingHistory)
+
+						if err == mongo.ErrNoDocuments {
+							// Если записи нет, создаем новую
+							_, err = h.historyCollection.InsertOne(context.Background(), history)
+						} else if err == nil {
+							// Если запись существует, добавляем привычку
+							_, err = h.historyCollection.UpdateOne(
+								context.Background(),
+								bson.M{
+									"telegram_id": user.TelegramID,
+									"date":        today,
+								},
+								bson.M{
+									"$push": bson.M{
+										"habits": models.HabitHistory{
+											HabitID: habit.ID,
+											Title:   habit.Title,
+											Done:    true,
+										},
+									},
+								},
+							)
+						}
+
+						if err != nil {
+							log.Printf("Ошибка при обновлении истории для автопривычки: %v", err)
+						}
+					}
+				}
+			}
+
+			// Получаем обновленные привычки
 			cursor, err = h.habitsCollection.Find(
 				context.Background(),
 				bson.M{"telegram_id": user.TelegramID},
@@ -223,7 +312,7 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 				bson.M{"telegram_id": id},
 				bson.M{
 					"$set": bson.M{
-						"credit":     missedHabits,
+						"credit":     len(habits),
 						"last_visit": today,
 					},
 				},
@@ -233,7 +322,7 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 				log.Printf("Ошибка при обновлении кредита: %v", err)
 			}
 
-			user.Credit = missedHabits
+			user.Credit = len(habits)
 		}
 
 		// Фильтруем привычки для текущего дня
