@@ -25,6 +25,12 @@ func TelegramAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
+		// Пропускаем проверку аутентификации для публичного профиля
+		if r.URL.Path == "/api/user/profile" && r.Method == "GET" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		// Получаем данные из заголовка
 		initData := r.Header.Get("X-Telegram-Data")
 		if initData == "" {
@@ -64,7 +70,7 @@ func TelegramAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 		sort.Strings(pairs)
 		dataCheckString := strings.Join(pairs, "\n")
-		log.Printf("Data check string: %s", dataCheckString)
+		// log.Printf("Data check string: %s", dataCheckString)
 
 		// Получаем токен бота из переменных окружения
 		botToken := os.Getenv("BOT_TOKEN")

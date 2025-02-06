@@ -39,7 +39,7 @@ async function request(endpoint: string, options: RequestOptions = {}) {
     // Проверяем статус ответа
     if (!response.ok) {
         const error = await response.text();
-        throw new Error(error);
+        throw new Error(`${response.status}: ${error}`);
     }
 
     // Если есть тело ответа, парсим его как JSON
@@ -83,7 +83,7 @@ export const api = {
         request('/api/habit/edit', { method: 'PUT', body: JSON.stringify(data) }),
     
     deleteHabit: (data: { telegram_id: number; habit_id: string }) =>
-        request('/api/habit', { method: 'DELETE', body: JSON.stringify(data) }),
+        request('/api/habit/delete', { method: 'DELETE', body: JSON.stringify(data) }),
     
     undoHabit: (data: any) =>
         request('/api/habit/undo', { method: 'PUT', body: JSON.stringify(data) }),

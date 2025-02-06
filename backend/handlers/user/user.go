@@ -53,6 +53,7 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "POST":
+		log.Println("POST")
 		var user models.User
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 			log.Printf("Ошибка декодирования JSON: %v", err)
@@ -71,11 +72,14 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(result)
 
 	case "GET":
 		telegramID := r.URL.Query().Get("telegram_id")
 		id, _ := strconv.ParseInt(telegramID, 10, 64)
+
+		log.Println("GET ", id, telegramID)
 
 		var user models.User
 		err := h.usersCollection.FindOne(context.Background(), bson.M{"telegram_id": id}).Decode(&user)
@@ -461,6 +465,7 @@ func (h *Handler) HandleUpdateLastVisit(w http.ResponseWriter, r *http.Request) 
 	}
 
 	log.Printf("Update result: %+v", result)
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -475,6 +480,8 @@ func (h *Handler) HandleSettings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	log.Println("HandleSettings called")
 
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -506,6 +513,7 @@ func (h *Handler) HandleSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"notifications_enabled": user.NotificationsEnabled,
 			"notification_time":     user.NotificationTime,
@@ -543,11 +551,19 @@ func (h *Handler) HandleSettings(w http.ResponseWriter, r *http.Request) {
 
 		_, err := h.usersCollection.UpdateOne(context.Background(), filter, update)
 		if err != nil {
+			log.Printf("Ошибка при обновлении настроек: %v", err)
 			http.Error(w, "failed to update settings", http.StatusInternalServerError)
 			return
 		}
 
-		json.NewEncoder(w).Encode(map[string]bool{"success": true})
+		log.Printf("Настройки успешно обновлены для пользователя %d", req.TelegramID)
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":               true,
+			"notifications_enabled": req.NotificationsEnabled,
+			"notification_time":     req.NotificationTime,
+		})
 
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -556,6 +572,16 @@ func (h *Handler) HandleSettings(w http.ResponseWriter, r *http.Request) {
 
 // HandleUserProfile обрабатывает GET запрос для получения публичного профиля пользователя
 func (h *Handler) HandleUserProfile(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -563,16 +589,21 @@ func (h *Handler) HandleUserProfile(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("HandleUserProfile called")
 	username := r.URL.Query().Get("username")
+	log.Printf("Searching for username: %s", username)
+
 	if username == "" {
 		http.Error(w, "Username is required", http.StatusBadRequest)
 		return
 	}
 
 	filter := bson.M{"username": username}
+	log.Printf("MongoDB filter: %+v", filter)
+
 	var user models.User
 	err := h.usersCollection.FindOne(r.Context(), filter).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
+			log.Printf("User not found for username: %s", username)
 			http.Error(w, "User not found", http.StatusNotFound)
 			return
 		}
@@ -580,6 +611,8 @@ func (h *Handler) HandleUserProfile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+
+	log.Printf("Found user: %+v", user)
 
 	// Получаем привычки пользователя
 	habitsFilter := bson.M{"telegram_id": user.TelegramID}
@@ -614,8 +647,6 @@ func (h *Handler) HandleUserProfile(w http.ResponseWriter, r *http.Request) {
 		Habits:     habits,
 	}
 
-	log.Printf("Response: %+v", response)
-
-	w.Header().Set("Content-Type", "application/json")
+	log.Printf("Sending response: %+v", response)
 	json.NewEncoder(w).Encode(response)
 }

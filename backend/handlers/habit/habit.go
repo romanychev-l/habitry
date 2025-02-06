@@ -276,6 +276,13 @@ func (h *Handler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Получаем обновленную версию привычки
+		err = h.habitsCollection.FindOne(context.Background(), bson.M{"_id": habitID}).Decode(&habit)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		// Обновляем историю
 		// Сначала проверяем существование записи
 		var existingHistory models.History
@@ -358,22 +365,9 @@ func (h *Handler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-
-		// Преобразуем в HabitResponse
-		habitResponse, err := h.enrichHabitWithFollowers(r.Context(), habit)
-		if err != nil {
-			log.Printf("Ошибка при обогащении данных привычки: %v", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"habit": habitResponse,
-		})
-		return
 	}
 
-	// Если привычка уже была выполнена сегодня, возвращаем её без изменений
+	// Преобразуем в HabitResponse
 	habitResponse, err := h.enrichHabitWithFollowers(r.Context(), habit)
 	if err != nil {
 		log.Printf("Ошибка при обогащении данных привычки: %v", err)
@@ -381,6 +375,7 @@ func (h *Handler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"habit": habitResponse,
 	})
@@ -462,6 +457,7 @@ func (h *Handler) HandleEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"habit": habitResponse,
 	})
@@ -482,6 +478,7 @@ func (h *Handler) HandleUndo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
 		return
 	}
+	log.Println("handleHabitUndo", r.Method)
 
 	var habitRequest models.HabitRequest
 	if err := json.NewDecoder(r.Body).Decode(&habitRequest); err != nil {
@@ -553,6 +550,13 @@ func (h *Handler) HandleUndo(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		// Получаем обновленную версию привычки
+		err = h.habitsCollection.FindOne(context.Background(), bson.M{"_id": habitID}).Decode(&habit)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	// Преобразуем в HabitResponse
@@ -563,6 +567,7 @@ func (h *Handler) HandleUndo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"habit": habitResponse,
 	})
@@ -635,7 +640,7 @@ func (h *Handler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Ошибка при удалении ID из followers: %v", err)
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "Привычка успешно удалена",
 	})
@@ -834,6 +839,8 @@ func (h *Handler) HandleGetFollowers(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
+			w.Header().Set("Content-Type", "application/json")
+			log.Printf("Привычка не найдена, возвращаем пустой массив")
 			json.NewEncoder(w).Encode([]interface{}{})
 			return
 		}
@@ -843,6 +850,7 @@ func (h *Handler) HandleGetFollowers(w http.ResponseWriter, r *http.Request) {
 
 	// Получаем информацию о подписчиках
 	var users []map[string]interface{}
+	log.Printf("Найдена привычка с %d подписчиками", len(habit.Followers))
 	if len(habit.Followers) > 0 {
 		// Получаем все привычки подписчиков
 		followerHabitIDs := make([]primitive.ObjectID, 0)
@@ -889,11 +897,21 @@ func (h *Handler) HandleGetFollowers(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
 }
 
 // HandleGetActivity возвращает данные об активности привычки за последний год
 func (h *Handler) HandleGetActivity(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return

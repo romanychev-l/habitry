@@ -26,19 +26,19 @@
     async function loadFollowers() {
         try {
             loading = true;
+            console.log('Loading followers for habit:', habit._id, 'telegramId:', telegramId);
             if (initialFollowers && initialFollowers.length > 0) {
                 followers = initialFollowers.map(f => ({ ...f }));
+                console.log('Using initial followers:', followers);
             } else {
-                const response = await fetch(`${API_URL}/habit/followers?habit_id=${habit._id}&telegram_id=${telegramId}`);
-                if (!response.ok) {
-                    throw new Error($_('habits.errors.load_followers'));
-                }
-                const data = await response.json();
+                const data = await api.getHabitFollowers(habit._id, telegramId);
+                console.log('Received followers data:', data);
                 followers = Array.isArray(data) ? data : [];
+                console.log('Processed followers:', followers);
             }
         } catch (err: any) {
-            error = err.message || $_('habits.errors.load_followers');
             console.error('Error loading followers:', err);
+            error = err.message || $_('habits.errors.load_followers');
             followers = [];
         } finally {
             loading = false;

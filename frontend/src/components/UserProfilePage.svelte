@@ -3,6 +3,7 @@
   import { createEventDispatcher } from 'svelte';
   import HabitCard from './HabitCard.svelte';
   import type { Habit } from '../types';
+  import { api } from '../utils/api';
   
   const dispatch = createEventDispatcher();
   export let username: string;
@@ -18,15 +19,9 @@
   let userProfile: UserProfile | null = null;
   let error: string | null = null;
   
-  const API_URL = import.meta.env.VITE_API_URL;
-  
   async function loadUserProfile() {
     try {
-      const response = await fetch(`${API_URL}/user/profile?username=${username}`);
-      if (!response.ok) {
-        throw new Error($_('profile.not_found'));
-      }
-      const data = await response.json();
+      const data = await api.getUserProfile(username);
       console.log('Received data:', data);
       userProfile = {
         ...data,

@@ -12,6 +12,7 @@
   let notificationTime = "";
   let isSaving = false;
   let saveMessage = "";
+  let saveTimeout: ReturnType<typeof setTimeout>;
 
   // Загружаем настройки при инициализации
   async function loadSettings() {
@@ -26,28 +27,43 @@
     }
   }
 
-  // Сохраняем настройки
+  // Сохраняем настройки с debounce
   async function saveSettings() {
     try {
       if (!$user?.id) return;
       
-      isSaving = true;
-      saveMessage = "";
+      // Очищаем предыдущий таймер
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+      }
 
-      await api.updateUserSettings({
-        telegram_id: $user.id,
-        notifications_enabled: notificationsEnabled,
-        notification_time: notificationTime
-      });
-
-      saveMessage = $_('settings.saved');
-      setTimeout(() => {
+      // Устанавливаем новый таймер
+      saveTimeout = setTimeout(async () => {
+        isSaving = true;
         saveMessage = "";
-      }, 3000);
+
+        console.log('Сохраняем настройки:', {
+          telegram_id: $user.id,
+          notifications_enabled: notificationsEnabled,
+          notification_time: notificationTime
+        });
+
+        await api.updateUserSettings({
+          telegram_id: $user.id,
+          notifications_enabled: notificationsEnabled,
+          notification_time: notificationTime
+        });
+
+        saveMessage = $_('settings.saved');
+        setTimeout(() => {
+          saveMessage = "";
+        }, 3000);
+        
+        isSaving = false;
+      }, 500); // Задержка 500мс
     } catch (error) {
       console.error('Error saving settings:', error);
       saveMessage = $_('settings.error');
-    } finally {
       isSaving = false;
     }
   }

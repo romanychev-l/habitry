@@ -111,7 +111,10 @@
           }
         }
       } catch (error) {
-        if (error instanceof Error && error.message.includes('404')) {
+        console.log('error user', error);
+        console.log('error type:', typeof error);
+        console.log('error message:', error instanceof Error ? error.message : 'not an Error instance');
+        if (error instanceof Error && (error.message.includes('404') || error.message.startsWith('404:'))) {
           console.log('create user');
           showOnboarding = true;
           await api.createUser({

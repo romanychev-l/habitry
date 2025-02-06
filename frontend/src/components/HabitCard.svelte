@@ -110,6 +110,13 @@
     
     async function updateHabitOnServer() {
         try {
+            console.log('Отправляем запрос на обновление привычки:', {
+                telegram_id: telegramId,
+                habit: {
+                    _id: habit._id
+                }
+            });
+            
             const data = await api.updateHabit({
                 telegram_id: telegramId,
                 habit: {
@@ -117,7 +124,7 @@
                 }
             });
             
-            console.log('Update response:', data);
+            console.log('Получен ответ от сервера:', data);
             
             if (data.habit) {
                 isAnimating = true;
@@ -126,11 +133,14 @@
                     isAnimating = false;
                 }, 800);
                 
+                console.log('Обновляем store habits. Текущее состояние:', $habits);
+                
                 // Обновляем store habits для пересортировки
                 habits.update(currentHabits => {
                     const updatedHabits = currentHabits.map(h => 
                         h._id === data.habit._id ? data.habit : h
                     );
+                    console.log('Новое состояние store:', updatedHabits);
                     return updatedHabits;
                 });
                 
@@ -139,12 +149,13 @@
             }
             return data;
         } catch (error) {
-            console.error('Ошибка:', error);
+            console.error('Ошибка при обновлении привычки:', error);
             throw error;
         }
     }
     
     async function handleUndo() {
+      console.log('handleUndo in HabitCard.svelte');
         try {
             const data = await api.undoHabit({
                 telegram_id: telegramId,
@@ -159,6 +170,11 @@
                 setTimeout(() => {
                     isAnimating = false;
                 }, 800);
+
+                // Обновляем локальное состояние
+                completed = false;
+
+                console.log('handleUndo in HabitCard.svelte', data);
 
                 // Обновляем store habits для пересортировки
                 habits.update(currentHabits => {
@@ -231,7 +247,7 @@
 
     async function handleEdit(event: { detail: Partial<Habit> }) {
         try {
-            const data = await api.updateHabit({
+            console.log('Отправляем запрос на редактирование привычки:', {
                 telegram_id: telegramId,
                 habit: {
                     _id: habit._id,
@@ -239,13 +255,26 @@
                 }
             });
 
+            const data = await api.editHabit({
+                telegram_id: telegramId,
+                habit: {
+                    _id: habit._id,
+                    ...event.detail
+                }
+            });
+
+            console.log('Получен ответ от сервера:', data);
+
             if (data.habit) {
+                // Обновляем store habits
                 habits.update(currentHabits => {
-                    const updatedHabits = currentHabits.map(h => 
+                    return currentHabits.map(h => 
                         h._id === data.habit._id ? data.habit : h
                     );
-                    return updatedHabits;
                 });
+
+                // После обновления store пересчитываем прогресс
+                await updateProgress();
             }
 
             showEditModal = false;
@@ -273,31 +302,20 @@
     }
 
     async function handleHabitLink(event: CustomEvent<{habitId: string; sharedHabitId: string; sharedByTelegramId: string}>) {
-      console.log('handleHabitLink in HabitCard.svelte', event.detail);
+        console.log('handleHabitLink in HabitCard.svelte', event.detail);
         try {
             const currentUserId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
             if (!currentUserId) {
                 throw new Error($_('habits.errors.link'));
             }
 
-            const response = await fetch(`${API_URL}/habit/join`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    telegram_id: currentUserId,
-                    habit_id: event.detail.habitId,
-                    shared_by_telegram_id: event.detail.sharedByTelegramId,
-                    shared_by_habit_id: event.detail.sharedHabitId
-                })
+            const data = await api.joinHabit({
+                telegram_id: currentUserId,
+                habit_id: event.detail.habitId,
+                shared_by_telegram_id: event.detail.sharedByTelegramId,
+                shared_by_habit_id: event.detail.sharedHabitId
             });
 
-            if (!response.ok) {
-                throw new Error($_('habits.errors.link'));
-            }
-
-            const data = await response.json();
             habits.update(currentHabits => data.habits || []);
 
             showLinkModal = false;
@@ -342,7 +360,10 @@
         {/if}
 
         {#if completed && !readonly}
-          <button class="undo-button" on:click={handleUndo}>&larr;</button>
+          <button 
+            class="undo-button" 
+            on:click|stopPropagation={handleUndo}
+          >&larr;</button>
         {/if}
       </div>
 
