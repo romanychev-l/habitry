@@ -2,6 +2,7 @@
   import { _ } from 'svelte-i18n';
   import { createEventDispatcher } from 'svelte';
   import { user } from '../stores/user';
+  import { isListView } from '../stores/view';
   import { api } from '../utils/api';
 
   const dispatch = createEventDispatcher();
@@ -45,13 +46,15 @@
         console.log('Сохраняем настройки:', {
           telegram_id: $user.id,
           notifications_enabled: notificationsEnabled,
-          notification_time: notificationTime
+          notification_time: notificationTime,
+          is_list_view: $isListView
         });
 
         await api.updateUserSettings({
           telegram_id: $user.id,
           notifications_enabled: notificationsEnabled,
-          notification_time: notificationTime
+          notification_time: notificationTime,
+          is_list_view: $isListView
         });
 
         saveMessage = $_('settings.saved');
@@ -72,6 +75,18 @@
     dispatch('back');
   }
 
+  function handleShare() {
+    if ($user?.username) {
+      const baseUrl = `https://t.me/${BOT_USERNAME}/app`;
+      const startAppParam = `startapp=profile_${$user.username}`;
+      const appUrl = `${baseUrl}?${startAppParam}`;
+      const shareText = $_('settings.share_profile_description');
+      
+      const url = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(shareText)}`;
+      window.open(url, '_blank');
+    }
+  }
+
   // Загружаем настройки при монтировании компонента
   loadSettings();
 </script>
@@ -88,53 +103,62 @@
     <section class="settings-section">
       <h2>{$_('settings.notifications')}</h2>
       
-      <div class="setting-item">
-        <span class="setting-label">{$_('settings.notifications_enabled')}</span>
-        <label class="switch">
-          <input 
-            type="checkbox" 
-            bind:checked={notificationsEnabled}
-            on:change={saveSettings}
-          >
-          <span class="slider"></span>
-        </label>
+      <div class="settings-group">
+        <div class="setting-item">
+          <div class="setting-label">
+            <span>{$_('settings.notifications_enabled')}</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" bind:checked={notificationsEnabled} on:change={saveSettings}>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        {#if notificationsEnabled}
+          <div class="setting-item">
+            <div class="setting-label">
+              <span>{$_('settings.notification_time')}</span>
+            </div>
+            <input 
+              type="time" 
+              bind:value={notificationTime}
+              class="time-input"
+              on:change={saveSettings}
+              placeholder={$_('settings.notification_time_placeholder')}
+            />
+          </div>
+        {/if}
       </div>
 
-      {#if notificationsEnabled}
+      <div class="settings-group">
         <div class="setting-item">
-          <span class="setting-label">{$_('settings.notification_time')}</span>
-          <input 
-            type="time" 
-            class="time-input"
-            bind:value={notificationTime}
-            on:change={saveSettings}
-            placeholder={$_('settings.notification_time_placeholder')}
-          >
+          <div class="setting-label">
+            <span>{$_('habits.compact_view')}</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" bind:checked={$isListView} on:change={saveSettings}>
+            <span class="slider"></span>
+          </label>
         </div>
-      {/if}
+      </div>
     </section>
 
     <section class="settings-section">
       <h2>{$_('settings.share_profile')}</h2>
-      <div class="setting-item">
-        <span class="setting-label">{$_('settings.share_profile_description')}</span>
-        <button 
-          class="share-button"
-          on:click={() => {
-            if ($user?.username) {
-              const baseUrl = `https://t.me/${BOT_USERNAME}/app`;
-              const startAppParam = `startapp=profile_${$user.username}`;
-              const appUrl = `${baseUrl}?${startAppParam}`;
-              const shareText = $_('settings.share_profile_description');
-              
-              const url = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(shareText)}`;
-              window.open(url, '_blank');
-            }
-          }}
-          disabled={!$user?.username}
-        >
-          {$_('settings.share')}
-        </button>
+      <div class="settings-group">
+        <div class="setting-item">
+          <div class="setting-label">
+            <span>{$_('settings.share_profile')}</span>
+            <span class="setting-description">{$_('settings.share_profile_description')}</span>
+          </div>
+          <button 
+            class="share-button" 
+            on:click={handleShare}
+            disabled={!$user?.username}
+          >
+            {$_('settings.share')}
+          </button>
+        </div>
       </div>
       {#if !$user?.username}
         <p class="warning">{$_('settings.username_required')}</p>
@@ -186,7 +210,7 @@
   header {
     display: flex;
     align-items: center;
-    padding: 12px;
+    padding: 70px 12px 12px 12px;
     border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
   }
 
@@ -222,6 +246,10 @@
     font-weight: 600;
     margin: 0 0 16px 0;
     color: var(--tg-theme-text-color);
+  }
+
+  .settings-group {
+    margin-bottom: 16px;
   }
 
   .setting-item {

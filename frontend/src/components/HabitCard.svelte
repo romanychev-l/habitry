@@ -245,38 +245,27 @@
         }
     }
 
-    async function handleEdit(event: { detail: Partial<Habit> }) {
+    async function handleEdit(event: CustomEvent) {
         try {
-            console.log('Отправляем запрос на редактирование привычки:', {
+            const habitData = {
                 telegram_id: telegramId,
                 habit: {
-                    _id: habit._id,
-                    ...event.detail
+                    ...habit,
+                    title: event.detail.title,
+                    want_to_become: event.detail.want_to_become,
+                    days: event.detail.days,
+                    is_one_time: event.detail.is_one_time,
+                    is_auto: event.detail.is_auto,
+                    stake: event.detail.stake
                 }
-            });
+            };
 
-            const data = await api.editHabit({
-                telegram_id: telegramId,
-                habit: {
-                    _id: habit._id,
-                    ...event.detail
-                }
-            });
-
-            console.log('Получен ответ от сервера:', data);
-
+            const data = await api.editHabit(habitData);
             if (data.habit) {
-                // Обновляем store habits
-                habits.update(currentHabits => {
-                    return currentHabits.map(h => 
-                        h._id === data.habit._id ? data.habit : h
-                    );
-                });
-
-                // После обновления store пересчитываем прогресс
-                await updateProgress();
+                habits.update(currentHabits => 
+                    currentHabits.map(h => h._id === habit._id ? data.habit : h)
+                );
             }
-
             showEditModal = false;
         } catch (error) {
             if (error instanceof Error && error.message.includes('403')) {

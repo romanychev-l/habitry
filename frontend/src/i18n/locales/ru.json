@@ -7,6 +7,8 @@
     "name": "Название привычки",
     "want_to_become": "Кем хочу стать",
     "want_to_become_placeholder": "Например: Спортивным",
+    "stake": "Ставка",
+    "stake_placeholder": "Введите сумму ставки",
     "one_time": "Одноразовая привычка",
     "auto_habit": "Автопривычка",
     "days": "Дни недели",

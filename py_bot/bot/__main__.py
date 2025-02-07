@@ -14,6 +14,7 @@ from bot.handlers.other import other_router
 from bot.middlewares.i18n import TranslatorRunnerMiddleware
 from bot.utils.i18n import create_translator_hub
 from bot.services.notification_manager import NotificationManager
+from bot.services.count_manager import CountManager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,6 +39,10 @@ async def main() -> None:
     notification_manager.start()
     # Загружаем существующие уведомления
     await notification_manager.load_existing_notifications()
+
+    # Инициализируем и запускаем менеджер подсчета выигрышей
+    count_manager = CountManager(bot)
+    count_manager.start()
 
     dp.include_router(commands_router)
     dp.include_router(other_router)

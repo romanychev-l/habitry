@@ -134,14 +134,23 @@ async def successful_payment(message: types.Message, i18n: TranslatorRunner):
     print(message)
     try:
         user_id = message.from_user.id
+        stars_amount = message.successful_payment.total_amount
+        will_tokens = stars_amount * 10  # 1 Stars = 10 WILL
+
+        # Получаем текущий баланс пользователя
+        user = db.users_collection.find_one({"telegram_id": user_id})
+        current_balance = user.get('balance', 0) if user else 0
+        new_balance = current_balance + will_tokens
+
         result = db.users_collection.update_one(
             {"telegram_id": user_id},
-            {"$set": {"credit": 0}}
+            {"$set": {"balance": new_balance}}
         )
         
         if result.modified_count > 0:
             await message.answer(
-                f"{i18n.message.payment_success()} {message.successful_payment.total_amount} Stars"
+                f"{i18n.message.payment_success()} {stars_amount} Stars\n"
+                f"Начислено: {will_tokens} WILL"
             )
         else:
             logging.error(f"Пользователь не найден: {user_id}")

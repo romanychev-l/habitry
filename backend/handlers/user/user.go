@@ -62,7 +62,6 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 		}
 
 		user.CreatedAt = time.Now()
-		user.Credit = 0
 		user.LastVisit = time.Now().Format("2006-01-02")
 
 		result, err := h.usersCollection.InsertOne(context.Background(), user)
@@ -310,23 +309,23 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			// Обновляем кредит и последний визит пользователя
+			// Обновляем последний визит пользователя
 			_, err = h.usersCollection.UpdateOne(
 				context.Background(),
 				bson.M{"telegram_id": id},
 				bson.M{
 					"$set": bson.M{
-						"credit":     len(habits),
 						"last_visit": today,
 					},
 				},
 			)
 
 			if err != nil {
-				log.Printf("Ошибка при обновлении кредита: %v", err)
+				log.Printf("Ошибка при обновлении last_visit: %v", err)
 			}
 
-			user.Credit = len(habits)
+			// Обновляем баланс в локальной копии пользователя для ответа
+			user.Balance = user.Balance
 		}
 
 		// Фильтруем привычки для текущего дня
@@ -366,7 +365,7 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 			LanguageCode         string             `json:"language_code"`
 			PhotoURL             string             `json:"photo_url"`
 			CreatedAt            time.Time          `json:"created_at"`
-			Credit               int                `json:"credit"`
+			Balance              int                `json:"balance"`
 			LastVisit            string             `json:"last_visit"`
 			Timezone             string             `json:"timezone"`
 			NotificationsEnabled bool               `json:"notifications_enabled"`
@@ -382,7 +381,7 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 			LanguageCode:         user.LanguageCode,
 			PhotoURL:             user.PhotoURL,
 			CreatedAt:            user.CreatedAt,
-			Credit:               user.Credit,
+			Balance:              user.Balance,
 			LastVisit:            today,
 			Timezone:             user.Timezone,
 			NotificationsEnabled: user.NotificationsEnabled,
@@ -444,11 +443,10 @@ func (h *Handler) HandleUpdateLastVisit(w http.ResponseWriter, r *http.Request) 
 	today := time.Now().In(loc).Format("2006-01-02")
 	log.Printf("Setting last_visit to: %s", today)
 
-	// Обновляем last_visit и сбрасываем credit
+	// Обновляем last_visit
 	update := bson.M{
 		"$set": bson.M{
 			"last_visit": today,
-			"credit":     0,
 		},
 	}
 

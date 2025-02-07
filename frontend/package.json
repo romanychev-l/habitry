@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@telegram-apps/sdk-svelte": "^1.0.5",
+    "@tonconnect/sdk": "^3.0.6",
     "@twa-dev/sdk": "^7.10.1",
     "@twa-dev/types": "^7.10.0",
     "autoprefixer": "^10.4.20",

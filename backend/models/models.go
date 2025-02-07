@@ -41,6 +41,7 @@ type Habit struct {
 	LastClickDate string             `bson:"last_click_date" json:"last_click_date"`
 	Streak        int                `bson:"streak" json:"streak"`
 	Score         int                `bson:"score" json:"score"`
+	Stake         int                `bson:"stake" json:"stake"`
 	Followers     []string           `bson:"followers" json:"followers,omitempty"` // ID других привычек
 }
 
@@ -56,6 +57,7 @@ type HabitResponse struct {
 	LastClickDate string             `json:"last_click_date"`
 	Streak        int                `json:"streak"`
 	Score         int                `json:"score"`
+	Stake         int                `json:"stake"`
 	Followers     []FollowerInfo     `json:"followers"` // Обогащенная информация о подписчиках
 }
 
@@ -95,7 +97,7 @@ type User struct {
 	LanguageCode         string             `bson:"language_code" json:"language_code"`
 	PhotoURL             string             `bson:"photo_url" json:"photo_url"`
 	CreatedAt            time.Time          `bson:"created_at" json:"created_at"`
-	Credit               int                `bson:"credit" json:"credit"`
+	Balance              int                `bson:"balance" json:"balance"`
 	LastVisit            string             `bson:"last_visit" json:"last_visit"`
 	Timezone             string             `bson:"timezone" json:"timezone"`
 	NotificationsEnabled bool               `bson:"notifications_enabled" json:"notifications_enabled"`

@@ -11,10 +11,14 @@
   let wantToBecome = habit?.want_to_become || '';
   let isDarkTheme = window.Telegram?.WebApp?.colorScheme === 'dark';
   let isAuto = habit?.is_auto || false;
+  let stake = '';
   let titleInput: HTMLInputElement;
 
   onMount(() => {
     titleInput?.focus();
+    if (habit?.stake) {
+      stake = habit.stake.toString();
+    }
   });
 
   function toggleDay(index: number) {
@@ -37,7 +41,8 @@
       want_to_become: wantToBecome,
       days: Array.from(selectedDays),
       is_one_time: isOneTime,
-      is_auto: isAuto
+      is_auto: isAuto,
+      stake: parseInt(stake) || 0
     };
     dispatch('save', habitData);
   }
@@ -86,12 +91,19 @@
           />
         </div>
         
-        <!-- <div class="form-control">
-          <label class="label cursor-pointer">
-            <span class="label-text">{$_('habits.one_time')}</span>
-            <input type="checkbox" class="checkbox" bind:checked={isOneTime} />
+        <div class="form-control">
+          <label class="label" for="stake">
+            <span class="label-text">{$_('habits.stake')}</span>
           </label>
-        </div> -->
+          <input
+            type="number"
+            id="stake"
+            bind:value={stake}
+            min="0"
+            placeholder="0"
+            class="input input-bordered w-full"
+          />
+        </div>
         
         <div class="form-control">
           <label class="label cursor-pointer" for="auto-habit">
@@ -169,6 +181,9 @@
     background: #F9F8F3;
     border-radius: 24px 24px 0 0;
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+    max-height: 90vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   @supports (-webkit-touch-callout: none) {
@@ -178,14 +193,18 @@
       min-height: -webkit-fill-available;
     }
 
+    /* Убираем автоматическое поднятие */
     .modal-container:focus-within {
-      transform: translateY(-35vh);
-      transition: transform 0.3s ease-out;
+      transform: none;
     }
   }
 
   .header {
-    padding: 32px 16px 16px 16px;
+    position: sticky;
+    top: 0;
+    background: inherit;
+    z-index: 2;
+    padding: 24px 16px 12px 16px;
     border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
     text-align: center;
   }
@@ -197,10 +216,10 @@
   }
 
   .content {
-    padding: 24px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 16px;
   }
 
   .type-selector {
@@ -285,7 +304,7 @@
     border-radius: 12px;
     background: transparent;
     font-size: 16px;
-    padding: 14px 0px;
+    padding: 14px 0 14px 0;
     margin: 0;
     width: 100%;
   }
@@ -293,6 +312,32 @@
   input[type="text"]:focus {
     outline: none;
     border-color: var(--tg-theme-button-color);
+  }
+
+  input[type="number"] {
+    border: 2px solid var(--tg-theme-secondary-bg-color);
+    border-radius: 12px;
+    background: transparent;
+    font-size: 16px;
+    padding: 14px 0 14px 0;
+    margin: 0;
+    width: 100%;
+  }
+
+  input[type="number"]:focus {
+    outline: none;
+    border-color: var(--tg-theme-button-color);
+  }
+
+  /* Убираем стрелки у input number */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
   }
 
   .switch {
@@ -331,7 +376,11 @@
   } */
 
   .footer {
-    padding: 16px 20px;
+    position: sticky;
+    bottom: 0;
+    background: inherit;
+    z-index: 2;
+    padding: 12px 16px;
     border-top: 1px solid var(--tg-theme-secondary-bg-color);
   }
 
@@ -351,14 +400,15 @@
   }
 
   .input-field {
-    margin-bottom: 16px;
+    margin-bottom: 8px;
   }
 
   :global([data-theme="dark"]) .modal {
     background: var(--tg-theme-bg-color);
   }
 
-  :global([data-theme="dark"]) input[type="text"] {
+  :global([data-theme="dark"]) input[type="text"],
+  :global([data-theme="dark"]) input[type="number"] {
     color: white;
   }
 

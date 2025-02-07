@@ -19,6 +19,7 @@ export interface Habit {
     last_click_date: string | null;
     streak: number;
     score: number;
+    stake: number;
     followers: FollowerInfo[];
 }
 
@@ -32,7 +33,7 @@ export interface User {
     language_code: string;
     photo_url: string;
     created_at: string;
-    credit: number;
+    balance: number;
     last_visit: string;
     timezone: string;
     notifications_enabled: boolean;

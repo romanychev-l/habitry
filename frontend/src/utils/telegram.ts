@@ -1,5 +1,6 @@
 import { user } from '../stores/user';
 import { api } from './api';
+import { invoice } from '@telegram-apps/sdk';
 
 export const initTelegram = () => {
     // Проверяем, что window.Telegram.WebApp существует
@@ -32,7 +33,7 @@ export const initTelegram = () => {
     // Расширяем на весь экран
     webapp.expand();
     webapp.disableVerticalSwipes();
-    // webapp.requestFullscreen();
+    webapp.requestFullscreen();
   
     // Устанавливаем тему
     document.documentElement.classList.add(webapp.colorScheme);
@@ -46,29 +47,42 @@ export const initTelegram = () => {
     root.style.setProperty('--tg-theme-secondary-bg-color', webapp.secondaryBackgroundColor);
 };
 
-export async function openTelegramInvoice(amount: number) {
-    if (!window.Telegram?.WebApp) {
-        console.error('Telegram WebApp is not available');
-        return;
-    }
-
+export async function openTelegramInvoice(starsAmount: number) {
     try {
-        const data = await api.createInvoice(amount);
+        console.log('Creating invoice for', starsAmount, 'Stars');
+        const data = await api.createInvoice(starsAmount);
         console.log('Invoice data:', data);
         
         if (!data.url) {
             throw new Error('No invoice URL in response');
         }
+
+        if (!invoice.isSupported()) {
+            console.error('Invoices are not supported in this version of Telegram');
+            return;
+        }
+
+        const status = await invoice.open(data.url, 'url');
+        console.log('Payment status:', status);
         
-        window.Telegram.WebApp.openInvoice(data.url, (status: string) => {
-            if (status === 'paid') {
+        switch (status) {
+            case 'paid':
                 console.log('Оплата прошла успешно');
-            } else if (status === 'failed') {
+                window.location.reload();
+                break;
+            case 'failed':
                 console.log('Ошибка оплаты');
-            } else if (status === 'cancelled') {
+                break;
+            case 'cancelled':
                 console.log('Оплата отменена');
-            }
-        });
+                window.location.reload();
+                break;
+            case 'pending':
+                console.log('Оплата в процессе');
+                break;
+            default:
+                console.log('Неизвестный статус оплаты:', status);
+        }
     } catch (error) {
         console.error('Ошибка при создании инвойса:', error);
     }

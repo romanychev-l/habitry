@@ -25,9 +25,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Запускаем миграцию
-	if err := migrations.MigrateHistory(client, "ht_db"); err != nil {
-		log.Printf("Ошибка при выполнении миграции: %v", err)
+	// Запускаем миграцию credit -> balance
+	if err := migrations.MigrateCreditToBalance(client, "ht_db"); err != nil {
+		log.Printf("Ошибка при выполнении миграции credit -> balance: %v", err)
 		os.Exit(1)
 	}
 

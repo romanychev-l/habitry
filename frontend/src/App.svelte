@@ -5,7 +5,8 @@
   import SettingsPage from './components/SettingsPage.svelte';
   import OnboardingModal from './components/OnboardingModal.svelte';
   import UserProfilePage from './components/UserProfilePage.svelte';
-  import { user } from './stores/user';
+  import BuyTokensModal from './components/BuyTokensModal.svelte';
+  import { user, balance } from './stores/user';
   import { isListView } from './stores/view';
   import { openTelegramInvoice } from './utils/telegram';
   import { _ } from 'svelte-i18n';
@@ -19,6 +20,7 @@
   let showHabitLinkModal = false;
   let showSettings = false;
   let showOnboarding = false;
+  let showBuyTokens = false;
   let sharedHabitId = '';
   let sharedByTelegramId = '';
   let showUserProfile = false;
@@ -91,14 +93,17 @@
       try {
         const data = await api.getUser(telegramId, userTimezone);
         habits.update(currentHabits => data.habits || []);
+        console.log('Setting balance from API response:', data.balance);
+        balance.set(data.balance);
+        console.log('Balance after set:', $balance);
         
         const now = new Date();
         const userDate = now.toLocaleString('en-US', { timeZone: userTimezone }).split(',')[0];
-        console.log('Checking dates:', { last_visit: data.last_visit, userDate, credit: data.credit });
+        console.log('Checking dates:', { last_visit: data.last_visit, userDate, balance: data.balance });
         
-        if (data.last_visit !== userDate && data.credit > 0) {
+        if (data.last_visit !== userDate && data.balance > 0) {
           console.log('Showing invoice and updating last_visit');
-          openTelegramInvoice(data.credit);
+          // openTelegramInvoice(data.balance);
           
           try {
             await api.updateLastVisit({
@@ -123,8 +128,10 @@
             username: $user.username,
             language_code: $user.languageCode,
             photo_url: $user.photoUrl,
-            timezone: userTimezone
+            timezone: userTimezone,
+            balance: 1000
           });
+          balance.set(1000);
           habits.update(currentHabits => []);
         } else {
           throw error;
@@ -157,7 +164,8 @@
           want_to_become: event.detail.want_to_become,
           days: event.detail.days,
           is_one_time: event.detail.is_one_time,
-          is_auto: event.detail.is_auto
+          is_auto: event.detail.is_auto,
+          stake: event.detail.stake
         }
       };
 
@@ -185,6 +193,13 @@
 
   $: {
     document.documentElement.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
+  }
+
+  // Отслеживаем изменения баланса
+  $: {
+    if ($balance !== undefined && $balance !== null) {
+      console.log('Balance updated:', $balance);
+    }
   }
 
   $: habitsList = $habits as Habit[];
@@ -235,14 +250,24 @@
           {/if}
         </button>
       </div>
+
+      <div class="balance-container">
+        <div class="balance">
+          {#if $balance !== undefined && $balance !== null}
+            {$balance} WILL
+          {:else}
+            {console.log('Balance is undefined or null:', $balance)}
+            0 WILL
+          {/if}
+        </div>
+        <button class="add-balance-button" on:click={() => {
+          console.log('Opening buy tokens modal');
+          showBuyTokens = true;
+        }}>
+          +
+        </button>
+      </div>
     {/if}
-    <div class="view-toggle">
-      <span class="toggle-label">{$_('habits.compact_view')}</span>
-      <label class="switch">
-        <input type="checkbox" bind:checked={$isListView}>
-        <span class="slider"></span>
-      </label>
-    </div>
   </header>
 
   <div class="habit-container" class:list-view={$isListView}>
@@ -296,6 +321,17 @@
       />
     {/if}
   {/if}
+
+  {#if showBuyTokens}
+    <BuyTokensModal 
+      on:close={() => showBuyTokens = false}
+      on:buy={event => {
+        showBuyTokens = false;
+        openTelegramInvoice(event.detail.starsAmount);
+        console.log('after openTelegramInvoice');
+      }}
+    />
+  {/if}
 </main>
 
 <style>
@@ -330,7 +366,7 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    padding: 8px 16px;
+    padding: 70px 16px 8px 16px;
   }
 
   .view-toggle {
@@ -408,6 +444,8 @@
     aspect-ratio: 1;
     margin: 0 auto;
     box-sizing: border-box;
+    position: relative;
+    z-index: 1;
   }
 
   .habit-container.list-view :global(.habit-card) {
@@ -424,13 +462,20 @@
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
+    width: 40px;
+    height: 40px;
     border: none;
-    background: var(--tg-theme-button-color);
-    color: var(--tg-theme-button-text-color);
+    background: #00D5A0;
+    color: white;
     font-size: 24px;
+    mask: url('/src/assets/streak.svg') no-repeat center / contain;
+    -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+    /* padding-bottom: 4px; */
   }
 
   .user-info {
@@ -472,6 +517,41 @@
     -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
   }
 
+  .balance-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .balance {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--tg-theme-text-color);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .add-balance-button {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: var(--tg-theme-hint-color);
+    color: white;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    mask: url('/src/assets/streak.svg') no-repeat center / contain;
+    -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
+    /* padding-bottom: 4px; */
+  }
+
+  :global([data-theme="dark"]) .balance {
+    color: white;
+  }
+
   /* .payment-button {
     position: fixed;
     bottom: 20px;
@@ -493,6 +573,10 @@
   }
 
   :global([data-theme="dark"]) .add-button {
-    color: white;
+    background: #00D5A0;
+  }
+
+  :global([data-theme="dark"]) .add-balance-button {
+    background: var(--tg-theme-hint-color);
   }
 </style>
