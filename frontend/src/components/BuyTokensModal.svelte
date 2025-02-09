@@ -1,6 +1,30 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { _ } from 'svelte-i18n';
+  import { onMount } from 'svelte';
+  // import { TonConnectProvider } from '@/tonconnect';
+  import * as TON_CONNECT_UI from '@tonconnect/ui';
+
+  // const manifestUrl = 'https://lenichev.site/tonconnect-manifest.json';
+  const manifestUrl = 'https://romanychev-l.github.io/habitry_public/manifest.json';
+  // export let url = '';
+
+  const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+        manifestUrl: manifestUrl,
+        buttonRootId: 'ton-connect'
+    });
+
+  async function connectToWallet() {
+      const connectedWallet = await tonConnectUI.connectWallet();
+      // Do something with connectedWallet if needed
+      console.log(connectedWallet);
+  }
+
+  // Call the function
+  connectToWallet().catch(error => {
+      console.error("Error connecting to wallet:", error);
+  });
+  
   
   const dispatch = createEventDispatcher();
   let tokensAmount = 100;
@@ -50,6 +74,24 @@
             TON Connect
           </button>
         </div>
+
+        <!-- {#if paymentMethod === 'ton'}
+          {#if walletConnected}
+            <p>Кошелёк подключён: {address}</p>
+          {:else}
+            <button on:click={connectWallet}>Подключить кошелёк TON</button>
+          {/if}
+        {/if} -->
+        
+        <!-- {#if paymentMethod === 'ton'}
+          <TonConnectProvider {manifestUrl}>
+            <div class="ton-connect-container">
+              <div id="ton-connect"></div>
+            </div>
+          </TonConnectProvider>
+        {/if} -->
+
+        <div id="ton-connect">Connect</div>
 
         <div class="info-block">
           <div class="exchange-rate">
@@ -308,5 +350,15 @@
   :global([data-theme="dark"]) .payment-method-selector button.active {
     background: #00D5A0;
     border-color: #00D5A0;
+  }
+
+  .ton-connect-container {
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: center;
+  }
+
+  :global(#ton-connect) {
+    width: 100%;
   }
 </style> 
