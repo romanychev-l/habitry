@@ -1,29 +1,29 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { _ } from 'svelte-i18n';
-  import { onMount } from 'svelte';
+  // import { onMount } from 'svelte';
   // import { TonConnectProvider } from '@/tonconnect';
-  import * as TON_CONNECT_UI from '@tonconnect/ui';
+  // import * as TON_CONNECT_UI from '@tonconnect/ui';
 
   // const manifestUrl = 'https://lenichev.site/tonconnect-manifest.json';
-  const manifestUrl = 'https://romanychev-l.github.io/habitry_public/manifest.json';
-  // export let url = '';
+  // const manifestUrl = 'https://romanychev-l.github.io/habitry_public/manifest.json';
+  // // export let url = '';
 
-  const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-        manifestUrl: manifestUrl,
-        buttonRootId: 'ton-connect'
-    });
+  // const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+  //       manifestUrl: manifestUrl,
+  //       buttonRootId: 'ton-connect'
+  //   });
 
-  async function connectToWallet() {
-      const connectedWallet = await tonConnectUI.connectWallet();
-      // Do something with connectedWallet if needed
-      console.log(connectedWallet);
-  }
+  // async function connectToWallet() {
+  //     const connectedWallet = await tonConnectUI.connectWallet();
+  //     // Do something with connectedWallet if needed
+  //     console.log(connectedWallet);
+  // }
 
-  // Call the function
-  connectToWallet().catch(error => {
-      console.error("Error connecting to wallet:", error);
-  });
+  // // Call the function
+  // connectToWallet().catch(error => {
+  //     console.error("Error connecting to wallet:", error);
+  // });
   
   
   const dispatch = createEventDispatcher();
@@ -91,7 +91,7 @@
           </TonConnectProvider>
         {/if} -->
 
-        <div id="ton-connect">Connect</div>
+        <!-- <div id="ton-connect">Connect</div> -->
 
         <div class="info-block">
           <div class="exchange-rate">

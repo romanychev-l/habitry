@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
   import type { Habit } from '../types';
   
@@ -13,12 +13,33 @@
   let isAuto = habit?.is_auto || false;
   let stake = '';
   let titleInput: HTMLInputElement;
+  let modalHeight: number;
+  let contentWrapper: HTMLDivElement;
+
+  function updateModalHeight() {
+    const vh = window.visualViewport?.height || window.innerHeight;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+    if (contentWrapper) {
+      contentWrapper.style.height = `${vh}px`;
+    }
+  }
 
   onMount(() => {
     titleInput?.focus();
     if (habit?.stake) {
       stake = habit.stake.toString();
     }
+    
+    window.visualViewport?.addEventListener('resize', updateModalHeight);
+    window.visualViewport?.addEventListener('scroll', updateModalHeight);
+    window.addEventListener('resize', updateModalHeight);
+    updateModalHeight();
+  });
+
+  onDestroy(() => {
+    window.visualViewport?.removeEventListener('resize', updateModalHeight);
+    window.visualViewport?.removeEventListener('scroll', updateModalHeight);
+    window.removeEventListener('resize', updateModalHeight);
   });
 
   function toggleDay(index: number) {
@@ -55,7 +76,7 @@
   }
 </script>
 
-<div class="wrapper">
+<div class="wrapper" bind:this={contentWrapper}>
   <div 
     class="overlay" 
     role="button"
@@ -158,9 +179,11 @@
     position: fixed;
     inset: 0;
     display: flex;
-    align-items: flex-end;
-    height: 100dvh;
+    align-items: center;
+    justify-content: center;
     z-index: 1000;
+    height: 100%;
+    padding-top: 5vh;
   }
 
   .overlay {
@@ -174,6 +197,10 @@
     position: relative;
     width: 100%;
     z-index: 1;
+    display: flex;
+    flex-direction: column;
+    max-height: 90%;
+    margin-top: auto;
   }
 
   .modal {
@@ -181,21 +208,17 @@
     background: #F9F8F3;
     border-radius: 24px 24px 0 0;
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+    display: flex;
+    flex-direction: column;
+    height: auto;
     max-height: 90vh;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
   }
 
   @supports (-webkit-touch-callout: none) {
     .wrapper {
-      position: absolute;
-      height: 100vh;
-      min-height: -webkit-fill-available;
-    }
-
-    /* Убираем автоматическое поднятие */
-    .modal-container:focus-within {
-      transform: none;
+      position: fixed;
+      height: var(--vh, 100%);
     }
   }
 
@@ -220,6 +243,9 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .type-selector {
@@ -382,6 +408,7 @@
     z-index: 2;
     padding: 12px 16px;
     border-top: 1px solid var(--tg-theme-secondary-bg-color);
+    margin-top: auto;
   }
 
   .save-btn {

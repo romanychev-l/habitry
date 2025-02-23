@@ -33,7 +33,7 @@ export const initTelegram = () => {
     // Расширяем на весь экран
     webapp.expand();
     webapp.disableVerticalSwipes();
-    webapp.requestFullscreen();
+    // webapp.requestFullscreen();
   
     // Устанавливаем тему
     document.documentElement.classList.add(webapp.colorScheme);

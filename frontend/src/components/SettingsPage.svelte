@@ -210,7 +210,7 @@
   header {
     display: flex;
     align-items: center;
-    padding: 70px 12px 12px 12px;
+    padding: 12px;
     border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
   }
 

@@ -366,7 +366,7 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    padding: 70px 16px 8px 16px;
+    padding: 12px 16px 8px 16px;
   }
 
   .view-toggle {
