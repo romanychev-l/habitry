@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -9,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -88,6 +90,57 @@ func TelegramAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			log.Printf("Неверная подпись. Hash: %s", hash)
 			http.Error(w, "Неверная подпись", http.StatusUnauthorized)
 			return
+		}
+
+		// Извлекаем данные пользователя
+		userDataStr := values.Get("user")
+		if userDataStr != "" {
+			// Попробуем извлечь telegram_id из данных пользователя
+			var telegramID int64
+			var found bool
+
+			// Если telegram_id есть в query параметрах
+			telegramIDStr := r.URL.Query().Get("telegram_id")
+			if telegramIDStr != "" {
+				if id, err := strconv.ParseInt(telegramIDStr, 10, 64); err == nil {
+					telegramID = id
+					found = true
+					log.Printf("Получен telegram_id из query: %d", telegramID)
+				}
+			}
+
+			// Если telegram_id не найден в query, ищем в теле запроса для POST/PUT
+			if !found && (r.Method == "POST" || r.Method == "PUT") {
+				// Для POST и PUT, извлекаем telegram_id из userDataStr (JSON в данных от Telegram)
+				// Примечание: в реальном приложении используйте более надежный парсинг JSON
+				if strings.Contains(userDataStr, "id") {
+					// Простой парсинг id из строки JSON
+					idStartIndex := strings.Index(userDataStr, "\"id\":")
+					if idStartIndex != -1 {
+						idStartIndex += 5 // длина "id":
+						commaIndex := strings.Index(userDataStr[idStartIndex:], ",")
+						if commaIndex == -1 {
+							commaIndex = strings.Index(userDataStr[idStartIndex:], "}")
+						}
+						if commaIndex != -1 {
+							idStr := strings.TrimSpace(userDataStr[idStartIndex : idStartIndex+commaIndex])
+							if id, err := strconv.ParseInt(idStr, 10, 64); err == nil {
+								telegramID = id
+								found = true
+								log.Printf("Получен telegram_id из user data: %d", telegramID)
+							}
+						}
+					}
+				}
+			}
+
+			// Если нашли telegram_id, добавляем его в контекст
+			if found {
+				ctx := context.WithValue(r.Context(), "telegram_id", telegramID)
+				// Используем новый контекст с запросом
+				r = r.WithContext(ctx)
+				log.Printf("Установлен telegram_id в контексте: %d", telegramID)
+			}
 		}
 
 		// Вызываем следующий обработчик

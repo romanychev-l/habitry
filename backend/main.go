@@ -6,11 +6,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"backend/db"
 	"backend/handlers/follower"
 	"backend/handlers/habit"
 	"backend/handlers/invoice"
+	"backend/handlers/ton"
 	"backend/handlers/user"
 	"backend/middleware"
 
@@ -35,9 +37,14 @@ func main() {
 	mongoHost := os.Getenv("MONGO_HOST")
 	mongoPort := os.Getenv("MONGO_PORT")
 	dbName := os.Getenv("MONGO_DB_NAME")
+	tonWalletAddress := os.Getenv("TON_WALLET_ADDRESS")
 
 	if botToken == "" || mongoHost == "" || mongoPort == "" || dbName == "" {
 		log.Fatal("Не все переменные окружения установлены")
+	}
+
+	if tonWalletAddress == "" {
+		log.Println("Предупреждение: TON_WALLET_ADDRESS не установлен. Платежи TON будут недоступны.")
 	}
 
 	// Формируем строку подключения к MongoDB
@@ -55,6 +62,8 @@ func main() {
 	usersCollection := database.Collection("users")
 	historyCollection := database.Collection("history")
 	habitsCollection := database.Collection("habits")
+	tonTxCollection := database.Collection("ton_transactions")
+	settingsCollection := database.Collection("settings")
 
 	b, err := tgbot.New(botToken)
 	if err != nil {
@@ -66,12 +75,21 @@ func main() {
 	habitHandler := habit.NewHandler(habitsCollection, historyCollection, usersCollection)
 	invoiceHandler := invoice.NewHandler(b)
 	followerHandler := follower.NewHandler(habitsCollection, usersCollection)
+	tonHandler := ton.NewHandler(usersCollection, tonTxCollection, settingsCollection)
 
-	// Настройка CORS
+	// Запускаем процессор транзакций в отдельной горутине
+	go runTonTransactionProcessor(tonHandler)
+
+	// Запускаем процессор вывода средств в отдельной горутине
+	go runWithdrawalsProcessor(tonHandler)
+
+	// Настройка CORS middleware
 	corsMiddleware := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},
-		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders: []string{"*"},
+		AllowedOrigins:   []string{"*"}, // Разрешаем запросы с любого источника в режиме разработки
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Content-Type", "Content-Length", "Accept-Encoding", "Authorization", "X-CSRF-Token", "X-Telegram-Data"},
+		AllowCredentials: true,
+		Debug:            true, // Включаем отладочный режим для CORS
 	})
 
 	// Настройка маршрутов
@@ -91,9 +109,50 @@ func main() {
 	http.HandleFunc("/api/habit/undo", middleware.TelegramAuthMiddleware(habitHandler.HandleUndo))
 	http.HandleFunc("/api/invoice", middleware.TelegramAuthMiddleware(invoiceHandler.HandleCreateInvoice))
 
+	// Добавляем маршруты для TON платежей
+	// http.HandleFunc("/api/ton/deposit", middleware.TelegramAuthMiddleware(tonHandler.HandleDeposit))
+	// http.HandleFunc("/api/ton/transaction", middleware.TelegramAuthMiddleware(tonHandler.HandleCheckTransaction))
+
+	// Добавляем новые маршруты для USDT платежей
+	http.HandleFunc("/api/ton/usdt-deposit", middleware.TelegramAuthMiddleware(tonHandler.HandleUsdtDeposit))
+	http.HandleFunc("/api/ton/check-usdt-transaction", middleware.TelegramAuthMiddleware(tonHandler.HandleCheckUsdtTransaction))
+
+	// Добавляем маршрут для обработки запросов на вывод WILL
+	http.HandleFunc("/api/ton/withdraw", middleware.TelegramAuthMiddleware(tonHandler.HandleWithdraw))
+
 	// Запуск сервера
 	wrappedHandler := corsMiddleware.Handler(http.DefaultServeMux)
 	serverAddr := fmt.Sprintf(":%s", port)
 	log.Printf("Сервер запущен на порту %s", port)
 	log.Fatal(http.ListenAndServe(serverAddr, wrappedHandler))
+}
+
+// runTonTransactionProcessor запускает периодическую обработку TON транзакций
+func runTonTransactionProcessor(handler *ton.TonHandler) {
+	for {
+		log.Println("Проверка транзакций")
+		ctx := context.Background()
+		_, err := handler.CheckUsdtTransaction(ctx)
+		if err != nil {
+			log.Printf("Ошибка при проверке транзакций: %v", err)
+		}
+		log.Println("Транзакции проверены")
+		time.Sleep(2 * time.Minute)
+	}
+}
+
+// runWithdrawalsProcessor запускает периодическую обработку запросов на вывод
+func runWithdrawalsProcessor(handler *ton.TonHandler) {
+	for {
+		log.Println("Начинаем обработку запросов на вывод")
+		ctx := context.Background()
+
+		err := handler.ProcessWithdrawals(ctx)
+		if err != nil {
+			log.Printf("Ошибка при обработке запросов на вывод: %v", err)
+		}
+
+		log.Println("Обработка запросов на вывод завершена")
+		time.Sleep(2 * time.Minute)
+	}
 }

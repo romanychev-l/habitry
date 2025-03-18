@@ -1,4 +1,10 @@
 import './app.css'
+import { Buffer } from 'buffer'
+// Глобальный полифил Buffer для использования в TON SDK
+if (typeof window !== 'undefined') {
+  window.Buffer = Buffer
+}
+
 import { mount } from 'svelte';
 import App from './App.svelte'
 import { initTelegram } from './utils/telegram'

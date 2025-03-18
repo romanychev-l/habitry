@@ -1,9 +1,20 @@
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import path from 'path'
 
 export default defineConfig(({ mode }) => ({
-  plugins: [svelte()],
+  plugins: [
+    svelte(),
+    nodePolyfills({
+      // Включаем полифилы для Buffer и других Node.js API
+      include: ['buffer', 'crypto'],
+      // Можно также добавить глобальный Buffer
+      globals: {
+        Buffer: true,
+      }
+    })
+  ],
   base: mode === 'production' ? '/ht/' : '/ht_front_dev/',
   server: {
     port: 5173,
@@ -12,6 +23,13 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       port: 5173,
       host: 'lenichev.site'
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false
+      }
     }
   },
   css: {
@@ -19,7 +37,8 @@ export default defineConfig(({ mode }) => ({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
+      '@': path.resolve(__dirname, './src'),
+      'buffer': 'buffer'
     }
   }
 }))

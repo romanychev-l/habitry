@@ -38,6 +38,11 @@ interface TelegramWebApp {
     };
     share: (url: string) => void;
     showAlert: (message: string) => void;
+    showPopup?: (params: {
+      title: string;
+      message: string;
+      buttons: Array<{ type: string }>;
+    }) => void;
 }
 
 interface Window {

@@ -30,25 +30,178 @@ async function request(endpoint: string, options: RequestOptions = {}) {
     }
     headers.set('Content-Type', 'application/json');
 
-    // Выполняем запрос
-    const response = await fetch(url.toString(), {
-        ...fetchOptions,
-        headers
+    console.log(`Выполняем запрос: ${url.toString()}, метод: ${fetchOptions.method || 'GET'}`);
+    if (fetchOptions.body) {
+        console.log('Тело запроса:', fetchOptions.body);
+    }
+
+    try {
+        // Выполняем запрос
+        const response = await fetch(url.toString(), {
+            ...fetchOptions,
+            headers
+        });
+
+        // Проверяем статус ответа
+        if (!response.ok) {
+            console.error(`Ошибка HTTP: ${response.status} ${response.statusText}`);
+            let errorText = '';
+            try {
+                errorText = await response.text();
+                console.error('Тело ответа с ошибкой:', errorText);
+            } catch (textError) {
+                console.error('Не удалось прочитать тело ответа с ошибкой:', textError);
+            }
+            throw new Error(`${response.status}: ${errorText}`);
+        }
+
+        // Если есть тело ответа, парсим его как JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            const jsonResponse = await response.json();
+            console.log('Успешный ответ (JSON):', jsonResponse);
+            return jsonResponse;
+        }
+
+        const textResponse = await response.text();
+        console.log('Успешный ответ (текст):', textResponse);
+        return textResponse;
+    } catch (error) {
+        console.error('Ошибка при выполнении запроса:', error);
+        if (error instanceof TypeError && error.message.includes('Network request failed')) {
+            console.error('Сетевая ошибка. Проверьте соединение и доступность сервера.');
+        }
+        throw error;
+    }
+}
+
+// Регистрация TON-депозита
+async function registerTonDeposit(data: { 
+    transaction_id: string; 
+    amount: number; 
+    will_amount: number; 
+    wallet_address: string; 
+    telegram_id: number;
+}) {
+    return request('/api/ton/deposit', { 
+        method: 'POST', 
+        body: JSON.stringify({
+            ...data,
+            currency: 'ton',
+            payment_type: 'deposit'
+        }) 
     });
+}
 
-    // Проверяем статус ответа
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`${response.status}: ${error}`);
+// Регистрация USDT-депозита
+async function registerUsdtDeposit(data: {
+  transaction_id: string;
+  amount: number;
+  will_amount: number;
+  wallet_address: string;
+  telegram_id: number;
+  usdt_master_address: string;
+}) {
+  console.log('registerUsdtDeposit вызван с данными:', data);
+  try {
+    // Проверка валидности данных перед отправкой
+    if (!data.transaction_id) {
+      console.error('Отсутствует transaction_id');
+      throw new Error('Отсутствует transaction_id');
     }
-
-    // Если есть тело ответа, парсим его как JSON
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-        return response.json();
+    
+    if (data.amount <= 0) {
+      console.error('Некорректная сумма USDT:', data.amount);
+      throw new Error('Некорректная сумма USDT');
     }
+    
+    if (!data.wallet_address) {
+      console.error('Отсутствует адрес кошелька');
+      throw new Error('Отсутствует адрес кошелька');
+    }
+    
+    if (!data.usdt_master_address) {
+      console.error('Отсутствует адрес мастер-контракта USDT');
+      throw new Error('Отсутствует адрес мастер-контракта USDT');
+    }
+    
+    console.log('Данные проверены, отправляем запрос на /api/ton/usdt-deposit');
+    const result = await request('/api/ton/usdt-deposit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...data,
+        currency: 'usdt',
+        payment_type: 'deposit'
+      }),
+    });
+    
+    console.log('Успешно зарегистрирован USDT-депозит:', result);
+    return result;
+  } catch (error) {
+    console.error('Ошибка при регистрации USDT-депозита:', error);
+    throw error;
+  }
+}
 
-    return response.text();
+// Проверка статуса USDT-транзакции
+async function checkUsdtTransaction(transactionId: string, telegramId: number) {
+  return request('/api/ton/check-usdt-transaction', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ transaction_id: transactionId, telegram_id: telegramId }),
+  });
+}
+
+// Регистрация запроса на вывод токенов
+async function registerWithdrawal(data: {
+  transaction_id: string;
+  will_amount: number;
+  amount: number;
+  wallet_address: string;
+  telegram_id: number;
+}) {
+  console.log('registerWithdrawal вызван с данными:', data);
+  try {
+    // Проверка валидности данных перед отправкой
+    if (!data.transaction_id) {
+      console.error('Отсутствует transaction_id');
+      throw new Error('Отсутствует transaction_id');
+    }
+    
+    if (data.will_amount <= 0) {
+      console.error('Некорректная сумма WILL:', data.will_amount);
+      throw new Error('Некорректная сумма WILL');
+    }
+    
+    if (!data.wallet_address) {
+      console.error('Отсутствует адрес кошелька');
+      throw new Error('Отсутствует адрес кошелька');
+    }
+    
+    console.log('Данные проверены, отправляем запрос на /api/ton/withdraw');
+    const result = await request('/api/ton/withdraw', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...data,
+        currency: 'usdt',
+        payment_type: 'withdraw'
+      }),
+    });
+    
+    console.log('Успешно зарегистрирован запрос на вывод:', result);
+    return result;
+  } catch (error) {
+    console.error('Ошибка при регистрации запроса на вывод:', error);
+    throw error;
+  }
 }
 
 // API методы
@@ -103,7 +256,20 @@ export const api = {
     unfollowHabit: (data: any) =>
         request('/api/habit/unfollow', { method: 'POST', body: JSON.stringify(data) }),
     
+    // TON-транзакции
+    registerTonDeposit,
+    
+    checkTonTransaction: (transactionId: string, telegramId: number) =>
+        request('/api/ton/transaction', { 
+            params: { transaction_id: transactionId, telegram_id: telegramId.toString() } 
+        }),
+    
     // Инвойсы
     createInvoice: (amount: number) =>
-        request('/api/invoice', { params: { amount: amount.toString() } })
+        request('/api/invoice', { params: { amount: amount.toString() } }),
+
+    // Новые методы
+    registerUsdtDeposit,
+    checkUsdtTransaction,
+    registerWithdrawal,
 }; 

@@ -13,6 +13,9 @@
   import { habits } from './stores/habit';
   import type { Habit } from './types';
   import { api } from './utils/api';
+  import { onMount, onDestroy } from 'svelte';
+  import { subscribeToWalletChanges } from './utils/tonConnect';
+  import type { Wallet } from '@tonconnect/ui';
   
   // Инициализируем значение из localStorage
   $isListView = localStorage.getItem('isListView') === 'true';
@@ -25,9 +28,182 @@
   let sharedByTelegramId = '';
   let showUserProfile = false;
   let profileUsername = '';
-  const API_URL = import.meta.env.VITE_API_URL;
   let isDarkTheme = window.Telegram?.WebApp?.colorScheme === 'dark';
   let isInitialized = false;
+  
+  // Переменные для TON Connect
+  let walletConnected = false;
+  let walletAddress = '';
+  let unsubscribeTonConnect: (() => void) | null = null;
+  
+  onMount(() => {
+    // Инициализируем TON Connect
+    initTonConnect();
+    checkPendingTonTransactions();
+  });
+  
+  function initTonConnect() {
+    try {
+      // Создаем элемент для кнопки TON Connect, если его еще нет
+      if (!document.getElementById('ton-connect')) {
+        const tonConnectElement = document.createElement('div');
+        tonConnectElement.id = 'ton-connect';
+        tonConnectElement.style.display = 'inline-block';
+        const container = document.getElementById('ton-connect-container');
+        if (container) {
+          container.appendChild(tonConnectElement);
+        } else {
+          console.error('Контейнер для TON Connect не найден');
+          return;
+        }
+      }
+      
+      // Подписываемся на изменения состояния кошелька
+      unsubscribeTonConnect = subscribeToWalletChanges((wallet: Wallet | null) => {
+        if (wallet) {
+          walletConnected = true;
+          walletAddress = wallet.account.address;
+          console.log('Кошелек подключен:', walletAddress);
+        } else {
+          walletConnected = false;
+          walletAddress = '';
+          console.log('Кошелек отключен');
+        }
+      });
+    } catch (error) {
+      console.error('Ошибка при инициализации TON Connect:', error);
+    }
+  }
+  
+  onDestroy(() => {
+    // Отписываемся от событий TON Connect
+    if (unsubscribeTonConnect) {
+      unsubscribeTonConnect();
+      unsubscribeTonConnect = null;
+    }
+  });
+  
+  // Функция для проверки незавершенных TON транзакций
+  async function checkPendingTonTransactions() {
+    const lastTonTx = localStorage.getItem('last_ton_tx');
+    if (lastTonTx) {
+      console.log('Найдена незавершенная TON транзакция:', lastTonTx);
+      checkTransactionStatus(lastTonTx);
+    }
+    
+    // Добавляем проверку USDT-транзакций
+    const lastUsdtTx = localStorage.getItem('last_usdt_tx');
+    if (lastUsdtTx) {
+      console.log('Найдена незавершенная USDT транзакция:', lastUsdtTx);
+      checkUsdtTransactionStatus(lastUsdtTx);
+    }
+  }
+  
+  // Функция для проверки статуса транзакции
+  async function checkTransactionStatus(transactionId: string) {
+    try {
+      const data = await api.checkTonTransaction(transactionId, $user?.id || 0);
+      console.log('Статус транзакции:', data);
+      
+      if (data.tx_status === 'completed') {
+        // Транзакция успешно обработана
+        try {
+          // @ts-ignore - игнорируем проблемы с типизацией
+          if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.showPopup === 'function') {
+            // @ts-ignore
+            window.Telegram.WebApp.showPopup({
+              title: 'Транзакция подтверждена',
+              message: `На ваш счет начислено ${data.will_amount} WILL токенов`,
+              buttons: [{ type: 'close' }]
+            });
+          }
+        } catch (error) {
+          console.warn('Telegram WebApp API недоступен:', error);
+        }
+        
+        // Удаляем ID транзакции из localStorage
+        localStorage.removeItem('last_ton_tx');
+      } else if (data.tx_status === 'pending') {
+        // Транзакция все еще в обработке, проверим еще раз через минуту
+        setTimeout(() => {
+          checkTransactionStatus(transactionId);
+        }, 60000);
+      } else if (data.tx_status === 'failed') {
+        // Транзакция не удалась
+        try {
+          // @ts-ignore - игнорируем проблемы с типизацией
+          if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.showPopup === 'function') {
+            // @ts-ignore
+            window.Telegram.WebApp.showPopup({
+              title: 'Транзакция не удалась',
+              message: 'Не удалось обработать вашу транзакцию. Пожалуйста, попробуйте еще раз.',
+              buttons: [{ type: 'close' }]
+            });
+          }
+        } catch (error) {
+          console.warn('Telegram WebApp API недоступен:', error);
+        }
+        
+        // Удаляем ID транзакции из localStorage
+        localStorage.removeItem('last_ton_tx');
+      }
+    } catch (error) {
+      console.error('Ошибка при проверке статуса транзакции:', error);
+    }
+  }
+  
+  // Функция для проверки статуса USDT-транзакции
+  async function checkUsdtTransactionStatus(transactionId: string) {
+    try {
+      const data = await api.checkUsdtTransaction(transactionId, $user?.id || 0);
+      console.log('Статус USDT транзакции:', data);
+      
+      if (data.tx_status === 'completed') {
+        // Транзакция успешно обработана
+        try {
+          // @ts-ignore
+          if (window.Telegram?.WebApp?.showPopup) {
+            // @ts-ignore
+            window.Telegram.WebApp.showPopup({
+              title: 'Транзакция подтверждена',
+              message: `На ваш счет начислено ${data.will_amount} WILL токенов`,
+              buttons: [{ type: 'close' }]
+            });
+          }
+        } catch (error) {
+          console.warn('Telegram WebApp API недоступен:', error);
+        }
+        
+        // Удаляем ID транзакции из localStorage
+        localStorage.removeItem('last_usdt_tx');
+      } else if (data.tx_status === 'pending') {
+        // Транзакция все еще в обработке, проверим еще раз через минуту
+        setTimeout(() => {
+          checkUsdtTransactionStatus(transactionId);
+        }, 60000);
+      } else if (data.tx_status === 'failed') {
+        // Транзакция не удалась
+        try {
+          // @ts-ignore
+          if (window.Telegram?.WebApp?.showPopup) {
+            // @ts-ignore
+            window.Telegram.WebApp.showPopup({
+              title: 'Транзакция не удалась',
+              message: 'Не удалось обработать вашу USDT транзакцию. Пожалуйста, попробуйте еще раз.',
+              buttons: [{ type: 'close' }]
+            });
+          }
+        } catch (error) {
+          console.warn('Telegram WebApp API недоступен:', error);
+        }
+        
+        // Удаляем ID транзакции из localStorage
+        localStorage.removeItem('last_usdt_tx');
+      }
+    } catch (error) {
+      console.error('Ошибка при проверке статуса USDT транзакции:', error);
+    }
+  }
   
   async function handleStartParam() {
     try {
@@ -227,6 +403,23 @@
   function handleOnboardingSkip() {
     showOnboarding = false;
   }
+
+  function handleTonTransactionSent(event: CustomEvent) {
+    const { transactionId } = event.detail;
+    console.log('Транзакция TON отправлена:', transactionId);
+    
+    // Запускаем проверку статуса транзакции
+    setTimeout(() => checkTransactionStatus(transactionId), 30000);
+  }
+
+  // Добавляем обработчик для USDT транзакций
+  function handleUsdtTransactionSent(event: CustomEvent) {
+    const { transactionId } = event.detail;
+    console.log('Транзакция USDT отправлена:', transactionId);
+    
+    // Запускаем проверку статуса транзакции
+    setTimeout(() => checkUsdtTransactionStatus(transactionId), 30000);
+  }
 </script>
 
 <main>
@@ -251,21 +444,25 @@
         </button>
       </div>
 
-      <div class="balance-container">
-        <div class="balance">
-          {#if $balance !== undefined && $balance !== null}
-            {$balance} WILL
-          {:else}
-            {console.log('Balance is undefined or null:', $balance)}
-            0 WILL
-          {/if}
+      <div class="right-section">
+        <div id="ton-connect-container" class="ton-connect-wrapper"></div>
+        
+        <div class="balance-container">
+          <div class="balance">
+            {#if $balance !== undefined && $balance !== null}
+              {$balance} WILL
+            {:else}
+              {console.log('Balance is undefined or null:', $balance)}
+              0 WILL
+            {/if}
+          </div>
+          <button class="add-balance-button" on:click={() => {
+            console.log('Opening buy tokens modal');
+            showBuyTokens = true;
+          }}>
+            +
+          </button>
         </div>
-        <button class="add-balance-button" on:click={() => {
-          console.log('Opening buy tokens modal');
-          showBuyTokens = true;
-        }}>
-          +
-        </button>
       </div>
     {/if}
   </header>
@@ -324,12 +521,23 @@
 
   {#if showBuyTokens}
     <BuyTokensModal 
+      telegramId={$user?.id || 0}
       on:close={() => showBuyTokens = false}
       on:buy={event => {
         showBuyTokens = false;
-        openTelegramInvoice(event.detail.starsAmount);
-        console.log('after openTelegramInvoice');
+        if (event.detail.paymentMethod === 'stars') {
+          openTelegramInvoice(event.detail.starsAmount);
+          console.log('after openTelegramInvoice');
+        }
+        // Закомментируем обработку TON
+        /* 
+        else {
+          console.log('TON transaction sent:', event.detail);
+        }
+        */
       }}
+      on:ton-transaction-sent={handleTonTransactionSent}
+      on:usdt-transaction-sent={handleUsdtTransactionSent}
     />
   {/if}
 </main>
@@ -578,5 +786,27 @@
 
   :global([data-theme="dark"]) .add-balance-button {
     background: var(--tg-theme-hint-color);
+  }
+
+  .right-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .ton-connect-wrapper {
+    display: flex;
+    align-items: center;
+  }
+
+  :global(#ton-connect) {
+    display: inline-block !important;
+  }
+
+  :global(#ton-connect button) {
+    height: 40px !important;
+    border-radius: 12px !important;
+    padding: 0 12px !important;
+    transition: all 0.2s ease !important;
   }
 </style>
