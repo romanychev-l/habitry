@@ -1,10 +1,3 @@
-import './app.css'
-import { Buffer } from 'buffer'
-// Глобальный полифил Buffer для использования в TON SDK
-if (typeof window !== 'undefined') {
-  window.Buffer = Buffer
-}
-
 import { mount } from 'svelte';
 import App from './App.svelte'
 import { initTelegram } from './utils/telegram'
@@ -14,17 +7,15 @@ import './i18n/i18n'
 
 console.log('🚀 Starting app initialization...')
 
-async function initializeApp() {
-  try {
-    // Инициализируем Telegram SDK
-    initTelegramSDK()
-    console.log('📱 Telegram SDK initializedd')
+// Инициализируем Telegram SDK
+initTelegramSDK()
+console.log('📱 Telegram SDK initializedd')
+
+if (await isTMA()) {
+    console.log('It\'s Telegram Mini Apps');
+} else {
     
-    if (await isTMA()) {
-      console.log('It\'s Telegram Mini Apps');
-    } else {
-      console.log("Not in Telegram Mini Apps environment");
-      const initDataRaw = new URLSearchParams([
+    const initDataRaw = new URLSearchParams([
         ['user', JSON.stringify({
           id: 99281932,
           first_name: 'Andrew',
@@ -63,20 +54,15 @@ async function initializeApp() {
         version: '7.2',
         platform: 'tdesktop',
       });
-    }
-    
-    // Монтируем приложение
-    const app = new App({
-      target: document.getElementById('app') as HTMLElement,
-    })
-    
-    console.log('✅ App mounted successfully')
-  } catch (error) {
-    console.error('❌ Error during app initialization:', error)
-  }
 }
 
-// Запускаем инициализацию
-initializeApp()
+const target = document.getElementById('app')
+if (!target) throw new Error('Element #app not found')
 
-export default App
+const app = mount(App, { target });
+console.log('✅ App initialized:', app)
+
+initTelegram()
+console.log('📱 Telegram initialized')
+
+export default app
