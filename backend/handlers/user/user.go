@@ -2,8 +2,10 @@ package user
 
 import (
 	"backend/models"
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -407,9 +409,22 @@ func (h *Handler) HandleUser(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) HandleUpdateLastVisit(w http.ResponseWriter, r *http.Request) {
 	log.Println("HandleUpdateLastVisit called")
+
+	// Читаем тело запроса для логирования
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Error reading request body: %v", err)
+		http.Error(w, `{"message": "Ошибка чтения тела запроса"}`, http.StatusBadRequest)
+		return
+	}
+	log.Printf("Raw request body: %s", string(body))
+
+	// Восстанавливаем тело запроса для дальнейшего использования
+	r.Body = io.NopCloser(bytes.NewBuffer(body))
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "PUT, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Telegram-Data")
 
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -417,6 +432,7 @@ func (h *Handler) HandleUpdateLastVisit(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if r.Method != "PUT" {
+		log.Printf("Wrong method: %s", r.Method)
 		http.Error(w, `{"message": "Метод не поддерживается"}`, http.StatusMethodNotAllowed)
 		return
 	}
@@ -428,6 +444,7 @@ func (h *Handler) HandleUpdateLastVisit(w http.ResponseWriter, r *http.Request) 
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		log.Printf("Error decoding request: %v", err)
+		log.Printf("Request body was: %s", string(body))
 		http.Error(w, `{"message": "Неверный формат данных"}`, http.StatusBadRequest)
 		return
 	}
@@ -450,9 +467,13 @@ func (h *Handler) HandleUpdateLastVisit(w http.ResponseWriter, r *http.Request) 
 		},
 	}
 
+	filter := bson.M{"telegram_id": request.TelegramID}
+	log.Printf("MongoDB filter: %+v", filter)
+	log.Printf("MongoDB update: %+v", update)
+
 	result, err := h.usersCollection.UpdateOne(
 		context.Background(),
-		bson.M{"telegram_id": request.TelegramID},
+		filter,
 		update,
 	)
 
@@ -463,8 +484,23 @@ func (h *Handler) HandleUpdateLastVisit(w http.ResponseWriter, r *http.Request) 
 	}
 
 	log.Printf("Update result: %+v", result)
+
+	if result.MatchedCount == 0 {
+		log.Printf("No documents matched the filter criteria")
+		http.Error(w, `{"message": "Пользователь не найден"}`, http.StatusNotFound)
+		return
+	}
+
+	if result.ModifiedCount == 0 {
+		log.Printf("Document matched but not modified")
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"matched_count":  result.MatchedCount,
+		"modified_count": result.ModifiedCount,
+	})
 }
 
 type UserSettingsRequest struct {

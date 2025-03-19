@@ -2,16 +2,14 @@ package middleware
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"sort"
 	"strconv"
-	"strings"
+	"time"
+
+	initdata "github.com/telegram-mini-apps/init-data-golang"
 )
 
 // TelegramAuthMiddleware проверяет данные, полученные от Telegram Mini App
@@ -34,47 +32,31 @@ func TelegramAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		// Получаем данные из заголовка
-		initData := r.Header.Get("X-Telegram-Data")
-		if initData == "" {
+		initDataStr := r.Header.Get("X-Telegram-Data")
+		if initDataStr == "" {
 			http.Error(w, "Отсутствуют данные Telegram", http.StatusUnauthorized)
 			return
 		}
 
 		// Декодируем URL-encoded строку
-		decodedData, err := url.QueryUnescape(initData)
+		decodedData, err := url.QueryUnescape(initDataStr)
 		if err != nil {
 			log.Printf("Ошибка при декодировании данных: %v", err)
 			http.Error(w, "Неверный формат данных", http.StatusBadRequest)
 			return
 		}
 
-		// Парсим данные
-		values, err := url.ParseQuery(decodedData)
+		log.Printf("Декодированные данные: %s", decodedData)
+
+		// Парсим данные с помощью библиотеки
+		data, err := initdata.Parse(decodedData)
 		if err != nil {
 			log.Printf("Ошибка при парсинге данных: %v", err)
 			http.Error(w, "Неверный формат данных", http.StatusBadRequest)
 			return
 		}
 
-		// Получаем хеш из данных
-		hash := values.Get("hash")
-		if hash == "" {
-			http.Error(w, "Отсутствует хеш", http.StatusBadRequest)
-			return
-		}
-
-		// Создаем data-check-string
-		pairs := make([]string, 0, len(values))
-		for k := range values {
-			if k != "hash" {
-				pairs = append(pairs, k+"="+values.Get(k))
-			}
-		}
-		sort.Strings(pairs)
-		dataCheckString := strings.Join(pairs, "\n")
-		// log.Printf("Data check string: %s", dataCheckString)
-
-		// Получаем токен бота из переменных окружения
+		// Проверяем подпись с помощью библиотеки
 		botToken := os.Getenv("BOT_TOKEN")
 		if botToken == "" {
 			log.Printf("Отсутствует токен бота")
@@ -82,85 +64,35 @@ func TelegramAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Создаем секретный ключ
-		secretKey := generateSecretKey(botToken)
+		// Устанавливаем срок действия данных (24 часа)
+		expIn := 24 * time.Hour
 
-		// Проверяем подпись
-		if !validateSignature(dataCheckString, hash, secretKey) {
-			log.Printf("Неверная подпись. Hash: %s", hash)
-			http.Error(w, "Неверная подпись", http.StatusUnauthorized)
+		// Проверяем валидность данных
+		if err := initdata.Validate(decodedData, botToken, expIn); err != nil {
+			log.Printf("Ошибка валидации данных: %v", err)
+			http.Error(w, "Неверная подпись или устаревшие данные", http.StatusUnauthorized)
 			return
 		}
 
-		// Извлекаем данные пользователя
-		userDataStr := values.Get("user")
-		if userDataStr != "" {
-			// Попробуем извлечь telegram_id из данных пользователя
-			var telegramID int64
-			var found bool
-
-			// Если telegram_id есть в query параметрах
+		// Если есть данные пользователя, добавляем telegram_id в контекст
+		if data.User.ID != 0 {
+			telegramID := data.User.ID
+			ctx := context.WithValue(r.Context(), "telegram_id", telegramID)
+			r = r.WithContext(ctx)
+			log.Printf("Установлен telegram_id в контексте: %d", telegramID)
+		} else {
+			// Пробуем получить telegram_id из query параметров
 			telegramIDStr := r.URL.Query().Get("telegram_id")
 			if telegramIDStr != "" {
 				if id, err := strconv.ParseInt(telegramIDStr, 10, 64); err == nil {
-					telegramID = id
-					found = true
-					log.Printf("Получен telegram_id из query: %d", telegramID)
+					ctx := context.WithValue(r.Context(), "telegram_id", id)
+					r = r.WithContext(ctx)
+					log.Printf("Установлен telegram_id из query: %d", id)
 				}
-			}
-
-			// Если telegram_id не найден в query, ищем в теле запроса для POST/PUT
-			if !found && (r.Method == "POST" || r.Method == "PUT") {
-				// Для POST и PUT, извлекаем telegram_id из userDataStr (JSON в данных от Telegram)
-				// Примечание: в реальном приложении используйте более надежный парсинг JSON
-				if strings.Contains(userDataStr, "id") {
-					// Простой парсинг id из строки JSON
-					idStartIndex := strings.Index(userDataStr, "\"id\":")
-					if idStartIndex != -1 {
-						idStartIndex += 5 // длина "id":
-						commaIndex := strings.Index(userDataStr[idStartIndex:], ",")
-						if commaIndex == -1 {
-							commaIndex = strings.Index(userDataStr[idStartIndex:], "}")
-						}
-						if commaIndex != -1 {
-							idStr := strings.TrimSpace(userDataStr[idStartIndex : idStartIndex+commaIndex])
-							if id, err := strconv.ParseInt(idStr, 10, 64); err == nil {
-								telegramID = id
-								found = true
-								log.Printf("Получен telegram_id из user data: %d", telegramID)
-							}
-						}
-					}
-				}
-			}
-
-			// Если нашли telegram_id, добавляем его в контекст
-			if found {
-				ctx := context.WithValue(r.Context(), "telegram_id", telegramID)
-				// Используем новый контекст с запросом
-				r = r.WithContext(ctx)
-				log.Printf("Установлен telegram_id в контексте: %d", telegramID)
 			}
 		}
 
 		// Вызываем следующий обработчик
 		next.ServeHTTP(w, r)
 	}
-}
-
-// generateSecretKey генерирует секретный ключ из токена бота
-func generateSecretKey(botToken string) []byte {
-	h := hmac.New(sha256.New, []byte("WebAppData"))
-	h.Write([]byte(botToken))
-	return h.Sum(nil)
-}
-
-// validateSignature проверяет подпись данных
-func validateSignature(dataCheckString, hash string, secretKey []byte) bool {
-	h := hmac.New(sha256.New, secretKey)
-	h.Write([]byte(dataCheckString))
-	signature := hex.EncodeToString(h.Sum(nil))
-	log.Printf("Generated signature: %s", signature)
-	log.Printf("Received hash: %s", hash)
-	return signature == hash
 }

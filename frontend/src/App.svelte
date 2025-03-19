@@ -282,6 +282,7 @@
           // openTelegramInvoice(data.balance);
           
           try {
+            console.log('Updating last_visit', telegramId, userTimezone);
             await api.updateLastVisit({
               telegram_id: telegramId,
               timezone: userTimezone

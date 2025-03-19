@@ -22,7 +22,7 @@ async function request(endpoint: string, options: RequestOptions = {}) {
     // Добавляем заголовки
     const headers = new Headers(fetchOptions.headers);
     if (initData) {
-        // Отправляем initData как есть, без дополнительного кодирования
+        // Передаем initData без encodeURIComponent - строка и так должна быть в правильном формате от Telegram
         headers.set('X-Telegram-Data', initData);
         console.log('Setting X-Telegram-Data header:', initData);
     } else {
@@ -213,8 +213,15 @@ export const api = {
     createUser: (userData: any) => 
         request('/api/user', { method: 'POST', body: JSON.stringify(userData) }),
     
-    updateLastVisit: (data: { telegram_id: number; timezone: string }) =>
-        request('/api/user/last-visit', { method: 'PUT', body: JSON.stringify(data) }),
+    updateLastVisit: (data: { telegram_id: number; timezone: string }) => {
+        console.log('updateLastVisit called with data:', data);
+        const body = JSON.stringify(data);
+        console.log('Request body:', body);
+        return request('/api/user/last-visit', { 
+            method: 'PUT', 
+            body: body
+        });
+    },
     
     getUserSettings: (telegramId: number) =>
         request('/api/user/settings', { params: { telegram_id: telegramId.toString() } }),
@@ -245,7 +252,12 @@ export const api = {
         request('/api/habit/join', { method: 'POST', body: JSON.stringify(data) }),
     
     getHabitFollowers: (habitId: string, telegramId: number) =>
-        request('/api/habit/followers', { params: { habit_id: habitId, telegram_id: telegramId.toString() } }),
+        request('/api/habit/followers', { 
+            params: { 
+                habit_id: habitId, 
+                telegram_id: telegramId.toString() 
+            }
+        }),
     
     getHabitProgress: (habitId: string, telegramId: number) =>
         request('/api/habit/progress', { params: { habit_id: habitId, telegram_id: telegramId.toString() } }),

@@ -683,7 +683,11 @@ func (h *TonHandler) CheckUsdtTransaction(ctx context.Context) (bool, error) {
 					amt := tlb.MustFromNano(transfer.Amount.Nano(), 6)
 					payload := transfer.ForwardPayload.BeginParse()
 
-					payloadOp := payload.MustLoadUInt(32)
+					payloadOp, err := payload.LoadUInt(32)
+					if err != nil {
+						log.Println("no text comment in transfer_notification")
+						continue
+					}
 					if payloadOp != 0 {
 						log.Println("no text comment in transfer_notification")
 						continue
@@ -695,7 +699,7 @@ func (h *TonHandler) CheckUsdtTransaction(ctx context.Context) (bool, error) {
 					// Ищем транзакцию в базе данных по комментарию
 					var transaction TonTransaction
 					sr := h.txCollection.FindOne(context.Background(), bson.M{"transaction_id": comment})
-					err := sr.Decode(&transaction)
+					err = sr.Decode(&transaction)
 					if err != nil {
 						log.Printf("Ошибка при поиске транзакции по комментарию: %v", err)
 						continue
