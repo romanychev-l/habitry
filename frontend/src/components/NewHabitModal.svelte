@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
+  import { fade } from 'svelte/transition';
   import type { Habit } from '../types';
   
   const dispatch = createEventDispatcher();
@@ -15,6 +16,9 @@
   let titleInput: HTMLInputElement;
   let modalHeight: number;
   let contentWrapper: HTMLDivElement;
+  let showTooltip = false;
+  let showWantToBecomeTooltip = false;
+  let showStakeTooltip = false;
 
   function updateModalHeight() {
     const vh = window.visualViewport?.height || window.innerHeight;
@@ -74,6 +78,18 @@
       dispatch('close');
     }
   }
+
+  function toggleTooltip() {
+    showTooltip = !showTooltip;
+  }
+
+  function toggleWantToBecomeTooltip() {
+    showWantToBecomeTooltip = !showWantToBecomeTooltip;
+  }
+
+  function toggleStakeTooltip() {
+    showStakeTooltip = !showStakeTooltip;
+  }
 </script>
 
 <div class="wrapper" bind:this={contentWrapper}>
@@ -91,17 +107,32 @@
       </div>
 
       <div class="content">
-        <input 
-          type="text" 
-          bind:value={title}
-          bind:this={titleInput}
-          placeholder={$_('habits.title')}
-          class="input-field"
-        />
+        <div class="form-control w-full">
+          <label class="label" for="habit-title">
+            <span class="label-text">{$_('habits.title')}</span>
+          </label>
+          <input 
+            type="text" 
+            id="habit-title"
+            bind:value={title}
+            bind:this={titleInput}
+            placeholder="{$_('habits.title_placeholder') || 'Например: Медитация'}"
+            class="input input-bordered w-full"
+          />
+        </div>
         
         <div class="form-control w-full">
           <label class="label" for="want-to-become">
-            <span class="label-text">{$_('habits.want_to_become')}</span>
+            <div class="label-with-info">
+              <span class="label-text">{$_('habits.want_to_become')}</span>
+              <button class="info-button" on:click|stopPropagation={toggleWantToBecomeTooltip}>?</button>
+              {#if showWantToBecomeTooltip}
+                <div class="tooltip" transition:fade>
+                  {$_('habits.want_to_become_tooltip')}
+                  <button class="tooltip-close" on:click|stopPropagation={toggleWantToBecomeTooltip}>×</button>
+                </div>
+              {/if}
+            </div>
           </label>
           <input
             type="text"
@@ -114,7 +145,16 @@
         
         <div class="form-control">
           <label class="label" for="stake">
-            <span class="label-text">{$_('habits.stake')}</span>
+            <div class="label-with-info">
+              <span class="label-text">{$_('habits.stake')}</span>
+              <button class="info-button" on:click|stopPropagation={toggleStakeTooltip}>?</button>
+              {#if showStakeTooltip}
+                <div class="tooltip" transition:fade>
+                  {$_('habits.stake_tooltip')}
+                  <button class="tooltip-close" on:click|stopPropagation={toggleStakeTooltip}>×</button>
+                </div>
+              {/if}
+            </div>
           </label>
           <input
             type="number"
@@ -128,8 +168,19 @@
         
         <div class="form-control">
           <label class="label cursor-pointer" for="auto-habit">
-            <span class="label-text">{$_('habits.auto_habit')}</span>
-            <input type="checkbox" id="auto-habit" class="checkbox" bind:checked={isAuto} />
+            <div class="auto-habit-row">
+              <div class="label-with-info">
+                <span class="label-text">{$_('habits.auto_habit')}</span>
+                <button class="info-button" on:click|stopPropagation={toggleTooltip}>?</button>
+                {#if showTooltip}
+                  <div class="tooltip" transition:fade>
+                    {$_('habits.auto_habit_tooltip')}
+                    <button class="tooltip-close" on:click|stopPropagation={toggleTooltip}>×</button>
+                  </div>
+                {/if}
+              </div>
+              <input type="checkbox" id="auto-habit" class="checkbox" bind:checked={isAuto} />
+            </div>
           </label>
         </div>
         
@@ -430,6 +481,68 @@
     margin-bottom: 8px;
   }
 
+  .checkbox-container {
+    display: flex;
+    align-items: center;
+    position: relative;
+  }
+
+  .auto-habit-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .label-with-info {
+    display: flex;
+    align-items: center;
+    position: relative;
+  }
+
+  .info-button {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #00D5A0;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    border: none;
+    margin-left: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .tooltip {
+    position: absolute;
+    left: 50px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 250px;
+    background: white;
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1001;
+    font-size: 14px;
+    color: #333;
+    line-height: 1.4;
+  }
+
+  .tooltip-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: #999;
+  }
+
   :global([data-theme="dark"]) .modal {
     background: var(--tg-theme-bg-color);
   }
@@ -461,5 +574,11 @@
 
   :global([data-theme="dark"]) .days-selector button:not(.selected) {
     color: white !important;
+  }
+
+  :global([data-theme="dark"]) .tooltip {
+    background: var(--tg-theme-bg-color);
+    color: var(--tg-theme-text-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
 </style>

@@ -53,7 +53,6 @@ type HabitResponse struct {
 	WantToBecome  string             `json:"want_to_become"`
 	Days          []int              `json:"days"`
 	IsOneTime     bool               `json:"is_one_time"`
-	IsAuto        bool               `json:"is_auto"`
 	CreatedAt     time.Time          `json:"created_at"`
 	LastClickDate string             `json:"last_click_date"`
 	Streak        int                `json:"streak"`

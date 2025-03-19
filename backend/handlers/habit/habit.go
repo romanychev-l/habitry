@@ -996,7 +996,6 @@ func (h *Handler) enrichHabitWithFollowers(ctx context.Context, habit models.Hab
 		WantToBecome:  habit.WantToBecome,
 		Days:          habit.Days,
 		IsOneTime:     habit.IsOneTime,
-		IsAuto:        habit.IsAuto,
 		CreatedAt:     habit.CreatedAt,
 		LastClickDate: habit.LastClickDate,
 		Streak:        habit.Streak,
