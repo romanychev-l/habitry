@@ -437,6 +437,8 @@ func (h *Handler) HandleEdit(w http.ResponseWriter, r *http.Request) {
 		habit.IsOneTime = habitRequest.Habit.IsOneTime
 	}
 	habit.IsAuto = habitRequest.Habit.IsAuto
+	habit.Streak = habitRequest.Habit.Streak
+	habit.Stake = habitRequest.Habit.Stake
 
 	// Сохраняем обновленную привычку
 	_, err = h.habitsCollection.UpdateOne(
@@ -994,10 +996,12 @@ func (h *Handler) enrichHabitWithFollowers(ctx context.Context, habit models.Hab
 		WantToBecome:  habit.WantToBecome,
 		Days:          habit.Days,
 		IsOneTime:     habit.IsOneTime,
+		IsAuto:        habit.IsAuto,
 		CreatedAt:     habit.CreatedAt,
 		LastClickDate: habit.LastClickDate,
 		Streak:        habit.Streak,
 		Score:         habit.Score,
+		Stake:         habit.Stake,
 		Followers:     []models.FollowerInfo{},
 	}
 

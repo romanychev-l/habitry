@@ -100,6 +100,7 @@ func main() {
 	http.HandleFunc("/api/habit", middleware.TelegramAuthMiddleware(habitHandler.HandleCreate))
 	http.HandleFunc("/api/habit/join", middleware.TelegramAuthMiddleware(habitHandler.HandleJoin))
 	http.HandleFunc("/api/habit/click", middleware.TelegramAuthMiddleware(habitHandler.HandleUpdate))
+	http.HandleFunc("/api/habit/edit", middleware.TelegramAuthMiddleware(habitHandler.HandleEdit))
 	http.HandleFunc("/api/habit/followers", middleware.TelegramAuthMiddleware(habitHandler.HandleGetFollowers))
 	http.HandleFunc("/api/habit/following", middleware.TelegramAuthMiddleware(followerHandler.HandleGetFollowing))
 	http.HandleFunc("/api/habit/progress", middleware.TelegramAuthMiddleware(followerHandler.HandleHabitProgress))

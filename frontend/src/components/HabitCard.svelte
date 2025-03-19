@@ -247,20 +247,34 @@
 
     async function handleEdit(event: CustomEvent) {
         try {
+            // Создаем новый объект для отправки на сервер
+            console.log('EditHabit event.detail:', event.detail);
+            console.log('Original habit:', habit);
+            
             const habitData = {
                 telegram_id: telegramId,
                 habit: {
-                    ...habit,
+                    _id: habit._id,
+                    telegram_id: habit.telegram_id,
                     title: event.detail.title,
                     want_to_become: event.detail.want_to_become,
                     days: event.detail.days,
                     is_one_time: event.detail.is_one_time,
                     is_auto: event.detail.is_auto,
-                    stake: event.detail.stake
+                    stake: event.detail.stake,
+                    created_at: habit.created_at,
+                    last_click_date: habit.last_click_date,
+                    streak: habit.streak,
+                    score: habit.score
+                    // Не включаем поле followers
                 }
             };
+            
+            console.log('HabitData being sent to server:', habitData);
 
             const data = await api.editHabit(habitData);
+            console.log('Response from server:', data);
+            
             if (data.habit) {
                 habits.update(currentHabits => 
                     currentHabits.map(h => h._id === habit._id ? data.habit : h)
