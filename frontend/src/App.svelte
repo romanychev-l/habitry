@@ -306,9 +306,9 @@
             language_code: $user.languageCode,
             photo_url: $user.photoUrl,
             timezone: userTimezone,
-            balance: 1000
+            balance: 100
           });
-          balance.set(1000);
+          balance.set(100);
           habits.update(currentHabits => []);
         } else {
           throw error;
@@ -558,15 +558,7 @@
     background-color: var(--tg-theme-bg-color);
   }
 
-  :global([data-theme="dark"]) body {
-    background-color: var(--tg-theme-bg-color);
-  }
-
   :global([data-theme="dark"]) .habit-container {
-    color: white;
-  }
-
-  :global([data-theme="dark"]) .toggle-label {
     color: white;
   }
 
@@ -576,62 +568,6 @@
     align-items: center;
     margin-bottom: 20px;
     padding: 12px 16px 8px 16px;
-  }
-
-  .view-toggle {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .toggle-label {
-    color: var(--tg-theme-text-color);
-    font-size: 14px;
-  }
-
-  .switch {
-    position: relative;
-    display: inline-block;
-    width: 40px;
-    height: 20px;
-  }
-
-  .switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-
-  .slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    transition: .3s;
-    border-radius: 20px;
-  }
-
-  .slider:before {
-    position: absolute;
-    content: "";
-    height: 16px;
-    width: 16px;
-    left: 2px;
-    bottom: 2px;
-    background-color: white;
-    transition: .3s;
-    border-radius: 50%;
-  }
-
-  input:checked + .slider {
-    background-color: #00D5A0;
-  }
-
-  input:checked + .slider:before {
-    transform: translateX(20px);
   }
 
   .habit-container {

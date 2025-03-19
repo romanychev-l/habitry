@@ -299,34 +299,6 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  .type-selector {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    background: none;
-    border: none;
-    color: var(--tg-theme-text-color);
-    padding: 0;
-    font-size: 16px;
-    margin-top: 8px;
-  }
-
-  .daily-habit-btn {
-    border-radius: 12px;
-    border: 2px solid var(--tg-theme-button-color);
-    background: transparent;
-    color: var(--tg-theme-button-color);
-    font-weight: 500;
-    text-align: left;
-    font-size: 14px;
-  }
-
-  .daily-habit-btn:active {
-    background: var(--tg-theme-button-color);
-    color: var(--tg-theme-button-text-color);
-  }
-
   .days-wrapper {
     display: flex;
     gap: 8px;
@@ -338,24 +310,6 @@
     grid-template-columns: repeat(4, 1fr);
     gap: 8px;
     flex: 1;
-  }
-
-  .all-btn {
-    aspect-ratio: 1;
-    border-radius: 12px;
-    border: 2px solid #00D5A0;
-    background: var(--tg-theme-secondary-bg-color);
-    font-weight: 500;
-    font-size: 14px;
-    padding: 0;
-    width: 48px;
-    height: 48px;
-  }
-
-  .all-btn.selected {
-    border-color: #00D5A0;
-    background: #00D5A0;
-    color: var(--tg-theme-button-text-color);
   }
 
   .days-selector button {
@@ -417,33 +371,6 @@
     -moz-appearance: textfield;
   }
 
-  .switch {
-    display: flex;
-    align-items: center;
-    margin-right: 4px;
-  }
-
-  .slider {
-    position: relative;
-    width: 36px;
-    height: 20px;
-    background: #ccc;
-    border-radius: 10px;
-    margin-left: 12px;
-  }
-
-  .slider:before {
-    content: "";
-    position: absolute;
-    height: 16px;
-    width: 16px;
-    left: 2px;
-    bottom: 2px;
-    background: white;
-    border-radius: 50%;
-    transition: transform 0.2s;
-  }
-
   /* .slider.checked {
     background: #00D5A0;
   }
@@ -475,16 +402,6 @@
 
   .save-btn:disabled {
     opacity: 0.6;
-  }
-
-  .input-field {
-    margin-bottom: 8px;
-  }
-
-  .checkbox-container {
-    display: flex;
-    align-items: center;
-    position: relative;
   }
 
   .auto-habit-row {
@@ -549,10 +466,6 @@
 
   :global([data-theme="dark"]) input[type="text"],
   :global([data-theme="dark"]) input[type="number"] {
-    color: white;
-  }
-
-  :global([data-theme="dark"]) .type-selector {
     color: white;
   }
 

@@ -12,13 +12,13 @@ func MigrateCreditToBalance(client *mongo.Client, dbName string) error {
 	ctx := context.Background()
 	usersCollection := client.Database(dbName).Collection("users")
 
-	// Обновляем все документы: удаляем поле credit и устанавливаем balance = 1000
+	// Обновляем все документы: удаляем поле credit и устанавливаем balance = 100
 	result, err := usersCollection.UpdateMany(
 		ctx,
 		bson.M{}, // пустой фильтр для обновления всех документов
 		bson.M{
-			"$unset": bson.M{"credit": ""},    // удаляем поле credit
-			"$set":   bson.M{"balance": 1000}, // устанавливаем balance = 1000
+			"$unset": bson.M{"credit": ""},   // удаляем поле credit
+			"$set":   bson.M{"balance": 100}, // устанавливаем balance = 100
 		},
 	)
 
