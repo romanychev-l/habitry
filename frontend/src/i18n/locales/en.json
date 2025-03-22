@@ -67,6 +67,12 @@
     "ping_sent_message": "Reminder has been sent to @{username}. They will be notified soon.",
     "confirm_ping": "Send Reminder",
     "confirm_ping_text": "Do you want to send a reminder to @{username}?",
+    "ping_all_inactive": "Remind everyone",
+    "no_followers_to_ping": "No followers to send reminders to",
+    "ping_all_success": "Reminders sent to {count} followers",
+    "ping_all_sent_title": "Reminders Sent",
+    "ping_all_sent_message": "Reminders have been sent to {count} followers",
+    "complete_before_ping": "Complete the habit first to send reminders",
     "join_habit": {
       "0": "I've been doing this habit for",
       "1": "already",
@@ -94,7 +100,8 @@
       "delete_message": "Are you sure you want to delete this habit?",
       "delete_confirm": "Yes, delete",
       "delete_cancel": "No, keep it"
-    }
+    },
+    "ping_blocked_title": "Reminder Blocked"
   },
   "days": {
     "monday": "Mon",

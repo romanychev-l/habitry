@@ -1,8 +1,8 @@
-<script lang="ts">
+Кн<script lang="ts">
     import { _ } from 'svelte-i18n';
     import type { Habit } from '../types';
     import { habits } from '../stores/habit';
-    import { createEventDispatcher } from 'svelte';
+    import { createEventDispatcher, onMount, onDestroy } from 'svelte';
     import ActivityHeatmap from './ActivityHeatmap.svelte';
     import { api } from '../utils/api';
     
@@ -23,30 +23,76 @@
     }> = [];
     let loading = false;
     let error = '';
-    let success = '';
     let showUnfollowConfirm = false;
     let selectedFollower: { username: string; telegram_id: number; first_name?: string; photo_url?: string } | null = null;
     let activityData: { date: string; count: number }[] = [];
     
     const API_URL = import.meta.env.VITE_API_URL;
     
+    // Предотвращаем скролл на основной странице
+    function disableBodyScroll() {
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function enableBodyScroll() {
+        document.body.style.overflow = '';
+    }
+    
+    $: if (show) {
+        loadFollowers();
+        loadActivityData();
+        disableBodyScroll();
+    } else {
+        enableBodyScroll();
+    }
+    
+    // Очищаем стили при размонтировании компонента
+    onDestroy(() => {
+        enableBodyScroll();
+    });
+    
     async function loadFollowers() {
         try {
             loading = true;
             console.log('Loading followers for habit:', habit._id, 'telegramId:', telegramId);
-            if (initialFollowers && initialFollowers.length > 0) {
-                followers = initialFollowers.map(f => ({ ...f }));
-                console.log('Using initial followers:', followers);
+            
+            // Всегда делаем запрос к API для получения актуальных данных
+            const data = await api.getHabitFollowers(habit._id, telegramId);
+            console.log('Received followers data:', data);
+            
+            // Добавляем подробное логирование для отладки
+            if (!data) {
+                console.warn('API returned null or undefined data');
+            } else if (!Array.isArray(data)) {
+                console.warn('API returned non-array data:', typeof data, data);
             } else {
-                const data = await api.getHabitFollowers(habit._id, telegramId);
-                console.log('Received followers data:', data);
-                followers = Array.isArray(data) ? data : [];
-                console.log('Processed followers:', followers);
+                console.log('API returned array with length:', data.length);
             }
+            
+            // Обновляем followers независимо от результата запроса
+            // (пустой массив - это нормальный результат после удаления)
+            if (Array.isArray(data)) {
+                followers = data;
+            } else {
+                console.warn('Setting followers to empty array because data is not an array');
+                followers = [];
+            }
+            console.log('Processed followers:', followers);
+            
+            // Отправляем событие обновления в родительский компонент
+            dispatch('followersUpdated', { followers });
+            
+            error = ''; // Сбрасываем ошибку если запрос успешен
         } catch (err: any) {
             console.error('Error loading followers:', err);
             error = err.message || $_('habits.errors.load_followers');
-            followers = [];
+            
+            // В случае ошибки, если есть initialFollowers, используем его
+            if (initialFollowers && initialFollowers.length > 0) {
+                followers = initialFollowers.map(f => ({ ...f }));
+            } else {
+                followers = [];
+            }
         } finally {
             loading = false;
         }
@@ -68,7 +114,6 @@
         if (!selectedFollower) return;
         
         error = '';
-        success = '';
         
         const requestData = {
             habit_id: habit._id,
@@ -82,13 +127,14 @@
             console.log('Успешно отписались');
             
             // Обновляем список подписчиков
-            const data = await api.getHabitFollowers(habit._id, telegramId);
-            dispatch('followersUpdated', { followers: data });
+            await loadFollowers();
             
-            // Закрываем модальное окно
+            // Закрываем модальное окно подтверждения
             showUnfollowConfirm = false;
             selectedFollower = null;
-            success = $_('habits.unfollow_success');
+            
+            // Показываем алерт вместо временного сообщения
+            alert($_('habits.unfollow_success'));
         } catch (error) {
             console.error('Error unfollowing:', error);
             error = $_('habits.errors.unfollow');
@@ -101,6 +147,14 @@
     }
     
     function handlePingClick(follower: { username: string; telegram_id: number; first_name?: string; photo_url?: string }) {
+        // Проверяем, выполнил ли пользователь привычку сегодня
+        const today = new Date().toISOString().split('T')[0]; // формат YYYY-MM-DD
+        if (habit.last_click_date !== today) {
+            // Показываем стандартный алерт с предупреждением
+            alert($_('habits.complete_before_ping'));
+            return;
+        }
+        
         // Сразу отправляем запрос на создание пинга без подтверждения
         try {
             api.createPing({
@@ -111,39 +165,79 @@
                 sender_id: telegramId,
                 sender_username: window.Telegram?.WebApp?.initDataUnsafe?.user?.username || ""
             })
-            .then(() => {
-                // Показываем временное сообщение об успехе
-                success = $_('habits.ping_success', { values: { username: follower.username } });
+            .then(async () => {
+                // Показываем стандартный алерт
+                alert($_('habits.ping_sent_message', { values: { username: follower.username } }));
                 
-                // Также показываем всплывающее уведомление через Telegram.WebApp если доступно
-                if (window.Telegram?.WebApp?.showPopup) {
-                    window.Telegram.WebApp.showPopup({
-                        title: $_('habits.ping_sent_title'),
-                        message: $_('habits.ping_sent_message', { values: { username: follower.username } }),
-                        buttons: [{ type: "ok" }]
-                    });
+                // Обновляем список подписчиков
+                try {
+                    await loadFollowers();
+                } catch (err) {
+                    console.error('Error reloading followers after ping:', err);
                 }
-                
-                // Скрываем сообщение через 3 секунды
-                const username = follower.username;
-                setTimeout(() => {
-                    if (success === $_('habits.ping_success', { values: { username } })) {
-                        success = '';
-                    }
-                }, 3000);
             })
             .catch((error: Error) => {
                 console.error('Error creating ping:', error);
-                if (window.Telegram && window.Telegram.WebApp) {
-                    window.Telegram.WebApp.showAlert($_('habits.errors.ping'));
-                }
+                alert($_('habits.errors.ping'));
             });
         } catch (error) {
             console.error('Error sending ping:', error);
-            if (window.Telegram && window.Telegram.WebApp) {
-                window.Telegram.WebApp.showAlert($_('habits.errors.ping'));
-            }
+            alert($_('habits.errors.ping'));
         }
+    }
+    
+    // Новая функция для отправки пинга всем подписчикам, которые не выполнили привычку
+    function handlePingAllClick() {
+        // Проверяем, выполнил ли пользователь привычку сегодня
+        const today = new Date().toISOString().split('T')[0]; // формат YYYY-MM-DD
+        if (habit.last_click_date !== today) {
+            // Показываем стандартный алерт с предупреждением
+            alert($_('habits.complete_before_ping'));
+            return;
+        }
+        
+        // Фильтруем только взаимных подписчиков, которые не выполнили привычку сегодня
+        const followersToPing = followers.filter(f => f.is_mutual && !f.completed_today);
+        
+        if (followersToPing.length === 0) {
+            // Показываем алерт, если нет подписчиков для пинга
+            alert($_('habits.no_followers_to_ping'));
+            return;
+        }
+        
+        // Счетчик успешных пингов
+        let successCount = 0;
+        let pingPromises: Promise<any>[] = [];
+        
+        // Отправляем пинг каждому подписчику и собираем промисы
+        followersToPing.forEach(follower => {
+            const pingPromise = api.createPing({
+                follower_id: follower.telegram_id,
+                follower_username: follower.username,
+                habit_id: habit._id,
+                habit_title: habit.title,
+                sender_id: telegramId,
+                sender_username: window.Telegram?.WebApp?.initDataUnsafe?.user?.username || ""
+            })
+            .then(() => {
+                successCount++;
+            })
+            .catch((error: Error) => {
+                console.error('Error creating ping:', error);
+            });
+            
+            pingPromises.push(pingPromise);
+        });
+        
+        // Ждем завершения всех запросов на пинг
+        Promise.all(pingPromises)
+            .then(async () => {
+                // Если были успешные пинги, показываем сообщение об успехе
+                if (successCount > 0) {
+                    // Показываем стандартный алерт
+                    alert($_('habits.ping_all_sent_message', { values: { count: successCount } }));
+                }
+            });
     }
     
     function handleClose() {
@@ -157,10 +251,22 @@
         }
     }
     
-    $: if (show) {
-        loadFollowers();
-        loadActivityData();
+    function handleDialogScroll(event: Event) {
+        event.stopPropagation();
     }
+    
+    // Добавляем обработчик инициализации
+    onMount(() => {
+        if (window.Telegram?.WebApp?.ready) {
+            window.Telegram.WebApp.ready();
+        }
+        
+        // Устанавливаем начальное состояние из initialFollowers, если они доступны
+        if (initialFollowers && initialFollowers.length > 0 && show) {
+            followers = initialFollowers.map(f => ({ ...f }));
+            console.log('Set initial followers state:', followers);
+        }
+    });
 </script>
 
 {#if show}
@@ -176,20 +282,33 @@
                 <h2>{$_('habits.followers_list')}</h2>
             </div>
             
-            <div class="dialog-content">
+            <div 
+                class="dialog-content" 
+                on:scroll|stopPropagation={handleDialogScroll}
+            >
                 <div class="activity-section">
                     <h3>{$_('habits.activity')}</h3>
                     <ActivityHeatmap data={activityData} />
                 </div>
                 
+                <!-- Кнопка "Пингануть всех" между секциями -->
+                <button 
+                    class="ping-all-button" 
+                    on:click={handlePingAllClick}
+                    title={$_('habits.ping_all_inactive')}
+                >
+                    🔔 {$_('habits.ping_all_inactive')}
+                </button>
+                
                 <div class="followers-section">
                     <h3>{$_('habits.followers_list')}</h3>
+                    
+                    {#if error}
+                        <div class="error">{error}</div>
+                    {/if}
+                    
                     {#if loading}
                         <div class="loading">{$_('common.loading')}</div>
-                    {:else if error}
-                        <div class="error">{error}</div>
-                    {:else if success}
-                        <div class="success">{success}</div>
                     {:else if followers.length === 0}
                         <div class="empty">{$_('habits.no_followers')}</div>
                     {:else}
@@ -230,7 +349,7 @@
                                                 >
                                                     🔔
                                                 </button>
-                                            {:else}
+                                            {:else if follower.completed_today}
                                                 <span class="completed-icon" title={$_('habits.completed_today')}>
                                                     ✅
                                                 </span>
@@ -306,6 +425,9 @@
         background: #F9F8F3;
         border-radius: 24px 24px 0 0;
         box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
     }
 
     .dialog-header {
@@ -322,6 +444,8 @@
 
     .dialog-content {
         padding: 16px 24px;
+        overflow-y: auto;
+        flex: 1;
     }
 
     .activity-section {
@@ -534,6 +658,27 @@
         border-radius: 8px;
         font-size: 16px;
         cursor: pointer;
+    }
+
+    .ping-all-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #007aff;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 12px 16px;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        margin: 12px 0;
+        width: 100%;
+        gap: 8px;
+    }
+    
+    .ping-all-button:active {
+        opacity: 0.8;
     }
 
     :global([data-theme="dark"]) .dialog {
