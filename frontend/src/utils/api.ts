@@ -284,4 +284,22 @@ export const api = {
     registerUsdtDeposit,
     checkUsdtTransaction,
     registerWithdrawal,
+    createPing: async (data: {
+      follower_id: number;
+      follower_username: string;
+      habit_id: string;
+      habit_title: string;
+      sender_id: number;
+      sender_username: string;
+    }) => {
+      try {
+        return request('/api/pings/create', {
+          method: 'POST',
+          body: JSON.stringify(data)
+        });
+      } catch (error) {
+        console.error('Error creating ping:', error);
+        throw error;
+      }
+    },
 }; 

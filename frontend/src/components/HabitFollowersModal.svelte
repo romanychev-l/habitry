@@ -11,14 +11,21 @@
     export let show = false;
     export let habit: Habit;
     export let telegramId: number;
-    export let initialFollowers: Array<{ username: string; telegram_id: number }> | null = null;
+    export let initialFollowers: Array<{ username: string; telegram_id: number; first_name?: string; photo_url?: string; completed_today?: boolean }> | null = null;
     
-    let followers: Array<{ username: string; telegram_id: number }> = [];
+    let followers: Array<{ 
+        username: string; 
+        telegram_id: number; 
+        first_name?: string; 
+        photo_url?: string;
+        is_mutual?: boolean;
+        completed_today?: boolean;
+    }> = [];
     let loading = false;
     let error = '';
     let success = '';
     let showUnfollowConfirm = false;
-    let selectedFollower: { username: string; telegram_id: number } | null = null;
+    let selectedFollower: { username: string; telegram_id: number; first_name?: string; photo_url?: string } | null = null;
     let activityData: { date: string; count: number }[] = [];
     
     const API_URL = import.meta.env.VITE_API_URL;
@@ -88,9 +95,55 @@
         }
     }
     
-    function handleUnfollowClick(follower: { username: string; telegram_id: number }) {
+    function handleUnfollowClick(follower: { username: string; telegram_id: number; first_name?: string; photo_url?: string }) {
         selectedFollower = follower;
         showUnfollowConfirm = true;
+    }
+    
+    function handlePingClick(follower: { username: string; telegram_id: number; first_name?: string; photo_url?: string }) {
+        // Сразу отправляем запрос на создание пинга без подтверждения
+        try {
+            api.createPing({
+                follower_id: follower.telegram_id,
+                follower_username: follower.username,
+                habit_id: habit._id,
+                habit_title: habit.title,
+                sender_id: telegramId,
+                sender_username: window.Telegram?.WebApp?.initDataUnsafe?.user?.username || ""
+            })
+            .then(() => {
+                // Показываем временное сообщение об успехе
+                success = $_('habits.ping_success', { values: { username: follower.username } });
+                
+                // Также показываем всплывающее уведомление через Telegram.WebApp если доступно
+                if (window.Telegram?.WebApp?.showPopup) {
+                    window.Telegram.WebApp.showPopup({
+                        title: $_('habits.ping_sent_title'),
+                        message: $_('habits.ping_sent_message', { values: { username: follower.username } }),
+                        buttons: [{ type: "ok" }]
+                    });
+                }
+                
+                // Скрываем сообщение через 3 секунды
+                const username = follower.username;
+                setTimeout(() => {
+                    if (success === $_('habits.ping_success', { values: { username } })) {
+                        success = '';
+                    }
+                }, 3000);
+            })
+            .catch((error: Error) => {
+                console.error('Error creating ping:', error);
+                if (window.Telegram && window.Telegram.WebApp) {
+                    window.Telegram.WebApp.showAlert($_('habits.errors.ping'));
+                }
+            });
+        } catch (error) {
+            console.error('Error sending ping:', error);
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.showAlert($_('habits.errors.ping'));
+            }
+        }
     }
     
     function handleClose() {
@@ -143,20 +196,62 @@
                         <ul class="followers-list">
                             {#each followers as follower}
                                 <li class="follower-item">
-                                    <a 
-                                        href="https://t.me/{follower.username}" 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        class="username"
-                                    >
-                                        @{follower.username}
-                                    </a>
-                                    <button 
-                                        class="unfollow-button"
-                                        on:click={() => handleUnfollowClick(follower)}
-                                    >
-                                        {$_('habits.unfollow')}
-                                    </button>
+                                    <div class="follower-info">
+                                        {#if follower.photo_url}
+                                            <img 
+                                                src={follower.photo_url} 
+                                                alt={follower.username} 
+                                                class="follower-avatar" 
+                                            />
+                                        {:else}
+                                            <div class="follower-avatar-placeholder">
+                                                {follower.first_name?.[0] || follower.username?.[0] || '?'}
+                                            </div>
+                                        {/if}
+                                        <div class="follower-details">
+                                            <span class="follower-name">{follower.first_name || follower.username}</span>
+                                            <a 
+                                                href="https://t.me/{follower.username}" 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                class="username"
+                                            >
+                                                @{follower.username}
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="follower-actions">
+                                        {#if follower.is_mutual}
+                                            {#if !follower.completed_today}
+                                                <button 
+                                                    class="ping-button"
+                                                    on:click={() => handlePingClick(follower)}
+                                                    title={$_('habits.ping_follower')}
+                                                >
+                                                    🔔
+                                                </button>
+                                            {:else}
+                                                <span class="completed-icon" title={$_('habits.completed_today')}>
+                                                    ✅
+                                                </span>
+                                            {/if}
+                                        {:else if follower.completed_today}
+                                            <span class="completed-icon" title={$_('habits.completed_today')}>
+                                                ✅
+                                            </span>
+                                        {:else}
+                                            <span class="not-completed-icon" title={$_('habits.not_completed_today')}>
+                                                ❌
+                                            </span>
+                                        {/if}
+                                        <button 
+                                            class="unfollow-button"
+                                            on:click={() => handleUnfollowClick(follower)}
+                                            title={$_('habits.unfollow')}
+                                        >
+                                            🗑️
+                                        </button>
+                                    </div>
                                 </li>
                             {/each}
                         </ul>
@@ -229,6 +324,29 @@
         padding: 16px 24px;
     }
 
+    .activity-section {
+        margin-bottom: 1rem;
+        padding: 1rem 0;
+        background-color: var(--background-secondary);
+        border-radius: 8px;
+    }
+    
+    .activity-section h3 {
+        margin: 0 1rem 0.5rem 1rem;
+        color: var(--text-primary);
+    }
+    
+    .followers-section {
+        padding: 1rem 0;
+        background-color: var(--background-secondary);
+        border-radius: 8px;
+    }
+    
+    .followers-section h3 {
+        margin: 0 1rem 0.5rem 1rem;
+        color: var(--text-primary);
+    }
+    
     .followers-list {
         list-style: none;
         padding: 0;
@@ -239,29 +357,116 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 12px;
+        padding: 12px 0;
         border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
+        margin: 0 1rem;
+    }
+    
+    .follower-item:first-child {
+        padding-top: 0;
+    }
+    
+    .follower-item:last-child {
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+    
+    .follower-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .follower-avatar {
+        width: 40px;
+        height: 40px;
+        object-fit: cover;
+        mask: url('/src/assets/squircley.svg') no-repeat center / contain;
+        -webkit-mask: url('/src/assets/squircley.svg') no-repeat center / contain;
+    }
+    
+    .follower-avatar-placeholder {
+        width: 40px;
+        height: 40px;
+        background: var(--tg-theme-button-color);
+        color: var(--tg-theme-button-text-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        font-weight: 500;
+        text-transform: uppercase;
+        mask: url('/src/assets/squircley.svg') no-repeat center / contain;
+        -webkit-mask: url('/src/assets/squircley.svg') no-repeat center / contain;
+    }
+    
+    .follower-details {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .follower-name {
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--tg-theme-text-color);
     }
     
     .username {
-        font-size: 16px;
+        font-size: 14px;
         text-decoration: none;
-        color: var(--tg-theme-text-color);
+        color: var(--tg-theme-hint-color, #999);
     }
     
     .username:hover {
         text-decoration: underline;
     }
     
+    .follower-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .completed-icon {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+        border-radius: 8px;
+    }
+    
+    .mutual-icon, .one-way-icon, .completed-icon {
+        font-size: 20px;
+    }
+    
+    .not-completed-icon {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+        border-radius: 8px;
+        color: #ff3b30;
+    }
+    
     .unfollow-button {
-        padding: 8px 16px;
-        border-radius: 12px;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
         background: #ff3b30;
         color: white;
         border: none;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 16px;
         font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
     }
 
     .button-group {
@@ -317,36 +522,25 @@
         margin-bottom: 16px;
     }
 
+    .ping-button {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #007aff;
+        color: white;
+        width: 32px;
+        height: 32px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
     :global([data-theme="dark"]) .dialog {
         background: var(--tg-theme-bg-color);
     }
 
     :global([data-theme="dark"]) .dialog * {
         color: white !important;
-    }
-
-    .activity-section {
-        margin-bottom: 1rem;
-        padding: 1rem;
-        background-color: var(--background-secondary);
-        border-radius: 8px;
-    }
-    
-    .activity-section h3 {
-        margin-top: 0;
-        margin-bottom: 0.5rem;
-        color: var(--text-primary);
-    }
-    
-    .followers-section {
-        padding: 1rem;
-        background-color: var(--background-secondary);
-        border-radius: 8px;
-    }
-    
-    .followers-section h3 {
-        margin-top: 0;
-        margin-bottom: 0.5rem;
-        color: var(--text-primary);
     }
 </style> 

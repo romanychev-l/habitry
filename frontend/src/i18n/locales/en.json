@@ -56,8 +56,19 @@
     "unfollow_success": "You have successfully unfollowed the user",
     "link_success": "You have successfully linked the habit",
     "activity": "Activity",
+    "mutual_follow": "Mutual subscription",
+    "one_way_follow": "One-way subscription",
+    "ping_follower": "Send reminder",
+    "completed_today": "Completed today",
+    "not_completed_today": "Not completed today",
+    "ping_success": "Reminder sent to @{username}",
+    "ping_message": "Reminder to complete your habit! 🔔",
+    "ping_sent_title": "Reminder Sent",
+    "ping_sent_message": "Reminder has been sent to @{username}. They will be notified soon.",
+    "confirm_ping": "Send Reminder",
+    "confirm_ping_text": "Do you want to send a reminder to @{username}?",
     "join_habit": {
-      "0": "I'm doing habit",
+      "0": "I've been doing this habit for",
       "1": "already",
       "2": "days, join me! 🤝"
     },
@@ -75,7 +86,8 @@
       "edit_forbidden": "Only the creator can edit the habit",
       "title_required": "Enter the habit name",
       "load_followers": "Failed to load followers",
-      "unfollow": "Failed to unfollow user"
+      "unfollow": "Failed to unfollow user",
+      "ping": "Failed to send reminder"
     },
     "modals": {
       "delete_title": "Delete Habit",

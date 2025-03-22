@@ -12,6 +12,7 @@ import (
 	"backend/handlers/follower"
 	"backend/handlers/habit"
 	"backend/handlers/invoice"
+	"backend/handlers/ping"
 	"backend/handlers/ton"
 	"backend/handlers/user"
 	"backend/middleware"
@@ -64,6 +65,7 @@ func main() {
 	habitsCollection := database.Collection("habits")
 	tonTxCollection := database.Collection("ton_transactions")
 	settingsCollection := database.Collection("settings")
+	pingsCollection := database.Collection("pings")
 
 	b, err := tgbot.New(botToken)
 	if err != nil {
@@ -76,6 +78,7 @@ func main() {
 	invoiceHandler := invoice.NewHandler(b)
 	followerHandler := follower.NewHandler(habitsCollection, usersCollection)
 	tonHandler := ton.NewHandler(usersCollection, tonTxCollection, settingsCollection)
+	pingHandler := ping.NewHandler(pingsCollection)
 
 	// Запускаем процессор транзакций в отдельной горутине
 	go runTonTransactionProcessor(tonHandler)
@@ -120,6 +123,9 @@ func main() {
 
 	// Добавляем маршрут для обработки запросов на вывод WILL
 	http.HandleFunc("/api/ton/withdraw", middleware.TelegramAuthMiddleware(tonHandler.HandleWithdraw))
+
+	// Добавляем маршрут для создания пингов
+	http.HandleFunc("/api/pings/create", middleware.TelegramAuthMiddleware(pingHandler.HandleCreatePing))
 
 	// Запуск сервера
 	wrappedHandler := corsMiddleware.Handler(http.DefaultServeMux)

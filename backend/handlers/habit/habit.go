@@ -891,9 +891,50 @@ func (h *Handler) HandleGetFollowers(w http.ResponseWriter, r *http.Request) {
 			).Decode(&user)
 
 			if err == nil {
+				// Проверяем, является ли подписка взаимной
+				isMutual := false
+
+				// Получаем привычки пользователя, на которого мы подписаны
+				followerHabits, err := h.habitsCollection.Find(
+					context.Background(),
+					bson.M{"telegram_id": followerHabit.TelegramID},
+				)
+
+				if err == nil {
+					defer followerHabits.Close(context.Background())
+
+					// Проверяем, есть ли текущая привычка в подписках пользователя
+					var fHabit models.Habit
+					for followerHabits.Next(context.Background()) {
+						if err := followerHabits.Decode(&fHabit); err != nil {
+							continue
+						}
+
+						// Если среди подписок пользователя есть текущая привычка, то подписка взаимная
+						for _, fID := range fHabit.Followers {
+							if fID == habitID {
+								isMutual = true
+								break
+							}
+						}
+
+						if isMutual {
+							break
+						}
+					}
+				}
+
+				// Проверяем, выполнил ли подписчик привычку сегодня
+				today := time.Now().Format("2006-01-02")
+				completedToday := followerHabit.LastClickDate == today
+
 				users = append(users, map[string]interface{}{
-					"username":    user.Username,
-					"telegram_id": user.TelegramID,
+					"username":        user.Username,
+					"telegram_id":     user.TelegramID,
+					"first_name":      user.FirstName,
+					"photo_url":       user.PhotoURL,
+					"is_mutual":       isMutual,
+					"completed_today": completedToday,
 				})
 			}
 		}

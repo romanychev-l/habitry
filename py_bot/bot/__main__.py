@@ -15,6 +15,7 @@ from bot.middlewares.i18n import TranslatorRunnerMiddleware
 from bot.utils.i18n import create_translator_hub
 from bot.services.notification_manager import NotificationManager
 from bot.services.count_manager import CountManager
+from bot.services.ping_manager import PingManager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -43,6 +44,10 @@ async def main() -> None:
     # Инициализируем и запускаем менеджер подсчета выигрышей
     count_manager = CountManager(bot)
     count_manager.start()
+    
+    # Инициализируем и запускаем менеджер пингов
+    ping_manager = PingManager(bot)
+    ping_manager.start()  # Теперь просто создаст асинхронную задачу
 
     dp.include_router(commands_router)
     dp.include_router(other_router)
