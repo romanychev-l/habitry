@@ -5,6 +5,7 @@
     import { createEventDispatcher, onMount, onDestroy } from 'svelte';
     import ActivityHeatmap from './ActivityHeatmap.svelte';
     import { api } from '../utils/api';
+    import { showTelegramOrCustomAlert } from '../stores/alert';
     
     const dispatch = createEventDispatcher();
     

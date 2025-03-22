@@ -43,6 +43,8 @@ interface TelegramWebApp {
       message: string;
       buttons: Array<{ type: string }>;
     }) => void;
+    showAlert?: (message: string, callback?: () => void) => void;
+    showConfirm?: (message: string, callback: (confirmed: boolean) => void) => void;
 }
 
 interface Window {

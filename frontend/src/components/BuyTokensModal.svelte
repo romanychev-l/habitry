@@ -6,6 +6,7 @@
   import type { Wallet } from '@tonconnect/ui';
   import { beginCell, Address, toNano } from '@ton/core'
   import { TonClient, JettonMaster } from '@ton/ton';
+  import { showTelegramOrCustomAlert } from '../stores/alert';
 
   // Используем уже объявленные глобальные типы без declare global
   
@@ -106,7 +107,7 @@
     if (!walletConnected) {
       console.error('Кошелек не подключен');
       transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
-      showTelegramPopup('Ошибка', 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.');
+      showTelegramOrCustomAlert('Ошибка', 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.');
       return;
     }
     
@@ -114,7 +115,7 @@
     if (withdrawAmount > userBalance) {
       console.error('Недостаточно средств для вывода');
       transactionError = `Недостаточно средств для вывода. Ваш баланс: ${userBalance} WILL`;
-      showTelegramPopup('Ошибка', `Недостаточно средств для вывода. Ваш баланс: ${userBalance} WILL`);
+      showTelegramOrCustomAlert('Ошибка', `Недостаточно средств для вывода. Ваш баланс: ${userBalance} WILL`);
       return;
     }
     
@@ -141,7 +142,7 @@
         console.log('Ответ сервера:', response);
         
         // Показываем уведомление об успешной обработке запроса
-        showTelegramPopup(
+        showTelegramOrCustomAlert(
           'Запрос на вывод отправлен',
           `Ваш запрос на вывод ${withdrawAmount} WILL (${usdtAmount} USDT) отправлен на обработку. Средства поступят на ваш кошелек в течение 24 часов.`
         );
@@ -154,31 +155,14 @@
       } catch (apiError: any) {
         console.error('Ошибка при регистрации запроса на вывод:', apiError);
         transactionError = apiError.message || 'Ошибка при регистрации запроса на вывод';
-        showTelegramPopup('Ошибка', transactionError);
+        showTelegramOrCustomAlert('Ошибка', transactionError);
       }
     } catch (error: any) {
       console.error('Ошибка при обработке запроса на вывод:', error);
       transactionError = error.message || 'Произошла неизвестная ошибка';
-      showTelegramPopup('Ошибка', transactionError);
+      showTelegramOrCustomAlert('Ошибка', transactionError);
     } finally {
       isProcessing = false;
-    }
-  }
-
-  // Удобная функция для показа уведомлений
-  function showTelegramPopup(title: string, message: string) {
-    try {
-      // @ts-ignore
-      if (window.Telegram?.WebApp?.showPopup) {
-        // @ts-ignore
-        window.Telegram.WebApp.showPopup({
-          title: title,
-          message: message,
-          buttons: [{ type: 'close' }]
-        });
-      }
-    } catch (error) {
-      console.warn('Не удалось показать уведомление через Telegram WebApp API:', error);
     }
   }
 
@@ -326,7 +310,7 @@
         if (!tonConnect.wallet) {
           console.error('Кошелек не подключен');
           transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
-          showTelegramPopup('Ошибка кошелька', transactionError);
+          showTelegramOrCustomAlert('Ошибка кошелька', transactionError);
           isProcessing = false;
           return;
         }
@@ -335,7 +319,7 @@
         if (!usdtMasterAddress.toString().startsWith('EQ')) {
           console.error('Некорректный адрес мастер-контракта USDT');
           transactionError = 'Некорректный адрес мастер-контракта USDT. Пожалуйста, проверьте конфигурацию.';
-          showTelegramPopup('Ошибка конфигурации', transactionError);
+          showTelegramOrCustomAlert('Ошибка конфигурации', transactionError);
           isProcessing = false;
           return;
         }
@@ -344,7 +328,7 @@
         if (!appWalletAddress.toString().startsWith('EQ')) {
           console.error('Некорректный адрес кошелька приложения');
           transactionError = 'Некорректный адрес кошелька приложения. Пожалуйста, проверьте конфигурацию.';
-          showTelegramPopup('Ошибка конфигурации', transactionError);
+          showTelegramOrCustomAlert('Ошибка конфигурации', transactionError);
           isProcessing = false;
           return;
         }
@@ -409,12 +393,12 @@
           transactionError = apiError.message || 'Ошибка при регистрации транзакции на сервере';
           
           // Показываем уведомление об ошибке
-          showTelegramPopup('Ошибка при регистрации транзакции', transactionError);
+          showTelegramOrCustomAlert('Ошибка при регистрации транзакции', transactionError);
         }
       } catch (sendError: any) {
         console.error('Ошибка при отправке USDT транзакции:', sendError);
         transactionError = sendError.message || 'Произошла ошибка при отправке USDT транзакции';
-        showTelegramPopup('Ошибка при отправке USDT транзакции', transactionError);
+        showTelegramOrCustomAlert('Ошибка при отправке USDT транзакции', transactionError);
       }
     } catch (error) {
       console.error('Ошибка при обработке платежа USDT:', error);
@@ -434,7 +418,7 @@
     }, 30000);
     
     // Отправляем уведомление пользователю
-    showTelegramPopup(
+    showTelegramOrCustomAlert(
       'USDT транзакция отправлена',
       'Ваша USDT транзакция отправлена в блокчейн TON. Обработка может занять несколько минут.'
     );
@@ -447,7 +431,7 @@
       
       if (data.tx_status === 'completed') {
         // Транзакция успешно обработана
-        showTelegramPopup(
+        showTelegramOrCustomAlert(
           'Транзакция подтверждена',
           `На ваш счет начислено ${data.will_amount} WILL токенов`
         );
@@ -461,7 +445,7 @@
         }, 60000);
       } else if (data.tx_status === 'failed') {
         // Транзакция не удалась
-        showTelegramPopup(
+        showTelegramOrCustomAlert(
           'Транзакция не удалась',
           'Не удалось обработать вашу USDT транзакцию. Пожалуйста, попробуйте еще раз.'
         );
@@ -518,7 +502,7 @@
         if (!tonConnect.wallet) {
           console.error('Кошелек не подключен');
           transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
-          showTelegramPopup('Ошибка кошелька', transactionError);
+          showTelegramOrCustomAlert('Ошибка кошелька', transactionError);
           isProcessing = false;
           return;
         }
@@ -556,7 +540,7 @@
           transactionError = apiError.message || 'Ошибка при регистрации транзакции на сервере';
           
           // Показываем уведомление об ошибке
-          showTelegramPopup('Ошибка при регистрации транзакции', transactionError);
+          showTelegramOrCustomAlert('Ошибка при регистрации транзакции', transactionError);
         }
       } catch (sendError: any) {
         console.error('Ошибка при отправке транзакции:', sendError);
@@ -569,7 +553,7 @@
         }
         
         // Показываем уведомление об ошибке
-        showTelegramPopup('Ошибка при отправке транзакции', transactionError);
+        showTelegramOrCustomAlert('Ошибка при отправке транзакции', transactionError);
       }
     } catch (error) {
       console.error('Ошибка при обработке платежа TON:', error);
@@ -590,7 +574,7 @@
     }, 30000);
     
     // Отправляем уведомление пользователю
-    showTelegramPopup(
+    showTelegramOrCustomAlert(
       'Транзакция отправлена',
       'Ваша транзакция отправлена в блокчейн TON. Обработка может занять несколько минут.'
     );
@@ -604,7 +588,7 @@
       
       if (data.tx_status === 'completed') {
         // Транзакция успешно обработана
-        showTelegramPopup(
+        showTelegramOrCustomAlert(
           'Транзакция подтверждена',
           `На ваш счет начислено ${data.will_amount} WILL токенов`
         );
@@ -618,7 +602,7 @@
         }, 60000);
       } else if (data.tx_status === 'failed') {
         // Транзакция не удалась
-        showTelegramPopup(
+        showTelegramOrCustomAlert(
           'Транзакция не удалась',
           'Не удалось обработать вашу транзакцию. Пожалуйста, попробуйте еще раз.'
         );

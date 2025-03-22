@@ -3,6 +3,7 @@
   import { _ } from 'svelte-i18n';
   import { fade } from 'svelte/transition';
   import type { Habit } from '../types';
+  import { showTelegramOrCustomAlert } from '../stores/alert';
   
   const dispatch = createEventDispatcher();
   export let habit: Habit | null = null;

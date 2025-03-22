@@ -16,6 +16,8 @@
   import { onMount, onDestroy } from 'svelte';
   import { subscribeToWalletChanges } from './utils/tonConnect';
   import type { Wallet } from '@tonconnect/ui';
+  import CustomAlert from './components/CustomAlert.svelte';
+  import { alertStore, hideAlert } from './stores/alert';
   
   // Инициализируем значение из localStorage
   $isListView = localStorage.getItem('isListView') === 'true';
@@ -539,6 +541,23 @@
       }}
       on:ton-transaction-sent={handleTonTransactionSent}
       on:usdt-transaction-sent={handleUsdtTransactionSent}
+    />
+  {/if}
+  
+  {#if $alertStore.visible}
+    <CustomAlert
+      title={$alertStore.title}
+      message={$alertStore.message}
+      showConfirm={$alertStore.showConfirm}
+      confirmText={$alertStore.confirmText}
+      cancelText={$alertStore.cancelText}
+      on:close={hideAlert}
+      on:confirm={() => {
+        if ($alertStore.onConfirm) {
+          $alertStore.onConfirm();
+        }
+        hideAlert();
+      }}
     />
   {/if}
 </main>
