@@ -1,4 +1,6 @@
 import { writable } from 'svelte/store';
+import { _ } from 'svelte-i18n';
+import { get } from 'svelte/store';
 
 type AlertState = {
   visible: boolean;
@@ -16,8 +18,8 @@ const initialState: AlertState = {
   title: '',
   message: '',
   showConfirm: false,
-  confirmText: 'Подтвердить',
-  cancelText: 'Отмена',
+  confirmText: '',
+  cancelText: '',
   onConfirm: undefined
 };
 
@@ -34,7 +36,7 @@ export function showAlert(title: string, message: string) {
   });
 }
 
-export function showConfirm(title: string, message: string, onConfirm: () => void, confirmText = 'Подтвердить', cancelText = 'Отмена') {
+export function showConfirm(title: string, message: string, onConfirm: () => void, confirmText = get(_)('alerts.confirm'), cancelText = get(_)('alerts.cancel')) {
   alertStore.set({
     visible: true,
     title,
@@ -61,8 +63,8 @@ export function showTelegramOrCustomConfirm(
   title: string, 
   message: string, 
   onConfirm: () => void, 
-  confirmText = 'Подтвердить', 
-  cancelText = 'Отмена'
+  confirmText = get(_)('alerts.confirm'), 
+  cancelText = get(_)('alerts.cancel')
 ) {
   // Всегда используем наш кастомный алерт с подтверждением
   showConfirm(title, message, onConfirm, confirmText, cancelText);

@@ -110,7 +110,8 @@
     "thursday": "Thu",
     "friday": "Fri",
     "saturday": "Sat",
-    "sunday": "Sun"
+    "sunday": "Sun",
+    "all": "All"
   },
   "months": {
     "jan": "Jan",
@@ -151,6 +152,49 @@
     "no_habits": "User has no habits yet",
     "loading": "Loading profile...",
     "not_found": "User not found"
+  },
+  "alerts": {
+    "notification": "Notification",
+    "error": "Error",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "wallet_error": "Wallet Error",
+    "config_error": "Configuration Error",
+    "transaction_error": "Transaction Registration Error",
+    "usdt_transaction_error": "USDT Transaction Error",
+    "transaction_send_error": "Transaction Sending Error",
+    "wallet_not_connected": "Wallet not connected. Please connect your wallet on the main screen.",
+    "insufficient_funds": "Insufficient funds for withdrawal. Your balance: {balance} WILL"
+  },
+  "payment": {
+    "buy": "Buy",
+    "withdraw": "Withdraw",
+    "tokens": "tokens",
+    "amount": "Amount",
+    "payment_method": "Payment Method",
+    "stars": "Stars",
+    "ton": "TON",
+    "usdt": "USDT",
+    "price": "Price",
+    "connect_wallet": "Connect Wallet",
+    "disconnect_wallet": "Disconnect Wallet",
+    "processing": "Processing...",
+    "success_title": "Success!",
+    "success_message": "Transaction completed successfully! Tokens will be added to your balance soon.",
+    "will_receive": "You will receive: {amount} WILL",
+    "balance": "Your balance: {amount} WILL",
+    "tokens_to_withdraw": "Tokens to withdraw",
+    "wallet_address": "Wallet address",
+    "withdraw_to": "Withdraw to",
+    "wallet": "Wallet",
+    "withdraw_amount": "Amount of WILL to withdraw",
+    "enter_amount": "Enter amount of WILL",
+    "enter_withdraw_amount": "Enter amount of WILL to withdraw",
+    "exchange_rate": "Exchange rate",
+    "connected": "connected",
+    "transaction_failed": "Transaction Failed",
+    "transaction_failed_message": "Failed to process your transaction. Please try again."
   },
   "onboarding": {
     "welcome": {

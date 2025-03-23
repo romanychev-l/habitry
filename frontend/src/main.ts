@@ -5,6 +5,8 @@ import { initTelegram } from './utils/telegram'
 import { init as initTelegramSDK } from '@telegram-apps/sdk'
 import './i18n/i18n'
 import { showTelegramOrCustomAlert } from './stores/alert';
+import { get } from 'svelte/store';
+import { _ } from 'svelte-i18n';
 
 console.log('🚀 Starting app initialization...')
 
@@ -18,7 +20,7 @@ if (!target) throw new Error('Element #app not found')
 // Переопределяем стандартную функцию alert
 const originalAlert = window.alert;
 window.alert = function(message) {
-  showTelegramOrCustomAlert('Уведомление', message);
+  showTelegramOrCustomAlert(get(_)('alerts.notification'), message);
 };
 
 const app = mount(App, { target });

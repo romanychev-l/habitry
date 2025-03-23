@@ -107,7 +107,7 @@
     if (!walletConnected) {
       console.error('Кошелек не подключен');
       transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
-      showTelegramOrCustomAlert('Ошибка', 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.');
+      showTelegramOrCustomAlert($_('alerts.error'), $_('alerts.wallet_not_connected'));
       return;
     }
     
@@ -115,7 +115,7 @@
     if (withdrawAmount > userBalance) {
       console.error('Недостаточно средств для вывода');
       transactionError = `Недостаточно средств для вывода. Ваш баланс: ${userBalance} WILL`;
-      showTelegramOrCustomAlert('Ошибка', `Недостаточно средств для вывода. Ваш баланс: ${userBalance} WILL`);
+      showTelegramOrCustomAlert($_('alerts.error'), $_('alerts.insufficient_funds', { values: { balance: userBalance } }));
       return;
     }
     
@@ -155,12 +155,12 @@
       } catch (apiError: any) {
         console.error('Ошибка при регистрации запроса на вывод:', apiError);
         transactionError = apiError.message || 'Ошибка при регистрации запроса на вывод';
-        showTelegramOrCustomAlert('Ошибка', transactionError);
+        showTelegramOrCustomAlert($_('alerts.error'), transactionError);
       }
     } catch (error: any) {
       console.error('Ошибка при обработке запроса на вывод:', error);
       transactionError = error.message || 'Произошла неизвестная ошибка';
-      showTelegramOrCustomAlert('Ошибка', transactionError);
+      showTelegramOrCustomAlert($_('alerts.error'), transactionError);
     } finally {
       isProcessing = false;
     }
@@ -192,6 +192,7 @@
     if (!walletConnected) {
       console.error('Кошелек не подключен');
       transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
+      showTelegramOrCustomAlert($_('alerts.error'), $_('alerts.wallet_not_connected'));
       return;
     }
 
@@ -213,6 +214,7 @@
         console.error('Ошибка при преобразовании адреса мастер-контракта USDT:', addrError);
         transactionError = `Недействительный адрес мастер-контракта USDT: ${rawUsdtMasterAddress}`;
         isProcessing = false;
+        showTelegramOrCustomAlert($_('alerts.error'), transactionError);
         return;
       }
       
@@ -228,6 +230,7 @@
         console.error('Ошибка при преобразовании адреса приложения:', addrError);
         transactionError = `Недействительный адрес кошелька приложения: ${rawAppWalletAddress}`;
         isProcessing = false;
+        showTelegramOrCustomAlert($_('alerts.error'), transactionError);
         return;
       }
 
@@ -310,7 +313,7 @@
         if (!tonConnect.wallet) {
           console.error('Кошелек не подключен');
           transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
-          showTelegramOrCustomAlert('Ошибка кошелька', transactionError);
+          showTelegramOrCustomAlert($_('alerts.error'), transactionError);
           isProcessing = false;
           return;
         }
@@ -319,7 +322,7 @@
         if (!usdtMasterAddress.toString().startsWith('EQ')) {
           console.error('Некорректный адрес мастер-контракта USDT');
           transactionError = 'Некорректный адрес мастер-контракта USDT. Пожалуйста, проверьте конфигурацию.';
-          showTelegramOrCustomAlert('Ошибка конфигурации', transactionError);
+          showTelegramOrCustomAlert($_('alerts.error'), transactionError);
           isProcessing = false;
           return;
         }
@@ -328,7 +331,7 @@
         if (!appWalletAddress.toString().startsWith('EQ')) {
           console.error('Некорректный адрес кошелька приложения');
           transactionError = 'Некорректный адрес кошелька приложения. Пожалуйста, проверьте конфигурацию.';
-          showTelegramOrCustomAlert('Ошибка конфигурации', transactionError);
+          showTelegramOrCustomAlert($_('alerts.error'), transactionError);
           isProcessing = false;
           return;
         }
@@ -393,16 +396,17 @@
           transactionError = apiError.message || 'Ошибка при регистрации транзакции на сервере';
           
           // Показываем уведомление об ошибке
-          showTelegramOrCustomAlert('Ошибка при регистрации транзакции', transactionError);
+          showTelegramOrCustomAlert($_('alerts.error'), transactionError);
         }
       } catch (sendError: any) {
         console.error('Ошибка при отправке USDT транзакции:', sendError);
         transactionError = sendError.message || 'Произошла ошибка при отправке USDT транзакции';
-        showTelegramOrCustomAlert('Ошибка при отправке USDT транзакции', transactionError);
+        showTelegramOrCustomAlert($_('alerts.error'), transactionError);
       }
     } catch (error) {
       console.error('Ошибка при обработке платежа USDT:', error);
       transactionError = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      showTelegramOrCustomAlert($_('alerts.error'), transactionError);
     } finally {
       isProcessing = false;
     }
@@ -462,6 +466,7 @@
     if (!walletConnected) {
       console.error('Кошелек не подключен');
       transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
+      showTelegramOrCustomAlert($_('alerts.error'), transactionError);
       return;
     }
 
@@ -502,7 +507,7 @@
         if (!tonConnect.wallet) {
           console.error('Кошелек не подключен');
           transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
-          showTelegramOrCustomAlert('Ошибка кошелька', transactionError);
+          showTelegramOrCustomAlert($_('alerts.error'), transactionError);
           isProcessing = false;
           return;
         }
@@ -540,7 +545,7 @@
           transactionError = apiError.message || 'Ошибка при регистрации транзакции на сервере';
           
           // Показываем уведомление об ошибке
-          showTelegramOrCustomAlert('Ошибка при регистрации транзакции', transactionError);
+          showTelegramOrCustomAlert($_('alerts.error'), transactionError);
         }
       } catch (sendError: any) {
         console.error('Ошибка при отправке транзакции:', sendError);
@@ -553,11 +558,12 @@
         }
         
         // Показываем уведомление об ошибке
-        showTelegramOrCustomAlert('Ошибка при отправке транзакции', transactionError);
+        showTelegramOrCustomAlert($_('alerts.error'), transactionError);
       }
     } catch (error) {
       console.error('Ошибка при обработке платежа TON:', error);
       transactionError = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      showTelegramOrCustomAlert($_('alerts.error'), transactionError);
     } finally {
       isProcessing = false;
     }
@@ -583,14 +589,14 @@
   // Функция для проверки статуса транзакции
   async function checkTransactionStatus(transactionId: string) {
     try {
-      const data = await api.checkTonTransaction(transactionId, telegramId);
-      console.log('Статус транзакции:', data);
+      const response = await fetch(`https://lenichev.site/api/wallet/transactions/${transactionId}`);
+      const data = await response.json();
       
-      if (data.tx_status === 'completed') {
-        // Транзакция успешно обработана
+      if (data.tx_status === 'success') {
+        // Транзакция успешна
         showTelegramOrCustomAlert(
-          'Транзакция подтверждена',
-          `На ваш счет начислено ${data.will_amount} WILL токенов`
+          $_('payment.success_title'),
+          $_('payment.success_message')
         );
         
         // Удаляем ID транзакции из localStorage
@@ -603,8 +609,8 @@
       } else if (data.tx_status === 'failed') {
         // Транзакция не удалась
         showTelegramOrCustomAlert(
-          'Транзакция не удалась',
-          'Не удалось обработать вашу транзакцию. Пожалуйста, попробуйте еще раз.'
+          $_('payment.transaction_failed'),
+          $_('payment.transaction_failed_message')
         );
         
         // Удаляем ID транзакции из localStorage
@@ -632,13 +638,13 @@
             class:active={modalMode === 'buy'} 
             on:click={() => modalMode = 'buy'}
           >
-            Купить WILL
+            {$_('payment.buy')} WILL
           </button>
           <button 
             class:active={modalMode === 'withdraw'} 
             on:click={() => modalMode = 'withdraw'}
           >
-            Вывести WILL
+            {$_('payment.withdraw')} WILL
           </button>
         </div>
 
@@ -646,34 +652,34 @@
           <!-- Контент для покупки WILL -->
           <div class="ton-info">
             {#if !walletConnected}
-              <p class="wallet-status">Для оплаты необходимо подключить кошелек на главном экране</p>
+              <p class="wallet-status">{$_('alerts.wallet_not_connected')}</p>
             {:else}
-              <p class="wallet-status">Кошелек подключен: {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}</p>
+              <p class="wallet-status">{$_('payment.wallet')} {$_('payment.connected')}: {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}</p>
             {/if}
           </div>
 
           <div class="info-block">
             <div class="exchange-rate">
-              <span class="label">Курс обмена</span>
+              <span class="label">{$_('payment.exchange_rate')}</span>
               <span class="value">
                 1 USDT = {USDT_EXCHANGE_RATE} WILL
               </span>
             </div>
 
             <div class="input-group">
-              <label for="tokens-amount">Количество WILL</label>
+              <label for="tokens-amount">{$_('payment.amount')} WILL</label>
               <input
                 type="number"
                 id="tokens-amount"
                 bind:value={tokensAmount}
                 min="10"
                 step="10"
-                placeholder="Введите количество WILL"
+                placeholder={$_('payment.enter_amount')}
               />
             </div>
 
             <div class="summary">
-              <span class="label">К оплате</span>
+              <span class="label">{$_('payment.price')}</span>
               <span class="value">
                 {calculateUsdt(tokensAmount)} USDT
               </span>
@@ -693,9 +699,9 @@
               disabled={tokensAmount < 10 || !walletConnected || isProcessing}
             >
               {#if isProcessing}
-                Обработка...
+                {$_('payment.processing')}
               {:else}
-                Купить
+                {$_('payment.buy')}
               {/if}
             </button>
           </div>
@@ -703,31 +709,31 @@
           <!-- Контент для вывода WILL -->
           <div class="ton-info">
             {#if !walletConnected}
-              <p class="wallet-status">Для вывода необходимо подключить кошелек на главном экране</p>
+              <p class="wallet-status">{$_('alerts.wallet_not_connected')}</p>
             {:else}
-              <p class="wallet-status">Кошелек подключен: {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}</p>
+              <p class="wallet-status">{$_('payment.wallet')} {$_('payment.connected')}: {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}</p>
             {/if}
             
             <!-- Отображаем текущий баланс -->
             <p class="balance-status">
               {#if isLoadingBalance}
-                Загрузка баланса...
+                {$_('common.loading')}
               {:else}
-                Ваш баланс: <strong>{userBalance} WILL</strong>
+                {$_('payment.balance', { values: { amount: userBalance } })}
               {/if}
             </p>
           </div>
           
           <div class="info-block">
             <div class="exchange-rate">
-              <span class="label">Курс обмена</span>
+              <span class="label">{$_('payment.exchange_rate')}</span>
               <span class="value">
                 1000 WILL = 1 USDT
               </span>
             </div>
             
             <div class="input-group">
-              <label for="withdraw-amount">Количество WILL для вывода</label>
+              <label for="withdraw-amount">{$_('payment.withdraw_amount')}</label>
               <input
                 type="number"
                 id="withdraw-amount"
@@ -735,12 +741,12 @@
                 min="10"
                 step="10"
                 max={userBalance}
-                placeholder="Введите количество WILL для вывода"
+                placeholder={$_('payment.enter_withdraw_amount')}
               />
             </div>
             
             <div class="summary">
-              <span class="label">Вы получите</span>
+              <span class="label">{$_('payment.will_receive', { values: { amount: (withdrawAmount / USDT_EXCHANGE_RATE).toFixed(2) } })}</span>
               <span class="value">
                 {(withdrawAmount / USDT_EXCHANGE_RATE).toFixed(2)} USDT
               </span>
@@ -760,9 +766,9 @@
               disabled={withdrawAmount < 10 || withdrawAmount > userBalance || !walletConnected || isProcessing}
             >
               {#if isProcessing}
-                Обработка...
+                {$_('payment.processing')}
               {:else}
-                Вывести
+                {$_('payment.withdraw')}
               {/if}
             </button>
           </div>

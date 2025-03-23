@@ -110,7 +110,8 @@
     "thursday": "Чт",
     "friday": "Пт",
     "saturday": "Сб",
-    "sunday": "Вс"
+    "sunday": "Вс",
+    "all": "Все"
   },
   "months": {
     "jan": "Янв",
@@ -151,6 +152,49 @@
     "no_habits": "У пользователя пока нет привычек",
     "loading": "Загрузка профиля...",
     "not_found": "Пользователь не найден"
+  },
+  "alerts": {
+    "notification": "Уведомление",
+    "error": "Ошибка",
+    "confirm": "Подтвердить",
+    "cancel": "Отмена",
+    "ok": "OK",
+    "wallet_error": "Ошибка кошелька",
+    "config_error": "Ошибка конфигурации",
+    "transaction_error": "Ошибка при регистрации транзакции",
+    "usdt_transaction_error": "Ошибка при отправке USDT транзакции",
+    "transaction_send_error": "Ошибка при отправке транзакции",
+    "wallet_not_connected": "Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.",
+    "insufficient_funds": "Недостаточно средств для вывода. Ваш баланс: {balance} WILL"
+  },
+  "payment": {
+    "buy": "Купить",
+    "withdraw": "Вывести",
+    "tokens": "токены",
+    "amount": "Количество",
+    "payment_method": "Способ оплаты",
+    "stars": "Stars",
+    "ton": "TON",
+    "usdt": "USDT",
+    "price": "Стоимость",
+    "connect_wallet": "Подключить кошелек",
+    "disconnect_wallet": "Отключить кошелек",
+    "processing": "Обработка...",
+    "success_title": "Успешно!",
+    "success_message": "Транзакция успешно выполнена! Токены будут добавлены на ваш баланс в ближайшее время.",
+    "will_receive": "Вы получите: {amount} WILL",
+    "balance": "Ваш баланс: {amount} WILL",
+    "tokens_to_withdraw": "Токены для вывода",
+    "wallet_address": "Адрес кошелька",
+    "withdraw_to": "Вывести на",
+    "wallet": "Кошелек",
+    "withdraw_amount": "Количество WILL для вывода",
+    "enter_amount": "Введите количество WILL",
+    "enter_withdraw_amount": "Введите количество WILL для вывода",
+    "exchange_rate": "Курс обмена",
+    "connected": "подключен",
+    "transaction_failed": "Транзакция не удалась",
+    "transaction_failed_message": "Не удалось обработать вашу транзакцию. Пожалуйста, попробуйте еще раз."
   },
   "onboarding": {
     "welcome": {

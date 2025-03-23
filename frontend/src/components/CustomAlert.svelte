@@ -1,12 +1,13 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import { _ } from 'svelte-i18n';
 
   // Props
   export let title: string = '';
   export let message: string = '';
   export let showConfirm: boolean = false;
-  export let confirmText: string = 'Подтвердить';
-  export let cancelText: string = 'Отмена';
+  export let confirmText: string = $_('alerts.confirm');
+  export let cancelText: string = $_('alerts.cancel');
 
   // Event dispatcher для закрытия и подтверждения
   const dispatch = createEventDispatcher();
@@ -52,7 +53,7 @@
         </button>
       {:else}
         <button class="action-button single" on:click={handleClose}>
-          OK
+          {$_('alerts.ok')}
         </button>
       {/if}
     </div>

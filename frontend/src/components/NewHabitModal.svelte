@@ -197,6 +197,7 @@
                 </button>
               {/each}
               <button 
+                class="day-tag all"
                 class:selected={selectedDays.size === 7}
                 on:click={() => {
                   if (selectedDays.size === 7) {
@@ -206,7 +207,7 @@
                   }
                 }}
               >
-                All
+                {$_('days.all')}
               </button>
             </div>
           </div>
