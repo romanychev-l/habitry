@@ -17,6 +17,7 @@
   const EXCHANGE_RATE = 10; // 1 Stars = 10 WILL
   const TON_EXCHANGE_RATE = 100; // 1 TON = 100 WILL
   const USDT_EXCHANGE_RATE = 1000; // 1 USDT = 1000 WILL (изменено)
+  const MIN_WITHDRAW_AMOUNT = 500; // Минимальная сумма вывода в WILL
 
   // Изменяем тип paymentMethod, добавляя 'usdt'
   let paymentMethod: 'stars' | 'ton' | 'usdt' = 'usdt';
@@ -26,6 +27,7 @@
   let withdrawAmount = 100;
   let walletConnected = false;
   let walletAddress = '';
+  let walletAddressFriendly = '';
   let unsubscribe: (() => void) | null = null; 
   let isProcessing = false;
   let transactionError = '';
@@ -40,6 +42,7 @@
       if (wallet) {
         walletConnected = true;
         walletAddress = wallet.account.address;
+        walletAddressFriendly = Address.parse(walletAddress).toString({ bounceable: false });
         console.log('Кошелек подключен:', walletAddress);
       } else {
         walletConnected = false;
@@ -108,6 +111,14 @@
       console.error('Кошелек не подключен');
       transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
       showTelegramOrCustomAlert($_('alerts.error'), $_('alerts.wallet_not_connected'));
+      return;
+    }
+    
+    // Проверяем минимальную сумму для вывода
+    if (withdrawAmount < MIN_WITHDRAW_AMOUNT) {
+      console.error('Сумма меньше минимальной для вывода');
+      transactionError = `Минимальная сумма для вывода: ${MIN_WITHDRAW_AMOUNT} WILL`;
+      showTelegramOrCustomAlert($_('alerts.error'), transactionError);
       return;
     }
     
@@ -654,7 +665,10 @@
             {#if !walletConnected}
               <p class="wallet-status">{$_('alerts.wallet_not_connected')}</p>
             {:else}
-              <p class="wallet-status">{$_('payment.wallet')} {$_('payment.connected')}: {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}</p>
+              <p class="wallet-status">
+                {$_('payment.wallet')} {$_('payment.connected')}: 
+                {walletAddressFriendly.slice(0, 8)}...{walletAddressFriendly.slice(-6)}
+              </p>            
             {/if}
           </div>
 
@@ -711,17 +725,8 @@
             {#if !walletConnected}
               <p class="wallet-status">{$_('alerts.wallet_not_connected')}</p>
             {:else}
-              <p class="wallet-status">{$_('payment.wallet')} {$_('payment.connected')}: {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}</p>
+              <p class="wallet-status">{$_('payment.wallet')} {$_('payment.connected')}: {walletAddressFriendly.slice(0, 8)}...{walletAddressFriendly.slice(-6)}</p>
             {/if}
-            
-            <!-- Отображаем текущий баланс -->
-            <p class="balance-status">
-              {#if isLoadingBalance}
-                {$_('common.loading')}
-              {:else}
-                {$_('payment.balance', { values: { amount: userBalance } })}
-              {/if}
-            </p>
           </div>
           
           <div class="info-block">
@@ -734,19 +739,27 @@
             
             <div class="input-group">
               <label for="withdraw-amount">{$_('payment.withdraw_amount')}</label>
-              <input
-                type="number"
-                id="withdraw-amount"
-                bind:value={withdrawAmount}
-                min="10"
-                step="10"
-                max={userBalance}
-                placeholder={$_('payment.enter_withdraw_amount')}
-              />
+              <div class="input-with-max">
+                <input
+                  type="number"
+                  id="withdraw-amount"
+                  bind:value={withdrawAmount}
+                  min={MIN_WITHDRAW_AMOUNT}
+                  step="10"
+                  max={userBalance}
+                  placeholder={$_('payment.enter_withdraw_amount')}
+                />
+                <button 
+                  class="max-btn" 
+                  on:click={() => withdrawAmount = userBalance}
+                >
+                  max
+                </button>
+              </div>
             </div>
             
             <div class="summary">
-              <span class="label">{$_('payment.will_receive', { values: { amount: (withdrawAmount / USDT_EXCHANGE_RATE).toFixed(2) } })}</span>
+              <span class="label">{$_('payment.will_receive')}</span>
               <span class="value">
                 {(withdrawAmount / USDT_EXCHANGE_RATE).toFixed(2)} USDT
               </span>
@@ -803,7 +816,7 @@
 
   .modal {
     width: 100%;
-    background: #F9F8F3;
+    background: var(--tg-theme-bg-color);
     border-radius: 24px 24px 0 0;
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
     max-height: 90vh;
@@ -812,7 +825,7 @@
   }
 
   .content {
-    padding: 24px 16px;
+    padding: 24px 16px 4px 16px;
   }
 
   .info-block {
@@ -867,7 +880,7 @@
 
   input[type="number"]:focus {
     outline: none;
-    border-color: #00D5A0;
+    border-color: var(--tg-theme-button-color);
   }
 
   .summary {
@@ -896,7 +909,6 @@
     background: inherit;
     z-index: 2;
     padding: 12px 16px;
-    border-top: 1px solid var(--tg-theme-secondary-bg-color);
   }
 
   /* Общий стиль для кнопок действий (купить/вывести) */
@@ -905,7 +917,7 @@
     padding: 14px;
     border-radius: 12px;
     border: none;
-    background: #00D5A0;
+    background: var(--tg-theme-button-color);
     color: white;
     font-size: 16px;
     font-weight: 500;
@@ -1054,6 +1066,37 @@
   }
   
   :global([data-theme="dark"]) .balance-status {
+    color: #ffffff;
+  }
+
+  /* Стили для кнопки max и контейнера ввода */
+  .input-with-max {
+    position: relative;
+    display: flex;
+    width: 100%;
+  }
+
+  .max-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color, #ffffff);
+    border: none;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    z-index: 2;
+  }
+
+  .max-btn:hover {
+    opacity: 0.9;
+  }
+
+  :global([data-theme="dark"]) .max-btn {
     color: #ffffff;
   }
 </style>

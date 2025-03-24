@@ -75,7 +75,7 @@
 
   .dialog {
     width: 100%;
-    background: #F9F8F3;
+    background: var(--tg-theme-bg-color);
     border-radius: 24px 24px 0 0;
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
   }
@@ -107,13 +107,13 @@
   }
 
   .dialog-button.edit {
-    background: var(--tg-theme-button-color);
+    background: var(--tg-theme-button-color);;
     color: var(--tg-theme-button-text-color);
     margin-bottom: 12px;
   }
 
   .dialog-button.share {
-    background: var(--tg-theme-button-color);
+    background: var(--tg-theme-button-color);;
     color: var(--tg-theme-button-text-color);
     margin-bottom: 12px;
   }

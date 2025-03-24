@@ -423,7 +423,7 @@
 
     .dialog {
         width: 100%;
-        background: #F9F8F3;
+        background: var(--tg-theme-bg-color);
         border-radius: 24px 24px 0 0;
         box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
         max-height: 90vh;
@@ -651,7 +651,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        background: #007aff;
+        background: var(--tg-theme-button-color);
         color: white;
         width: 32px;
         height: 32px;
@@ -665,7 +665,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #007aff;
+        background: var(--tg-theme-button-color);
         color: white;
         border: none;
         border-radius: 12px;

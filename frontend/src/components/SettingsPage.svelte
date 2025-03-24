@@ -148,8 +148,7 @@
       <div class="settings-group">
         <div class="setting-item">
           <div class="setting-label">
-            <span>{$_('settings.share_profile')}</span>
-            <span class="setting-description">{$_('settings.share_profile_description')}</span>
+            <span>{$_('settings.share_profile_description')}</span>
           </div>
           <button 
             class="share-button" 
@@ -177,41 +176,36 @@
   .settings-page {
     position: fixed;
     inset: 0;
-    background-color: #F9F8F3;
+    background-color: var(--tg-theme-bg-color);
     z-index: 1000;
     display: flex;
     flex-direction: column;
   }
 
-  :global([data-theme="dark"]) .settings-page {
-    background-color: var(--tg-theme-bg-color);
+  .settings-content {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    color: var(--tg-theme-text-color);
   }
 
-  :global([data-theme="dark"]) .settings-content {
-    color: white;
+  .setting-label {
+    color: var(--tg-theme-text-color);
+    font-size: 14px;
   }
 
-  :global([data-theme="dark"]) .setting-label {
-    color: white;
+  h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--tg-theme-text-color);
   }
 
-  :global([data-theme="dark"]) h1 {
-    color: white;
-  }
-
-  :global([data-theme="dark"]) h2 {
-    color: white;
-  }
-
-  :global([data-theme="dark"]) .back-button {
-    color: white;
-  }
-
-  header {
-    display: flex;
-    align-items: center;
-    padding: 12px;
-    border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
+  h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+    color: var(--tg-theme-text-color);
   }
 
   .back-button {
@@ -224,28 +218,15 @@
     color: var(--tg-theme-text-color);
   }
 
-  h1 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--tg-theme-text-color);
-  }
-
-  .settings-content {
-    flex: 1;
-    padding: 24px;
-    overflow-y: auto;
+  header {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
   }
 
   .settings-section {
     margin-bottom: 32px;
-  }
-
-  .settings-section h2 {
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0 0 16px 0;
-    color: var(--tg-theme-text-color);
   }
 
   .settings-group {
@@ -257,14 +238,9 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 16px;
-    /* padding: 12px; */
-    background: var(--tg-theme-secondary-bg-color, rgba(0, 0, 0, 0.05));
+    padding: 12px;
+    background: var(--tg-theme-secondary-bg-color);
     border-radius: 12px;
-  }
-
-  .setting-label {
-    color: var(--tg-theme-text-color);
-    font-size: 14px;
   }
 
   .switch {
@@ -305,7 +281,7 @@
   }
 
   input:checked + .slider {
-    background-color: #00D5A0;
+    background-color: var(--tg-theme-button-color);
   }
 
   input:checked + .slider:before {
@@ -322,14 +298,8 @@
     width: 70px;
   }
 
-  :global([data-theme="dark"]) .time-input {
-    background: var(--tg-theme-secondary-bg-color);
-    border-color: var(--tg-theme-hint-color);
-    color: var(--tg-theme-text-color);
-  }
-
-  :global([data-theme="dark"]) .time-input::-webkit-calendar-picker-indicator {
-    filter: invert(1);
+  .time-input::-webkit-calendar-picker-indicator {
+    filter: invert(0.5);
   }
 
   .save-message {

@@ -42,13 +42,7 @@ export const initTelegram = () => {
     // Устанавливаем тему
     document.documentElement.classList.add(webapp.colorScheme);
   
-    // Устанавливаем цвета из темы Telegram
-    const root = document.documentElement;
-    root.style.setProperty('--tg-theme-bg-color', webapp.backgroundColor);
-    root.style.setProperty('--tg-theme-text-color', webapp.textColor);
-    root.style.setProperty('--tg-theme-button-color', webapp.buttonColor);
-    root.style.setProperty('--tg-theme-button-text-color', webapp.buttonTextColor);
-    root.style.setProperty('--tg-theme-secondary-bg-color', webapp.secondaryBackgroundColor);
+    console.log(webapp);
 };
 
 export async function openTelegramInvoice(starsAmount: number) {

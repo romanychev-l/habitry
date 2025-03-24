@@ -20,6 +20,7 @@
   let showTooltip = false;
   let showWantToBecomeTooltip = false;
   let showStakeTooltip = false;
+  let showDaysTooltip = false;
 
   function updateModalHeight() {
     const vh = window.visualViewport?.height || window.innerHeight;
@@ -91,6 +92,10 @@
   function toggleStakeTooltip() {
     showStakeTooltip = !showStakeTooltip;
   }
+
+  function toggleDaysTooltip() {
+    showDaysTooltip = !showDaysTooltip;
+  }
 </script>
 
 <div class="wrapper" bind:this={contentWrapper}>
@@ -108,7 +113,7 @@
       </div>
 
       <div class="content">
-        <div class="form-control w-full">
+        <div class="form-control">
           <label class="label" for="habit-title">
             <span class="label-text">{$_('habits.title')}</span>
           </label>
@@ -118,11 +123,11 @@
             bind:value={title}
             bind:this={titleInput}
             placeholder="{$_('habits.title_placeholder') || 'Например: Медитация'}"
-            class="input input-bordered w-full"
+            class="input"
           />
         </div>
         
-        <div class="form-control w-full">
+        <div class="form-control">
           <label class="label" for="want-to-become">
             <div class="label-with-info">
               <span class="label-text">{$_('habits.want_to_become')}</span>
@@ -139,7 +144,7 @@
             type="text"
             id="want-to-become"
             bind:value={wantToBecome}
-            class="input input-bordered w-full"
+            class="input"
             placeholder={$_('habits.want_to_become_placeholder')}
           />
         </div>
@@ -163,29 +168,41 @@
             bind:value={stake}
             min="0"
             placeholder="0"
-            class="input input-bordered w-full"
+            class="input"
           />
         </div>
         
         <div class="form-control">
-          <label class="label cursor-pointer" for="auto-habit">
-            <div class="auto-habit-row">
-              <div class="label-with-info">
-                <span class="label-text">{$_('habits.auto_habit')}</span>
-                <button class="info-button" on:click|stopPropagation={toggleTooltip}>?</button>
-                {#if showTooltip}
-                  <div class="tooltip" transition:fade>
-                    {$_('habits.auto_habit_tooltip')}
-                    <button class="tooltip-close" on:click|stopPropagation={toggleTooltip}>×</button>
-                  </div>
-                {/if}
-              </div>
-              <input type="checkbox" id="auto-habit" class="checkbox" bind:checked={isAuto} />
+          <label class="label" for="auto-habit">
+            <div class="label-with-info">
+              <span class="label-text">{$_('habits.auto_habit')}</span>
+              <button class="info-button" on:click|stopPropagation={toggleTooltip}>?</button>
+              {#if showTooltip}
+                <div class="tooltip" transition:fade>
+                  {$_('habits.auto_habit_tooltip')}
+                  <button class="tooltip-close" on:click|stopPropagation={toggleTooltip}>×</button>
+                </div>
+              {/if}
             </div>
           </label>
+          <div class="checkbox-container">
+            <input type="checkbox" id="auto-habit" class="checkbox" bind:checked={isAuto} />
+          </div>
         </div>
         
         {#if !isOneTime}
+          <div class="label">
+            <div class="label-with-info">
+              <span class="label-text">{$_('habits.days')}</span>
+              <button class="info-button" on:click|stopPropagation={toggleDaysTooltip}>?</button>
+              {#if showDaysTooltip}
+                <div class="tooltip" transition:fade>
+                  {$_('habits.days_tooltip')}
+                  <button class="tooltip-close" on:click|stopPropagation={toggleDaysTooltip}>×</button>
+                </div>
+              {/if}
+            </div>
+          </div>
           <div class="days-wrapper">
             <div class="days-selector">
               {#each [0, 1, 2, 3, 4, 5, 6] as day}
@@ -232,11 +249,10 @@
     position: fixed;
     inset: 0;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
     z-index: 1000;
     height: 100%;
-    padding-top: 5vh;
   }
 
   .overlay {
@@ -253,12 +269,11 @@
     display: flex;
     flex-direction: column;
     max-height: 90%;
-    margin-top: auto;
   }
 
   .modal {
     width: 100%;
-    background: #F9F8F3;
+    background: var(--tg-theme-bg-color);
     border-radius: 24px 24px 0 0;
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
     display: flex;
@@ -280,7 +295,7 @@
     top: 0;
     background: inherit;
     z-index: 2;
-    padding: 24px 16px 12px 16px;
+    padding: 24px 24px 12px 24px;
     border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
     text-align: center;
   }
@@ -292,7 +307,7 @@
   }
 
   .content {
-    padding: 16px;
+    padding: 16px 24px;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -301,10 +316,15 @@
     -webkit-overflow-scrolling: touch;
   }
 
+  .form-control {
+    width: 100%;
+  }
+
   .days-wrapper {
     display: flex;
     gap: 8px;
     align-items: start;
+    width: 100%;
   }
 
   .days-selector {
@@ -317,47 +337,39 @@
   .days-selector button {
     aspect-ratio: 1;
     border-radius: 12px;
-    border: 2px solid #00D5A0;
-    background: var(--tg-theme-secondary-bg-color);
+    border: 2px solid var(--tg-theme-button-color);
+    background: var(--tg-theme-bg-color);
     font-weight: 500;
     font-size: 14px;
     padding: 0;
     width: 100%;
     height: 48px;
+    color: var(--tg-theme-text-color);
   }
 
   .days-selector button.selected {
-    border-color: #00D5A0;
-    background: #00D5A0;
+    border-color: var(--tg-theme-button-color);
+    background: var(--tg-theme-button-color);
     color: white;
   }
 
-  input[type="text"] {
+  input[type="text"], 
+  input[type="number"],
+  .input {
     border: 2px solid var(--tg-theme-secondary-bg-color);
     border-radius: 12px;
     background: transparent;
     font-size: 16px;
-    padding: 14px 0 14px 0;
-    margin: 0;
+    padding: 14px 12px;
+    margin: 8px 0 0 0;
     width: 100%;
+    box-sizing: border-box;
+    color: var(--tg-theme-text-color);
   }
 
-  input[type="text"]:focus {
-    outline: none;
-    border-color: var(--tg-theme-button-color);
-  }
-
-  input[type="number"] {
-    border: 2px solid var(--tg-theme-secondary-bg-color);
-    border-radius: 12px;
-    background: transparent;
-    font-size: 16px;
-    padding: 14px 0 14px 0;
-    margin: 0;
-    width: 100%;
-  }
-
-  input[type="number"]:focus {
+  input[type="text"]:focus, 
+  input[type="number"]:focus,
+  .input:focus {
     outline: none;
     border-color: var(--tg-theme-button-color);
   }
@@ -386,7 +398,7 @@
     bottom: 0;
     background: inherit;
     z-index: 2;
-    padding: 12px 16px;
+    padding: 12px 24px;
     border-top: 1px solid var(--tg-theme-secondary-bg-color);
     margin-top: auto;
   }
@@ -396,7 +408,7 @@
     padding: 14px;
     border-radius: 12px;
     border: none;
-    background: #00D5A0;
+    background: var(--tg-theme-button-color);
     color: white;
     font-size: 16px;
     font-weight: 500;
@@ -423,7 +435,7 @@
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #00D5A0;
+    background: var(--tg-theme-button-color);
     color: white;
     font-size: 12px;
     font-weight: bold;
@@ -462,17 +474,21 @@
     color: #999;
   }
 
+  .checkbox-container {
+    margin-top: 8px;
+  }
+
   :global([data-theme="dark"]) .modal {
     background: var(--tg-theme-bg-color);
   }
 
-  :global([data-theme="dark"]) input[type="text"],
-  :global([data-theme="dark"]) input[type="number"] {
-    color: white;
+  :global([data-theme="dark"]) .days-selector button:not(.selected) {
+    color: white !important;
   }
 
   :global([data-theme="dark"]) .days-selector button {
-    color: white;
+    color: white !important;
+    background-color: var(--tg-theme-secondary-bg-color);
   }
 
   :global([data-theme="dark"]) h2 {
@@ -485,10 +501,6 @@
 
   :global([data-theme="dark"]) input::placeholder {
     color: rgba(255, 255, 255, 0.6) !important;
-  }
-
-  :global([data-theme="dark"]) .days-selector button:not(.selected) {
-    color: white !important;
   }
 
   :global([data-theme="dark"]) .tooltip {

@@ -91,7 +91,7 @@
   .profile-page {
     position: fixed;
     inset: 0;
-    background-color: var(--tg-theme-bg-color, #F9F8F3);
+    background-color: var(--tg-theme-bg-color);
     z-index: 1000;
     display: flex;
     flex-direction: column;

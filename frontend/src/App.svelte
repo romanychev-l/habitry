@@ -447,25 +447,23 @@
         </button>
       </div>
 
-      <div class="right-section">
-        <div id="ton-connect-container" class="ton-connect-wrapper"></div>
-        
-        <div class="balance-container">
-          <div class="balance">
-            {#if $balance !== undefined && $balance !== null}
-              {$balance} WILL
-            {:else}
-              {console.log('Balance is undefined or null:', $balance)}
-              0 WILL
-            {/if}
-          </div>
-          <button class="add-balance-button" on:click={() => {
-            console.log('Opening buy tokens modal');
-            showBuyTokens = true;
-          }}>
-            +
-          </button>
+      <div id="ton-connect-container" class="ton-connect-wrapper"></div>
+      
+      <div class="balance-container">
+        <div class="balance">
+          {#if $balance !== undefined && $balance !== null}
+            {$balance} WILL
+          {:else}
+            {console.log('Balance is undefined or null:', $balance)}
+            0 WILL
+          {/if}
         </div>
+        <button class="add-balance-button" on:click={() => {
+          console.log('Opening buy tokens modal');
+          showBuyTokens = true;
+        }}>
+          +
+        </button>
       </div>
     {/if}
   </header>
@@ -570,10 +568,6 @@
     margin: 0 auto;
     box-sizing: border-box;
     min-height: 100vh;
-    background-color: #F9F8F3;
-  }
-
-  :global([data-theme="dark"]) main {
     background-color: var(--tg-theme-bg-color);
   }
 
@@ -586,7 +580,7 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    padding: 12px 16px 8px 16px;
+    padding: 4px 16px 8px 16px;
   }
 
   .habit-container {
@@ -629,7 +623,7 @@
     width: 40px;
     height: 40px;
     border: none;
-    background: #00D5A0;
+    background: var(--tg-theme-button-color);;
     color: white;
     font-size: 24px;
     mask: url('/src/assets/streak.svg') no-repeat center / contain;
@@ -661,9 +655,9 @@
     width: 40px;
     height: 40px;
     object-fit: cover;
-    border: 2px solid var(--tg-theme-button-color);
     mask: url('/src/assets/streak.svg') no-repeat center / contain;
     -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
+    transform: scale(1.1);
   }
 
   .profile-placeholder {
@@ -712,9 +706,9 @@
     /* padding-bottom: 4px; */
   }
 
-  :global([data-theme="dark"]) .balance {
+  /* :global([data-theme="dark"]) .balance {
     color: white;
-  }
+  } */
 
   /* .payment-button {
     position: fixed;
@@ -736,18 +730,8 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  :global([data-theme="dark"]) .add-button {
-    background: #00D5A0;
-  }
-
   :global([data-theme="dark"]) .add-balance-button {
     background: var(--tg-theme-hint-color);
-  }
-
-  .right-section {
-    display: flex;
-    align-items: center;
-    gap: 12px;
   }
 
   .ton-connect-wrapper {
