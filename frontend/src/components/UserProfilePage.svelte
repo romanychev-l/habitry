@@ -140,7 +140,6 @@
     width: 64px;
     height: 64px;
     object-fit: cover;
-    border: 2px solid var(--tg-theme-button-color);
     mask: url('/src/assets/streak.svg') no-repeat center / contain;
     -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
   }
@@ -148,7 +147,7 @@
   .profile-placeholder {
     width: 64px;
     height: 64px;
-    background: var(--tg-theme-button-color);
+    background: var(--tg-theme-hint-color);
     color: var(--tg-theme-button-text-color);
     display: flex;
     align-items: center;

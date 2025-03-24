@@ -210,8 +210,9 @@
   
   async function handleStartParam() {
     try {
-      const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
-      console.log('Start param:', startParam);
+      // Получаем параметры из стора telegramWebApp, а не напрямую из window.Telegram
+      const startParam = $telegramWebApp?.initDataUnsafe?.start_param;
+      console.log('Start param (from store):', startParam);
       
       if (startParam) {
         if (startParam.startsWith('habit_')) {
@@ -232,6 +233,12 @@
     } catch (error) {
       console.error('Ошибка при обработке start param:', error);
     }
+  }
+
+  // Добавляем реактивный блок для обработки параметров запуска при изменении $telegramWebApp
+  $: if ($telegramWebApp?.ready && $telegramWebApp?.initDataUnsafe) {
+    console.log('TelegramWebApp обновлен, проверяем параметры запуска');
+    handleStartParam();
   }
 
   async function handleHabitLink(event: CustomEvent) {
@@ -261,11 +268,12 @@
       console.log('Telegram WebApp (from store):', $telegramWebApp);
       console.log('Telegram WebApp (from window):', window.Telegram?.WebApp);
       
+      // Обрабатываем параметры запуска перед проверкой telegramId
+      await handleStartParam();
+      
       const telegramId = $user?.id;
       if (!telegramId) return;
       
-      await handleStartParam();
-
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       
       try {
