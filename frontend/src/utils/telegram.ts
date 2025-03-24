@@ -1,6 +1,7 @@
 import { user } from '../stores/user';
 import { api } from './api';
 import { invoice } from '@telegram-apps/sdk';
+import { updateTelegramWebApp } from '../stores/telegram';
 
 export const initTelegram = () => {
     // Проверяем, что window.Telegram.WebApp существует
@@ -10,6 +11,9 @@ export const initTelegram = () => {
     }
   
     const webapp = window.Telegram.WebApp;
+    
+    // Обновляем стор с данными WebApp
+    updateTelegramWebApp();
   
     // Получаем данные пользователя
     const userData = webapp.initDataUnsafe?.user;

@@ -14,8 +14,10 @@
     "paths": {
       "@/*": ["../frontend/src/*"]
     },
-    "lib": ["ES2015", "DOM"]
+    "lib": ["ES2015", "DOM"],
+    "allowSyntheticDefaultImports": true
   },
   "include": ["../frontend/src/**/*.d.ts", "../frontend/src/**/*.ts", "../frontend/src/**/*.js", "../frontend/src/**/*.svelte"],
+  "exclude": ["node_modules"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

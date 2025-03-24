@@ -1,3 +1,6 @@
+import { get } from 'svelte/store';
+import { telegramWebApp, updateTelegramWebApp } from '../stores/telegram';
+
 const API_URL = import.meta.env.VITE_API_URL;
 
 interface RequestOptions extends RequestInit {
@@ -15,18 +18,46 @@ async function request(endpoint: string, options: RequestOptions = {}) {
         });
     }
 
-    // Получаем данные инициализации из Telegram
-    const initData = window.Telegram?.WebApp?.initData;
-    console.log('Telegram initData:', initData);
+    // Получаем данные инициализации из стора
+    const webappStore = get(telegramWebApp);
+    let initData = webappStore.initData;
+    let initDataUnsafe = webappStore.initDataUnsafe;
+
+    // Если в сторе нет данных, пробуем получить напрямую
+    if (!initData && window.Telegram?.WebApp?.initData) {
+        initData = window.Telegram.WebApp.initData;
+    }
+
+    if (!initDataUnsafe && window.Telegram?.WebApp?.initDataUnsafe) {
+        initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
+    }
+    
+    console.log('Telegram WebApp status:', {
+        hasWebApp: !!window.Telegram?.WebApp,
+        hasInitData: !!initData,
+        hasInitDataUnsafe: !!initDataUnsafe,
+        storeReady: webappStore.ready
+    });
     
     // Добавляем заголовки
     const headers = new Headers(fetchOptions.headers);
     if (initData) {
-        // Передаем initData без encodeURIComponent - строка и так должна быть в правильном формате от Telegram
         headers.set('X-Telegram-Data', initData);
-        console.log('Setting X-Telegram-Data header:', initData);
+        console.log('Using initData for authentication');
+    } else if (initDataUnsafe) {
+        // Если нет initData, пробуем использовать initDataUnsafe
+        const unsafeData = JSON.stringify(initDataUnsafe);
+        headers.set('X-Telegram-Data', unsafeData);
+        console.log('Using initDataUnsafe for authentication');
     } else {
-        console.warn('No Telegram initData available');
+        console.warn('No Telegram authentication data available');
+        
+        // ВРЕМЕННОЕ РЕШЕНИЕ: Передаем минимальные данные для тестирования
+        // ВНИМАНИЕ: Это решение только для разработки, убрать в production!
+        if (endpoint.includes('/api/user')) {
+            console.warn('Используем тестовые данные для аутентификации, ТОЛЬКО ДЛЯ РАЗРАБОТКИ!');
+            headers.set('X-Telegram-Test-Auth', 'true');
+        }
     }
     headers.set('Content-Type', 'application/json');
 

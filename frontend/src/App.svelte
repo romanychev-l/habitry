@@ -18,6 +18,7 @@
   import type { Wallet } from '@tonconnect/ui';
   import CustomAlert from './components/CustomAlert.svelte';
   import { alertStore, hideAlert } from './stores/alert';
+  import { telegramWebApp, updateTelegramWebApp } from './stores/telegram';
   
   // Инициализируем значение из localStorage
   $isListView = localStorage.getItem('isListView') === 'true';
@@ -257,9 +258,8 @@
     
     try {
       console.log('initializeUser', $user);
-      console.log('Telegram WebApp:', window.Telegram?.WebApp);
-      console.log('Telegram initData:', window.Telegram?.WebApp?.initData);
-      console.log('Telegram initDataUnsafe:', window.Telegram?.WebApp?.initDataUnsafe);
+      console.log('Telegram WebApp (from store):', $telegramWebApp);
+      console.log('Telegram WebApp (from window):', window.Telegram?.WebApp);
       
       const telegramId = $user?.id;
       if (!telegramId) return;
