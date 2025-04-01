@@ -96,18 +96,29 @@
   
   function initTonConnect() {
     try {
+      console.log('Инициализация TON Connect...');
+      
       // Создаем элемент для кнопки TON Connect, если его еще нет
       if (!document.getElementById('ton-connect')) {
+        console.log('Создание элемента ton-connect...');
         const tonConnectElement = document.createElement('div');
         tonConnectElement.id = 'ton-connect';
         tonConnectElement.style.display = 'inline-block';
+        
         const container = document.getElementById('ton-connect-container');
         if (container) {
           container.appendChild(tonConnectElement);
+          console.log('Элемент ton-connect успешно добавлен в контейнер');
         } else {
-          console.error('Контейнер для TON Connect не найден');
-          return;
+          console.error('Контейнер для TON Connect не найден, создаем новый...');
+          const newContainer = document.createElement('div');
+          newContainer.id = 'ton-connect-container';
+          newContainer.className = 'ton-connect-wrapper';
+          newContainer.appendChild(tonConnectElement);
+          document.querySelector('header')?.appendChild(newContainer);
         }
+      } else {
+        console.log('Элемент ton-connect уже существует');
       }
       
       // Подписываемся на изменения состояния кошелька
@@ -481,8 +492,8 @@
 
 <main>
   <header>
-    {#if $user}
-      <div class="user-info">
+    <div class="user-info">
+      {#if $user}
         <button 
           class="profile-button"
           on:click={() => showSettings = true}
@@ -499,11 +510,13 @@
             </div>
           {/if}
         </button>
-      </div>
+      {/if}
+    </div>
 
-      <div id="ton-connect-container" class="ton-connect-wrapper"></div>
-      
-      <div class="balance-container">
+    <div id="ton-connect-container" class="ton-connect-wrapper"></div>
+    
+    <div class="balance-container">
+      {#if $user}
         <div class="balance">
           {#if $balance !== undefined && $balance !== null}
             {$balance} WILL
@@ -518,8 +531,8 @@
         }}>
           +
         </button>
-      </div>
-    {/if}
+      {/if}
+    </div>
   </header>
 
   <div class="habit-container" class:list-view={$isListView}>
@@ -584,34 +597,17 @@
           openTelegramInvoice(event.detail.starsAmount);
           console.log('after openTelegramInvoice');
         }
-        // Закомментируем обработку TON
-        /* 
-        else {
-          console.log('TON transaction sent:', event.detail);
-        }
-        */
       }}
       on:ton-transaction-sent={handleTonTransactionSent}
       on:usdt-transaction-sent={handleUsdtTransactionSent}
     />
   {/if}
-  
-  <!-- {#if $alertStore.visible}
-    <CustomAlert
-      title={$alertStore.title}
-      message={$alertStore.message}
-      showConfirm={$alertStore.showConfirm}
-      confirmText={$alertStore.confirmText}
-      cancelText={$alertStore.cancelText}
-      on:close={hideAlert}
-      on:confirm={() => {
-        if ($alertStore.onConfirm) {
-          $alertStore.onConfirm();
-        }
-        hideAlert();
-      }}
-    />
-  {/if} -->
+
+  <div class="creator-container">
+    <a href="https://t.me/romanychev" target="_blank" class="creator-link">
+      {$_('creator.by')}
+    </a>
+  </div>
 </main>
 
 <style>
@@ -643,6 +639,7 @@
     gap: 16px;
     width: 100%;
     box-sizing: border-box;
+    margin-bottom: 20px; /* Уменьшаем отступ снизу для контейнера с привычками */
   }
 
   .habit-container.list-view {
@@ -802,5 +799,24 @@
     border-radius: 12px !important;
     padding: 0 12px !important;
     transition: all 0.2s ease !important;
+  }
+
+  .creator-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 8px 0; /* Уменьшаем отступы сверху и снизу */
+  }
+
+  .creator-link {
+    color: var(--tg-theme-hint-color);
+    text-decoration: none;
+    font-size: 14px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+  }
+
+  .creator-link:hover {
+    opacity: 1;
   }
 </style>

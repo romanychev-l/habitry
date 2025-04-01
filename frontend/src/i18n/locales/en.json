@@ -238,5 +238,8 @@
     },
     "skip": "Skip",
     "next": "Next"
+  },
+  "creator": {
+    "by": "Created by Leonid Romanychev"
   }
 } 
