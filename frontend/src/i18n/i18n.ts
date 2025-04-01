@@ -6,11 +6,8 @@ import en from './locales/en.json';
 addMessages('ru', ru);
 addMessages('en', en);
 
-// Получаем язык из Telegram WebApp или используем язык браузера
-const telegramLanguage = window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code;
-const initialLocale = telegramLanguage || getLocaleFromNavigator();
-
+// Используем язык браузера по умолчанию
 init({
   fallbackLocale: 'ru',
-  initialLocale: initialLocale,
+  initialLocale: getLocaleFromNavigator(),
 }); 

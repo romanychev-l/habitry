@@ -2,14 +2,14 @@
   import { _ } from 'svelte-i18n';
   import { createEventDispatcher } from 'svelte';
   import type { Habit } from '../types';
+  import { initData } from '@telegram-apps/sdk-svelte';
 
   const dispatch = createEventDispatcher();
   const BOT_USERNAME = import.meta.env.VITE_BOT_USERNAME;
   export let habit: Habit;
 
   function handleShare() {
-    const telegram = window.Telegram?.WebApp;
-    const userId = telegram?.initDataUnsafe?.user?.id || '';
+    const userId = initData.user()?.id || '';
     const baseUrl = `https://t.me/${BOT_USERNAME}/app`;
     const startAppParam = `startapp=habit_${habit._id}_${userId}`;
     const appUrl = `${baseUrl}?${startAppParam}`;

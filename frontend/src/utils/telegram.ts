@@ -1,49 +1,6 @@
 import { user } from '../stores/user';
 import { api } from './api';
-import { invoice } from '@telegram-apps/sdk';
-import { updateTelegramWebApp } from '../stores/telegram';
-
-export const initTelegram = () => {
-    // Проверяем, что window.Telegram.WebApp существует
-    if (!window.Telegram?.WebApp) {
-      console.error('Telegram WebApp is not initialized');
-      return;
-    }
-  
-    const webapp = window.Telegram.WebApp;
-    
-    // Обновляем стор с данными WebApp
-    updateTelegramWebApp();
-  
-    // Получаем данные пользователя
-    const userData = webapp.initDataUnsafe?.user;
-    if (userData) {
-      // Исправляем URL фотографии, заменяя экранированные слэши на обычные
-      const photoUrl = userData.photo_url?.replace(/\\\//g, '/');
-      
-      user.set({
-        id: userData.id,
-        firstName: userData.first_name,
-        username: userData.username,
-        languageCode: userData.language_code,
-        photoUrl: photoUrl
-      });
-    }
-    console.log('user', userData);
-  
-    // Сообщаем что приложение готово
-    webapp.ready();
-  
-    // Расширяем на весь экран
-    webapp.expand();
-    webapp.disableVerticalSwipes();
-    // webapp.requestFullscreen();
-  
-    // Устанавливаем тему
-    document.documentElement.classList.add(webapp.colorScheme);
-  
-    console.log(webapp);
-};
+import { invoice } from '@telegram-apps/sdk-svelte';
 
 export async function openTelegramInvoice(starsAmount: number) {
     try {

@@ -4,6 +4,7 @@
   import HabitCard from './HabitCard.svelte';
   import type { Habit } from '../types';
   import { api } from '../utils/api';
+  import { initData } from '@telegram-apps/sdk-svelte';
   
   const dispatch = createEventDispatcher();
   export let username: string;
@@ -73,7 +74,7 @@
               <HabitCard 
                 habit={habit} 
                 telegramId={parseInt(userProfile.telegram_id)} 
-                readonly={userProfile.telegram_id !== window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()}
+                readonly={userProfile.telegram_id !== initData.user()?.id?.toString()}
               />
             {/each}
           </div>

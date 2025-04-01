@@ -166,7 +166,20 @@
     "usdt_transaction_error": "USDT Transaction Error",
     "transaction_send_error": "Transaction Sending Error",
     "wallet_not_connected": "Wallet not connected. Please connect your wallet on the main screen.",
-    "insufficient_funds": "Insufficient funds for withdrawal. Your balance: {balance} WILL"
+    "insufficient_funds": "Insufficient funds for withdrawal. Your balance: {balance} WILL",
+    "warning": "Warning",
+    "success": "Success",
+    "info": "Information",
+    "transaction_sent": "Transaction Sent",
+    "transaction_confirmed": "Transaction Confirmed",
+    "transaction_failed": "Transaction Failed",
+    "withdrawal_request_sent": "Withdrawal Request Sent",
+    "transaction_confirmed_message": "{amount} WILL tokens have been added to your account",
+    "transaction_failed_message": "Failed to process your transaction. Please try again.",
+    "usdt_transaction_failed_message": "Failed to process your USDT transaction. Please try again.",
+    "habit_join_error": "Failed to join the habit. Please try again later.",
+    "habit_create_error": "Failed to create the habit. Please try again later.",
+    "ton_transaction_sent": "Your transaction has been sent to the TON blockchain. Processing may take several minutes."
   },
   "payment": {
     "buy": "Buy",
@@ -195,7 +208,15 @@
     "exchange_rate": "Exchange rate",
     "connected": "connected",
     "transaction_failed": "Transaction Failed",
-    "transaction_failed_message": "Failed to process your transaction. Please try again."
+    "transaction_failed_message": "Failed to process your transaction. Please try again.",
+    "min_withdraw_amount": "Minimum withdrawal amount: {amount} WILL",
+    "withdrawal_request_message": "Your withdrawal request for {will_amount} WILL ({usdt_amount} USDT) has been submitted. Funds will be credited to your wallet within 24 hours.",
+    "withdrawal_error": "Error registering withdrawal request",
+    "unknown_error": "An unknown error occurred",
+    "invalid_usdt_master_address": "Invalid USDT master contract address. Please check the configuration.",
+    "invalid_app_wallet_address": "Invalid application wallet address. Please check the configuration.",
+    "wallet_app_error": "Error in wallet application. Please try using a different wallet or update the application.",
+    "transaction_send_error": "Error occurred while sending the transaction"
   },
   "onboarding": {
     "welcome": {

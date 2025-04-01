@@ -6,7 +6,7 @@
   import type { Wallet } from '@tonconnect/ui';
   import { beginCell, Address, toNano } from '@ton/core'
   import { TonClient, JettonMaster } from '@ton/ton';
-  import { showTelegramOrCustomAlert } from '../stores/alert';
+  import { popup } from '@telegram-apps/sdk-svelte';
 
   // Используем уже объявленные глобальные типы без declare global
   
@@ -110,23 +110,35 @@
     if (!walletConnected) {
       console.error('Кошелек не подключен');
       transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
-      showTelegramOrCustomAlert($_('alerts.error'), $_('alerts.wallet_not_connected'));
+      await popup.open({
+        title: $_('alerts.error'),
+        message: $_('alerts.wallet_not_connected'),
+        buttons: [{ id: 'close', type: 'close' }]
+      });
       return;
     }
     
     // Проверяем минимальную сумму для вывода
     if (withdrawAmount < MIN_WITHDRAW_AMOUNT) {
       console.error('Сумма меньше минимальной для вывода');
-      transactionError = `Минимальная сумма для вывода: ${MIN_WITHDRAW_AMOUNT} WILL`;
-      showTelegramOrCustomAlert($_('alerts.error'), transactionError);
+      transactionError = $_('payment.min_withdraw_amount', { values: { amount: MIN_WITHDRAW_AMOUNT } });
+      await popup.open({
+        title: $_('alerts.error'),
+        message: $_('payment.min_withdraw_amount', { values: { amount: MIN_WITHDRAW_AMOUNT } }),
+        buttons: [{ id: 'close', type: 'close' }]
+      });
       return;
     }
     
     // Проверяем баланс
     if (withdrawAmount > userBalance) {
       console.error('Недостаточно средств для вывода');
-      transactionError = `Недостаточно средств для вывода. Ваш баланс: ${userBalance} WILL`;
-      showTelegramOrCustomAlert($_('alerts.error'), $_('alerts.insufficient_funds', { values: { balance: userBalance } }));
+      transactionError = $_('alerts.insufficient_funds', { values: { balance: userBalance } });
+      await popup.open({
+        title: $_('alerts.error'),
+        message: $_('alerts.insufficient_funds', { values: { balance: userBalance } }),
+        buttons: [{ id: 'close', type: 'close' }]
+      });
       return;
     }
     
@@ -153,10 +165,11 @@
         console.log('Ответ сервера:', response);
         
         // Показываем уведомление об успешной обработке запроса
-        showTelegramOrCustomAlert(
-          'Запрос на вывод отправлен',
-          `Ваш запрос на вывод ${withdrawAmount} WILL (${usdtAmount} USDT) отправлен на обработку. Средства поступят на ваш кошелек в течение 24 часов.`
-        );
+        await popup.open({
+          title: $_('alerts.withdrawal_request_sent'),
+          message: $_('payment.withdrawal_request_message', { values: { will_amount: withdrawAmount, usdt_amount: usdtAmount } }),
+          buttons: [{ id: 'close', type: 'close' }]
+        });
         
         // Обновляем баланс пользователя
         await loadUserBalance();
@@ -166,12 +179,20 @@
       } catch (apiError: any) {
         console.error('Ошибка при регистрации запроса на вывод:', apiError);
         transactionError = apiError.message || 'Ошибка при регистрации запроса на вывод';
-        showTelegramOrCustomAlert($_('alerts.error'), transactionError);
+        await popup.open({
+          title: $_('alerts.error'),
+          message: $_('payment.withdrawal_error'),
+          buttons: [{ id: 'close', type: 'close' }]
+        });
       }
     } catch (error: any) {
       console.error('Ошибка при обработке запроса на вывод:', error);
-      transactionError = error.message || 'Произошла неизвестная ошибка';
-      showTelegramOrCustomAlert($_('alerts.error'), transactionError);
+      transactionError = $_('payment.unknown_error');
+      await popup.open({
+        title: $_('alerts.error'),
+        message: $_('payment.unknown_error'),
+        buttons: [{ id: 'close', type: 'close' }]
+      });
     } finally {
       isProcessing = false;
     }
@@ -203,7 +224,11 @@
     if (!walletConnected) {
       console.error('Кошелек не подключен');
       transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
-      showTelegramOrCustomAlert($_('alerts.error'), $_('alerts.wallet_not_connected'));
+      await popup.open({
+        title: $_('alerts.error'),
+        message: $_('alerts.wallet_not_connected'),
+        buttons: [{ id: 'close', type: 'close' }]
+      });
       return;
     }
 
@@ -223,9 +248,13 @@
         console.log('Адрес мастер-контракта USDT успешно преобразован:', usdtMasterAddress.toString());
       } catch (addrError) {
         console.error('Ошибка при преобразовании адреса мастер-контракта USDT:', addrError);
-        transactionError = `Недействительный адрес мастер-контракта USDT: ${rawUsdtMasterAddress}`;
+        transactionError = $_('payment.invalid_usdt_master_address');
         isProcessing = false;
-        showTelegramOrCustomAlert($_('alerts.error'), transactionError);
+        await popup.open({
+          title: $_('alerts.error'),
+          message: $_('payment.invalid_usdt_master_address'),
+          buttons: [{ id: 'close', type: 'close' }]
+        });
         return;
       }
       
@@ -239,9 +268,13 @@
         console.log('Адрес кошелька приложения успешно преобразован:', appWalletAddress.toString());
       } catch (addrError) {
         console.error('Ошибка при преобразовании адреса приложения:', addrError);
-        transactionError = `Недействительный адрес кошелька приложения: ${rawAppWalletAddress}`;
+        transactionError = $_('payment.invalid_app_wallet_address');
         isProcessing = false;
-        showTelegramOrCustomAlert($_('alerts.error'), transactionError);
+        await popup.open({
+          title: $_('alerts.error'),
+          message: $_('payment.invalid_app_wallet_address'),
+          buttons: [{ id: 'close', type: 'close' }]
+        });
         return;
       }
 
@@ -324,7 +357,11 @@
         if (!tonConnect.wallet) {
           console.error('Кошелек не подключен');
           transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
-          showTelegramOrCustomAlert($_('alerts.error'), transactionError);
+          await popup.open({
+            title: $_('alerts.error'),
+            message: $_('payment.wallet_not_connected'),
+            buttons: [{ id: 'close', type: 'close' }]
+          });
           isProcessing = false;
           return;
         }
@@ -332,8 +369,12 @@
         // Проверяем, что адрес мастер-контракта USDT корректный
         if (!usdtMasterAddress.toString().startsWith('EQ')) {
           console.error('Некорректный адрес мастер-контракта USDT');
-          transactionError = 'Некорректный адрес мастер-контракта USDT. Пожалуйста, проверьте конфигурацию.';
-          showTelegramOrCustomAlert($_('alerts.error'), transactionError);
+          transactionError = $_('payment.invalid_usdt_master_address');
+          await popup.open({
+            title: $_('alerts.error'),
+            message: $_('payment.invalid_usdt_master_address'),
+            buttons: [{ id: 'close', type: 'close' }]
+          });
           isProcessing = false;
           return;
         }
@@ -341,8 +382,12 @@
         // Проверяем, что адрес кошелька приложения корректный
         if (!appWalletAddress.toString().startsWith('EQ')) {
           console.error('Некорректный адрес кошелька приложения');
-          transactionError = 'Некорректный адрес кошелька приложения. Пожалуйста, проверьте конфигурацию.';
-          showTelegramOrCustomAlert($_('alerts.error'), transactionError);
+          transactionError = $_('payment.invalid_app_wallet_address');
+          await popup.open({
+            title: $_('alerts.error'),
+            message: $_('payment.invalid_app_wallet_address'),
+            buttons: [{ id: 'close', type: 'close' }]
+          });
           isProcessing = false;
           return;
         }
@@ -404,20 +449,32 @@
             console.error('Детали запроса:', apiError.request);
           }
           
-          transactionError = apiError.message || 'Ошибка при регистрации транзакции на сервере';
+          transactionError = $_('payment.withdrawal_error');
           
           // Показываем уведомление об ошибке
-          showTelegramOrCustomAlert($_('alerts.error'), transactionError);
+          await popup.open({
+            title: $_('alerts.error'),
+            message: $_('payment.withdrawal_error'),
+            buttons: [{ id: 'close', type: 'close' }]
+          });
         }
-      } catch (sendError: any) {
-        console.error('Ошибка при отправке USDT транзакции:', sendError);
-        transactionError = sendError.message || 'Произошла ошибка при отправке USDT транзакции';
-        showTelegramOrCustomAlert($_('alerts.error'), transactionError);
+      } catch (error) {
+        console.error('Ошибка при отправке USDT транзакции:', error);
+        transactionError = $_('payment.transaction_send_error');
+        await popup.open({
+          title: $_('alerts.error'),
+          message: $_('payment.transaction_send_error'),
+          buttons: [{ id: 'close', type: 'close' }]
+        });
       }
     } catch (error) {
       console.error('Ошибка при обработке платежа USDT:', error);
       transactionError = error instanceof Error ? error.message : 'Неизвестная ошибка';
-      showTelegramOrCustomAlert($_('alerts.error'), transactionError);
+      await popup.open({
+        title: $_('alerts.error'),
+        message: transactionError,
+        buttons: [{ id: 'close', type: 'close' }]
+      });
     } finally {
       isProcessing = false;
     }
@@ -433,10 +490,10 @@
     }, 30000);
     
     // Отправляем уведомление пользователю
-    showTelegramOrCustomAlert(
-      'USDT транзакция отправлена',
-      'Ваша USDT транзакция отправлена в блокчейн TON. Обработка может занять несколько минут.'
-    );
+    popup.open({
+      title: $_('alerts.transaction_sent'),
+      message: $_('alerts.ton_transaction_sent')
+    });
   }
 
   async function checkUsdtTransactionStatus(transactionId: string) {
@@ -446,10 +503,10 @@
       
       if (data.tx_status === 'completed') {
         // Транзакция успешно обработана
-        showTelegramOrCustomAlert(
-          'Транзакция подтверждена',
-          `На ваш счет начислено ${data.will_amount} WILL токенов`
-        );
+        popup.open({
+          title: $_('alerts.transaction_confirmed'),
+          message: `На ваш счет начислено ${data.will_amount} WILL токенов`
+        });
         
         // Удаляем ID транзакции из localStorage
         localStorage.removeItem('last_usdt_tx');
@@ -460,10 +517,10 @@
         }, 60000);
       } else if (data.tx_status === 'failed') {
         // Транзакция не удалась
-        showTelegramOrCustomAlert(
-          'Транзакция не удалась',
-          'Не удалось обработать вашу USDT транзакцию. Пожалуйста, попробуйте еще раз.'
-        );
+        popup.open({
+          title: $_('alerts.transaction_failed'),
+          message: 'Не удалось обработать вашу транзакцию. Пожалуйста, попробуйте еще раз.'
+        });
         
         // Удаляем ID транзакции из localStorage
         localStorage.removeItem('last_usdt_tx');
@@ -477,7 +534,11 @@
     if (!walletConnected) {
       console.error('Кошелек не подключен');
       transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
-      showTelegramOrCustomAlert($_('alerts.error'), transactionError);
+      await popup.open({
+        title: $_('alerts.error'),
+        message: transactionError,
+        buttons: [{ id: 'close', type: 'close' }]
+      });
       return;
     }
 
@@ -518,7 +579,11 @@
         if (!tonConnect.wallet) {
           console.error('Кошелек не подключен');
           transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
-          showTelegramOrCustomAlert($_('alerts.error'), transactionError);
+          await popup.open({
+            title: $_('alerts.error'),
+            message: transactionError,
+            buttons: [{ id: 'close', type: 'close' }]
+          });
           isProcessing = false;
           return;
         }
@@ -556,25 +621,36 @@
           transactionError = apiError.message || 'Ошибка при регистрации транзакции на сервере';
           
           // Показываем уведомление об ошибке
-          showTelegramOrCustomAlert($_('alerts.error'), transactionError);
+          await popup.open({
+            title: $_('alerts.error'),
+            message: transactionError,
+            buttons: [{ id: 'close', type: 'close' }]
+          });
         }
-      } catch (sendError: any) {
-        console.error('Ошибка при отправке транзакции:', sendError);
+      } catch (error) {
+        console.error('Ошибка при отправке транзакции:', error);
         
-        // Проверяем, содержит ли ошибка NullPointerException
-        if (sendError.message && sendError.message.includes('NullPointerException')) {
+        if (error instanceof Error && error.message.includes('NullPointerException')) {
           transactionError = 'Ошибка в приложении кошелька. Пожалуйста, попробуйте использовать другой кошелек или обновите приложение.';
         } else {
-          transactionError = sendError.message || 'Произошла ошибка при отправке транзакции';
+          transactionError = error instanceof Error ? error.message : 'Произошла ошибка при отправке транзакции';
         }
         
         // Показываем уведомление об ошибке
-        showTelegramOrCustomAlert($_('alerts.error'), transactionError);
+        await popup.open({
+          title: $_('alerts.error'),
+          message: transactionError,
+          buttons: [{ id: 'close', type: 'close' }]
+        });
       }
     } catch (error) {
       console.error('Ошибка при обработке платежа TON:', error);
       transactionError = error instanceof Error ? error.message : 'Неизвестная ошибка';
-      showTelegramOrCustomAlert($_('alerts.error'), transactionError);
+      await popup.open({
+        title: $_('alerts.error'),
+        message: transactionError,
+        buttons: [{ id: 'close', type: 'close' }]
+      });
     } finally {
       isProcessing = false;
     }
@@ -591,10 +667,10 @@
     }, 30000);
     
     // Отправляем уведомление пользователю
-    showTelegramOrCustomAlert(
-      'Транзакция отправлена',
-      'Ваша транзакция отправлена в блокчейн TON. Обработка может занять несколько минут.'
-    );
+    popup.open({
+      title: $_('alerts.transaction_sent'),
+      message: $_('alerts.ton_transaction_sent')
+    });
   }
   
   // Функция для проверки статуса транзакции
@@ -605,10 +681,10 @@
       
       if (data.tx_status === 'success') {
         // Транзакция успешна
-        showTelegramOrCustomAlert(
-          $_('payment.success_title'),
-          $_('payment.success_message')
-        );
+        popup.open({
+          title: $_('payment.success_title'),
+          message: $_('payment.success_message')
+        });
         
         // Удаляем ID транзакции из localStorage
         localStorage.removeItem('last_ton_tx');
@@ -619,10 +695,10 @@
         }, 60000);
       } else if (data.tx_status === 'failed') {
         // Транзакция не удалась
-        showTelegramOrCustomAlert(
-          $_('payment.transaction_failed'),
-          $_('payment.transaction_failed_message')
-        );
+        popup.open({
+          title: $_('payment.transaction_failed'),
+          message: $_('payment.transaction_failed_message')
+        });
         
         // Удаляем ID транзакции из localStorage
         localStorage.removeItem('last_ton_tx');

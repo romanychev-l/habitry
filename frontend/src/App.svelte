@@ -16,9 +16,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { subscribeToWalletChanges } from './utils/tonConnect';
   import type { Wallet } from '@tonconnect/ui';
-  import CustomAlert from './components/CustomAlert.svelte';
-  import { alertStore, hideAlert } from './stores/alert';
-  import { telegramWebApp, updateTelegramWebApp } from './stores/telegram';
+  import { popup, initData, themeParams } from '@telegram-apps/sdk-svelte';
   
   // Инициализируем значение из localStorage
   $isListView = localStorage.getItem('isListView') === 'true';
@@ -31,19 +29,70 @@
   let sharedByTelegramId = '';
   let showUserProfile = false;
   let profileUsername = '';
-  let isDarkTheme = window.Telegram?.WebApp?.colorScheme === 'dark';
+  let isDarkTheme = false;
   let isInitialized = false;
   
   // Переменные для TON Connect
   let walletConnected = false;
   let walletAddress = '';
   let unsubscribeTonConnect: (() => void) | null = null;
+
+  initData.restore();
   
   onMount(() => {
+    // Инициализируем Telegram WebApp
+    initTelegramWebApp();
+    
     // Инициализируем TON Connect
     initTonConnect();
     checkPendingTonTransactions();
   });
+  
+  // Функция для инициализации Telegram WebApp
+  async function initTelegramWebApp() {
+    console.log('Инициализация Telegram WebApp через @telegram-apps/sdk-svelte...');
+
+    try {
+      // Получаем данные пользователя через initData
+      
+      const userData = initData.user();
+      console.log('userData', userData);
+      if (userData) {
+        // Исправляем URL фотографии, заменяя экранированные слэши на обычные
+        const photoUrl = userData.photo_url?.replace(/\\\//g, '/');
+        
+        user.set({
+          id: userData.id,
+          firstName: userData.first_name,
+          username: userData.username,
+          languageCode: userData.language_code,
+          photoUrl: photoUrl
+        });
+        console.log('Пользователь:', userData);
+      } else {
+        console.warn('Данные пользователя недоступны');
+      }
+    
+      // Инициализируем и привязываем параметры темы
+      if (themeParams.mount.isAvailable()) {
+        try {
+          await themeParams.mount();
+          themeParams.bindCssVars();
+          isDarkTheme = themeParams.backgroundColor() === '#000000';
+          console.log('Тема установлена:', isDarkTheme ? 'dark' : 'light');
+        } catch (err) {
+          console.error('Ошибка при инициализации темы:', err);
+        }
+      }
+      
+      console.log('Telegram WebApp успешно инициализирован');
+
+      // Проверяем параметры запуска после инициализации
+      handleStartParam();
+    } catch (error) {
+      console.error('Ошибка при инициализации Telegram WebApp:', error);
+    }
+  }
   
   function initTonConnect() {
     try {
@@ -111,15 +160,11 @@
       if (data.tx_status === 'completed') {
         // Транзакция успешно обработана
         try {
-          // @ts-ignore - игнорируем проблемы с типизацией
-          if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.showPopup === 'function') {
-            // @ts-ignore
-            window.Telegram.WebApp.showPopup({
-              title: 'Транзакция подтверждена',
-              message: `На ваш счет начислено ${data.will_amount} WILL токенов`,
-              buttons: [{ type: 'close' }]
-            });
-          }
+          await popup.open({
+            title: $_('alerts.transaction_confirmed'),
+            message: $_('alerts.transaction_confirmed_message', { values: { amount: data.will_amount } }),
+            buttons: [{ id: 'close', type: 'close' }]
+          });
         } catch (error) {
           console.warn('Telegram WebApp API недоступен:', error);
         }
@@ -134,15 +179,11 @@
       } else if (data.tx_status === 'failed') {
         // Транзакция не удалась
         try {
-          // @ts-ignore - игнорируем проблемы с типизацией
-          if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.showPopup === 'function') {
-            // @ts-ignore
-            window.Telegram.WebApp.showPopup({
-              title: 'Транзакция не удалась',
-              message: 'Не удалось обработать вашу транзакцию. Пожалуйста, попробуйте еще раз.',
-              buttons: [{ type: 'close' }]
-            });
-          }
+          await popup.open({
+            title: $_('alerts.transaction_failed'),
+            message: $_('alerts.transaction_failed_message'),
+            buttons: [{ id: 'close', type: 'close' }]
+          });
         } catch (error) {
           console.warn('Telegram WebApp API недоступен:', error);
         }
@@ -164,15 +205,11 @@
       if (data.tx_status === 'completed') {
         // Транзакция успешно обработана
         try {
-          // @ts-ignore
-          if (window.Telegram?.WebApp?.showPopup) {
-            // @ts-ignore
-            window.Telegram.WebApp.showPopup({
-              title: 'Транзакция подтверждена',
-              message: `На ваш счет начислено ${data.will_amount} WILL токенов`,
-              buttons: [{ type: 'close' }]
-            });
-          }
+          await popup.open({
+            title: $_('alerts.transaction_confirmed'),
+            message: $_('alerts.transaction_confirmed_message', { values: { amount: data.will_amount } }),
+            buttons: [{ id: 'close', type: 'close' }]
+          });
         } catch (error) {
           console.warn('Telegram WebApp API недоступен:', error);
         }
@@ -187,15 +224,11 @@
       } else if (data.tx_status === 'failed') {
         // Транзакция не удалась
         try {
-          // @ts-ignore
-          if (window.Telegram?.WebApp?.showPopup) {
-            // @ts-ignore
-            window.Telegram.WebApp.showPopup({
-              title: 'Транзакция не удалась',
-              message: 'Не удалось обработать вашу USDT транзакцию. Пожалуйста, попробуйте еще раз.',
-              buttons: [{ type: 'close' }]
-            });
-          }
+          await popup.open({
+            title: $_('alerts.transaction_failed'),
+            message: $_('alerts.usdt_transaction_failed_message'),
+            buttons: [{ id: 'close', type: 'close' }]
+          });
         } catch (error) {
           console.warn('Telegram WebApp API недоступен:', error);
         }
@@ -210,9 +243,9 @@
   
   async function handleStartParam() {
     try {
-      // Получаем параметры из стора telegramWebApp, а не напрямую из window.Telegram
-      const startParam = $telegramWebApp?.initDataUnsafe?.start_param;
-      console.log('Start param (from store):', startParam);
+      // Получаем параметры через initData
+      const startParam = initData.startParam();
+      console.log('Start param:', startParam);
       
       if (startParam) {
         if (startParam.startsWith('habit_')) {
@@ -235,10 +268,11 @@
     }
   }
 
-  // Добавляем реактивный блок для обработки параметров запуска при изменении $telegramWebApp
-  $: if ($telegramWebApp?.ready && $telegramWebApp?.initDataUnsafe) {
-    console.log('TelegramWebApp обновлен, проверяем параметры запуска');
-    handleStartParam();
+  // Добавляем реактивный блок для обработки параметров запуска
+  $: {
+    if (initData.startParam()) {
+      console.log('TelegramWebApp доступен после инициализации, параметры запуска уже обработаны в initTelegramWebApp');
+    }
   }
 
   async function handleHabitLink(event: CustomEvent) {
@@ -257,6 +291,11 @@
       showHabitLinkModal = false;
     } catch (error) {
       console.error('Ошибка при присоединении к привычке:', error);
+      popup.open({
+        title: $_('alerts.error'),
+        message: $_('alerts.habit_join_error'),
+        buttons: [{ id: 'close', type: 'close' }]
+      });
     }
   }
 
@@ -265,8 +304,7 @@
     
     try {
       console.log('initializeUser', $user);
-      console.log('Telegram WebApp (from store):', $telegramWebApp);
-      console.log('Telegram WebApp (from window):', window.Telegram?.WebApp);
+      console.log('Telegram WebApp (from window):', initData.user());
       
       // Обрабатываем параметры запуска перед проверкой telegramId
       await handleStartParam();
@@ -274,7 +312,9 @@
       const telegramId = $user?.id;
       if (!telegramId) return;
       
+      // Явно получаем часовой пояс пользователя
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      console.log('User timezone:', userTimezone);
       
       try {
         const data = await api.getUser(telegramId, userTimezone);
@@ -283,8 +323,10 @@
         balance.set(data.balance);
         console.log('Balance after set:', $balance);
         
+        // Получаем текущую дату в часовом поясе пользователя
         const now = new Date();
         const userDate = now.toLocaleString('en-US', { timeZone: userTimezone }).split(',')[0];
+        console.log('User local date:', userDate, 'in timezone', userTimezone);
         console.log('Checking dates:', { last_visit: data.last_visit, userDate, balance: data.balance });
         
         if (data.last_visit !== userDate && data.balance > 0) {
@@ -315,7 +357,7 @@
             username: $user.username,
             language_code: $user.languageCode,
             photo_url: $user.photoUrl,
-            timezone: userTimezone,
+            timezone: userTimezone,  // Сохраняем часовой пояс пользователя
             balance: 100
           });
           balance.set(100);
@@ -370,7 +412,11 @@
       }
     } catch (error) {
       console.error('Ошибка при создании привычки:', error);
-      alert($_('habits.errors.create'));
+      popup.open({
+        title: $_('alerts.error'),
+        message: $_('alerts.habit_create_error'),
+        buttons: [{ id: 'close', type: 'close' }]
+      });
     }
   }
 
@@ -550,7 +596,7 @@
     />
   {/if}
   
-  {#if $alertStore.visible}
+  <!-- {#if $alertStore.visible}
     <CustomAlert
       title={$alertStore.title}
       message={$alertStore.message}
@@ -565,7 +611,7 @@
         hideAlert();
       }}
     />
-  {/if}
+  {/if} -->
 </main>
 
 <style>

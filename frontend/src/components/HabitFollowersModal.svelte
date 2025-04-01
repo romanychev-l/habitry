@@ -5,7 +5,9 @@
     import { createEventDispatcher, onMount, onDestroy } from 'svelte';
     import ActivityHeatmap from './ActivityHeatmap.svelte';
     import { api } from '../utils/api';
-    import { showTelegramOrCustomAlert } from '../stores/alert';
+    // import { showTelegramOrCustomAlert } from '../stores/alert';
+    import { user } from '../stores/user';
+    import { popup, initData } from '@telegram-apps/sdk-svelte';
     
     const dispatch = createEventDispatcher();
     
@@ -62,10 +64,10 @@
             console.log('Received followers data:', data);
             
             // Добавляем подробное логирование для отладки
-            if (!data) {
+            if (!Array.isArray(data)) {
                 console.warn('API returned null or undefined data');
-            } else if (!Array.isArray(data)) {
-                console.warn('API returned non-array data:', typeof data, data);
+            } else if (data.length === 0) {
+                console.warn('API returned empty array');
             } else {
                 console.log('API returned array with length:', data.length);
             }
@@ -134,8 +136,12 @@
             showUnfollowConfirm = false;
             selectedFollower = null;
             
-            // Показываем алерт вместо временного сообщения
-            alert($_('habits.unfollow_success'));
+            // Показываем алерт
+            await popup.open({
+                title: $_('alerts.success'),
+                message: $_('habits.unfollow_success'),
+                buttons: [{ id: 'close', type: 'close' }]
+            });
         } catch (error) {
             console.error('Error unfollowing:', error);
             error = $_('habits.errors.unfollow');
@@ -152,7 +158,11 @@
         const today = new Date().toISOString().split('T')[0]; // формат YYYY-MM-DD
         if (habit.last_click_date !== today) {
             // Показываем стандартный алерт с предупреждением
-            alert($_('habits.complete_before_ping'));
+            popup.open({
+                title: $_('alerts.warning'),
+                message: $_('habits.complete_before_ping'),
+                buttons: [{ id: 'close', type: 'close' }]
+            });
             return;
         }
         
@@ -164,11 +174,15 @@
                 habit_id: habit._id,
                 habit_title: habit.title,
                 sender_id: telegramId,
-                sender_username: window.Telegram?.WebApp?.initDataUnsafe?.user?.username || ""
+                sender_username: $user?.username || ""
             })
             .then(async () => {
                 // Показываем стандартный алерт
-                alert($_('habits.ping_sent_message', { values: { username: follower.username } }));
+                await popup.open({
+                    title: $_('alerts.success'),
+                    message: $_('habits.ping_sent_message', { values: { username: follower.username } }),
+                    buttons: [{ id: 'close', type: 'close' }]
+                });
                 
                 // Обновляем список подписчиков
                 try {
@@ -177,13 +191,21 @@
                     console.error('Error reloading followers after ping:', err);
                 }
             })
-            .catch((error: Error) => {
+            .catch(async (error: Error) => {
                 console.error('Error creating ping:', error);
-                alert($_('habits.errors.ping'));
+                await popup.open({
+                    title: $_('alerts.error'),
+                    message: $_('habits.errors.ping'),
+                    buttons: [{ id: 'close', type: 'close' }]
+                });
             });
         } catch (error) {
             console.error('Error sending ping:', error);
-            alert($_('habits.errors.ping'));
+            popup.open({
+                title: $_('alerts.error'),
+                message: $_('habits.errors.ping'),
+                buttons: [{ id: 'close', type: 'close' }]
+            });
         }
     }
     
@@ -193,7 +215,11 @@
         const today = new Date().toISOString().split('T')[0]; // формат YYYY-MM-DD
         if (habit.last_click_date !== today) {
             // Показываем стандартный алерт с предупреждением
-            alert($_('habits.complete_before_ping'));
+            popup.open({
+                title: $_('alerts.warning'),
+                message: $_('habits.complete_before_ping'),
+                buttons: [{ id: 'close', type: 'close' }]
+            });
             return;
         }
         
@@ -202,7 +228,11 @@
         
         if (followersToPing.length === 0) {
             // Показываем алерт, если нет подписчиков для пинга
-            alert($_('habits.no_followers_to_ping'));
+            popup.open({
+                title: $_('alerts.info'),
+                message: $_('habits.no_followers_to_ping'),
+                buttons: [{ id: 'close', type: 'close' }]
+            });
             return;
         }
         
@@ -218,7 +248,7 @@
                 habit_id: habit._id,
                 habit_title: habit.title,
                 sender_id: telegramId,
-                sender_username: window.Telegram?.WebApp?.initDataUnsafe?.user?.username || ""
+                sender_username: $user?.username || ""
             })
             .then(() => {
                 successCount++;
@@ -235,8 +265,11 @@
             .then(async () => {
                 // Если были успешные пинги, показываем сообщение об успехе
                 if (successCount > 0) {
-                    // Показываем стандартный алерт
-                    alert($_('habits.ping_all_sent_message', { values: { count: successCount } }));
+                    await popup.open({
+                        title: $_('alerts.success'),
+                        message: $_('habits.ping_all_sent_message', { values: { count: successCount } }),
+                        buttons: [{ id: 'close', type: 'close' }]
+                    });
                 }
             });
     }
@@ -258,9 +291,9 @@
     
     // Добавляем обработчик инициализации
     onMount(() => {
-        if (window.Telegram?.WebApp?.ready) {
-            window.Telegram.WebApp.ready();
-        }
+        // if (window.Telegram?.WebApp?.ready) {
+        //     // Свойство ready - это булев флаг, а не метод
+        // }
         
         // Устанавливаем начальное состояние из initialFollowers, если они доступны
         if (initialFollowers && initialFollowers.length > 0 && show) {

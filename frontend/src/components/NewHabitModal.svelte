@@ -3,7 +3,10 @@
   import { _ } from 'svelte-i18n';
   import { fade } from 'svelte/transition';
   import type { Habit } from '../types';
-  import { showTelegramOrCustomAlert } from '../stores/alert';
+  import { themeParams, popup } from '@telegram-apps/sdk-svelte';
+  import { habits } from '../stores/habit';
+  import { user } from '../stores/user';
+  // import { showTelegramOrCustomAlert } from '../stores/alert';
   
   const dispatch = createEventDispatcher();
   export let habit: Habit | null = null;
@@ -11,7 +14,7 @@
   let selectedDays = new Set(habit?.days || []);
   let isOneTime = habit?.is_one_time || false;
   let wantToBecome = habit?.want_to_become || '';
-  let isDarkTheme = window.Telegram?.WebApp?.colorScheme === 'dark';
+  let isDarkTheme = themeParams.backgroundColor() === '#000000';
   let isAuto = habit?.is_auto || false;
   let stake = '';
   let titleInput: HTMLInputElement;
@@ -59,7 +62,11 @@
 
   function handleSave() {
     if (!title.trim()) {
-        alert($_('habits.errors.title_required'));
+        popup.open({
+          title: $_('alerts.error'),
+          message: $_('habits.errors.title_required'),
+          buttons: [{ id: 'close', type: 'close' }]
+        });
         return;
     }
 

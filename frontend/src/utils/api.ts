@@ -1,5 +1,4 @@
-import { get } from 'svelte/store';
-import { telegramWebApp, updateTelegramWebApp } from '../stores/telegram';
+import { initDataRaw } from '@telegram-apps/sdk-svelte';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -18,37 +17,16 @@ async function request(endpoint: string, options: RequestOptions = {}) {
         });
     }
 
-    // Получаем данные инициализации из стора
-    const webappStore = get(telegramWebApp);
-    let initData = webappStore.initData;
-    let initDataUnsafe = webappStore.initDataUnsafe;
-
-    // Если в сторе нет данных, пробуем получить напрямую
-    if (!initData && window.Telegram?.WebApp?.initData) {
-        initData = window.Telegram.WebApp.initData;
-    }
-
-    if (!initDataUnsafe && window.Telegram?.WebApp?.initDataUnsafe) {
-        initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
-    }
+    // Получаем данные инициализации через initData
+    // const userData = initData.state();
     
-    console.log('Telegram WebApp status:', {
-        hasWebApp: !!window.Telegram?.WebApp,
-        hasInitData: !!initData,
-        hasInitDataUnsafe: !!initDataUnsafe,
-        storeReady: webappStore.ready
-    });
+    
+    console.log('Telegram initDataRaw', initDataRaw());
     
     // Добавляем заголовки
     const headers = new Headers(fetchOptions.headers);
-    if (initData) {
-        headers.set('X-Telegram-Data', initData);
-        console.log('Using initData for authentication');
-    } else if (initDataUnsafe) {
-        // Если нет initData, пробуем использовать initDataUnsafe
-        const unsafeData = JSON.stringify(initDataUnsafe);
-        headers.set('X-Telegram-Data', unsafeData);
-        console.log('Using initDataUnsafe for authentication');
+    if (initDataRaw) {
+        headers.set('X-Telegram-Data', `${initDataRaw()}`);
     } else {
         console.warn('No Telegram authentication data available');
         

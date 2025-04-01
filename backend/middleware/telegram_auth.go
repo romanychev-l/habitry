@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -38,23 +37,17 @@ func TelegramAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Декодируем URL-encoded строку
-		decodedData, err := url.QueryUnescape(initDataStr)
-		if err != nil {
-			log.Printf("Ошибка при декодировании данных: %v", err)
-			http.Error(w, "Неверный формат данных", http.StatusBadRequest)
-			return
-		}
-
-		log.Printf("Декодированные данные: %s", decodedData)
+		log.Printf("Полученные данные: %s", initDataStr)
 
 		// Парсим данные с помощью библиотеки
-		data, err := initdata.Parse(decodedData)
-		if err != nil {
-			log.Printf("Ошибка при парсинге данных: %v", err)
-			http.Error(w, "Неверный формат данных", http.StatusBadRequest)
-			return
-		}
+		// data, err := initdata.Parse(initDataStr)
+		// if err != nil {
+		// 	log.Printf("Ошибка при парсинге данных: %v\nПолученные данные: %s", err, initDataStr)
+		// 	http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+		// 	return
+		// }
+
+		// log.Printf("Успешно распарсены данные: %+v", data)
 
 		// Проверяем подпись с помощью библиотеки
 		botToken := os.Getenv("BOT_TOKEN")
@@ -68,30 +61,39 @@ func TelegramAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		expIn := 24 * time.Hour
 
 		// Проверяем валидность данных
-		if err := initdata.Validate(decodedData, botToken, expIn); err != nil {
-			log.Printf("Ошибка валидации данных: %v", err)
+		if err := initdata.Validate(initDataStr, botToken, expIn); err != nil {
+			log.Printf("Ошибка валидации данных: %v\nТокен бота (первые 10 символов): %s...\nСрок действия: %v",
+				err, botToken[:10], expIn)
 			http.Error(w, "Неверная подпись или устаревшие данные", http.StatusUnauthorized)
 			return
 		}
 
+		log.Printf("Данные успешно провалидированы")
+
 		// Если есть данные пользователя, добавляем telegram_id в контекст
-		if data.User.ID != 0 {
-			telegramID := data.User.ID
-			ctx := context.WithValue(r.Context(), "telegram_id", telegramID)
-			r = r.WithContext(ctx)
-			log.Printf("Установлен telegram_id в контексте: %d", telegramID)
-		} else {
-			// Пробуем получить telegram_id из query параметров
-			telegramIDStr := r.URL.Query().Get("telegram_id")
-			if telegramIDStr != "" {
-				if id, err := strconv.ParseInt(telegramIDStr, 10, 64); err == nil {
-					ctx := context.WithValue(r.Context(), "telegram_id", id)
-					r = r.WithContext(ctx)
-					log.Printf("Установлен telegram_id из query: %d", id)
-				}
+		// if data.User.ID != 0 {
+		// 	ctx := context.WithValue(r.Context(), "telegram_id", data.User.ID)
+		// 	r = r.WithContext(ctx)
+		// 	log.Printf("Установлен telegram_id в контексте: %d", data.User.ID)
+		// } else {
+		// 	// Пробуем получить telegram_id из query параметров
+		// 	telegramIDStr := r.URL.Query().Get("telegram_id")
+		// 	if telegramIDStr != "" {
+		// 		if id, err := strconv.ParseInt(telegramIDStr, 10, 64); err == nil {
+		// 			ctx := context.WithValue(r.Context(), "telegram_id", id)
+		// 			r = r.WithContext(ctx)
+		// 			log.Printf("Установлен telegram_id из query: %d", id)
+		// 		}
+		// 	}
+		// }
+		telegramIDStr := r.URL.Query().Get("telegram_id")
+		if telegramIDStr != "" {
+			if id, err := strconv.ParseInt(telegramIDStr, 10, 64); err == nil {
+				ctx := context.WithValue(r.Context(), "telegram_id", id)
+				r = r.WithContext(ctx)
 			}
 		}
-
+		log.Printf("telegramIDStr: %s", telegramIDStr)
 		// Вызываем следующий обработчик
 		next.ServeHTTP(w, r)
 	}

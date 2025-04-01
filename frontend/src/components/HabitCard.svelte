@@ -2,6 +2,7 @@
     import { _ } from 'svelte-i18n';
     import { isListView } from '../stores/view';
     import { habits } from '../stores/habit';
+    import { user } from '../stores/user';
     import HabitActionsModal from './HabitActionsModal.svelte';
     import DeleteConfirmModal from './DeleteConfirmModal.svelte';
     import NewHabitModal from './NewHabitModal.svelte';
@@ -10,6 +11,7 @@
     import type { Habit } from '../types';
     import { onMount } from 'svelte';
     import { api } from '../utils/api';
+    import { popup, initData } from '@telegram-apps/sdk-svelte';
     
     export let habit: Habit;
     export let telegramId: number;
@@ -155,7 +157,6 @@
     }
     
     async function handleUndo() {
-      console.log('handleUndo in HabitCard.svelte');
         try {
             const data = await api.undoHabit({
                 telegram_id: telegramId,
@@ -188,8 +189,12 @@
                 await updateProgress();
             }
         } catch (error) {
-            console.error('Ошибка:', error);
-            alert($_('habits.errors.undo'));
+            console.error('Error undoing habit click:', error);
+            await popup.open({
+                title: 'Ошибка',
+                message: $_('habits.errors.undo'),
+                buttons: [{ id: 'close', type: 'close' }]
+            });
         }
     }
     
@@ -203,12 +208,12 @@
             // Перезагружаем страницу после успешного удаления
             window.location.reload();
         } catch (error) {
-            if (error instanceof Error && error.message.includes('403')) {
-                alert($_('habits.errors.delete_forbidden'));
-                return;
-            }
-            console.error('Error:', error);
-            alert($_('habits.errors.delete'));
+            console.error('Error deleting habit:', error);
+            await popup.open({
+                title: 'Ошибка',
+                message: $_('habits.errors.delete'),
+                buttons: [{ id: 'close', type: 'close' }]
+            });
         }
     }
 
@@ -307,7 +312,7 @@
     async function handleHabitLink(event: CustomEvent<{habitId: string; sharedHabitId: string; sharedByTelegramId: string}>) {
         console.log('handleHabitLink in HabitCard.svelte', event.detail);
         try {
-            const currentUserId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+            const currentUserId = initData.user()?.id;
             if (!currentUserId) {
                 throw new Error($_('habits.errors.link'));
             }
@@ -322,10 +327,18 @@
             habits.update(currentHabits => data.habits || []);
 
             showLinkModal = false;
-            window.Telegram?.WebApp?.showAlert($_('habits.link_success'));
+            await popup.open({
+                title: 'Успех',
+                message: $_('habits.link_success'),
+                buttons: [{ id: 'close', type: 'close' }]
+            });
         } catch (error) {
             console.error('Error:', error);
-            window.Telegram?.WebApp?.showAlert($_('habits.errors.link'));
+            await popup.open({
+                title: 'Ошибка',
+                message: $_('habits.errors.link'),
+                buttons: [{ id: 'close', type: 'close' }]
+            });
         }
     }
 </script>

@@ -49,7 +49,7 @@
 
   .dialog {
     width: 100%;
-    background: #F9F8F3;
+    background: var(--tg-theme-bg-color);
     border-radius: 24px 24px 0 0;
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
   }
