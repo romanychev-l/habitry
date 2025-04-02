@@ -75,7 +75,7 @@ async def cmd_stats(msg: Message):
             f"👥 Всего пользователей: {total_users}\n"
             f"📝 Всего привычек: {total_habits}\n"
             f"🔗 Всего связей между привычками: {total_links}\n"
-            f"✅ Выполнено привычек сегодня: {completed_today}\n"
+            f"👍 Выполнено привычек сегодня: {completed_today}\n"
             f"✅ Выполнено привычек вчера: {completed_yesterday}\n"
             f"🏆 Общее количество выполнений: {total_completions}\n"
         )
@@ -84,6 +84,49 @@ async def cmd_stats(msg: Message):
         
     except Exception as e:
         logging.error(f"Error in stats command: {e}")
+        await msg.answer(f"Ошибка при получении статистики: {str(e)}")
+
+    
+@other_router.message(Command("today_list_users"))
+async def cmd_today_list_users(msg: Message):
+    if msg.from_user.id != 248603604:  # Ваш ID
+        logging.info(f"Unauthorized stats access attempt from user {msg.from_user.id}")
+        return
+        
+    try:
+        # Получаем текущую дату
+        now = datetime.utcnow()
+        today = now.date()
+        
+        # Получаем все документы за сегодня
+        today_docs = list(db['history'].find({"date": today.isoformat()}))
+        
+        if not today_docs:
+            await msg.answer("Сегодня пока никто не выполнил привычки")
+            return
+            
+        # Создаем словарь для хранения статистики по пользователям
+        user_stats = {}
+        
+        # Обрабатываем каждый документ
+        for doc in today_docs:
+            user = db['users'].find_one({"telegram_id": doc.get('telegram_id')})
+            if user:
+                username = user.get('username', 'unknown')
+                user_stats[username] = len(doc.get('habits', []))
+        
+        # Формируем сообщение
+        message = "📊 Статистика выполнения привычек сегодня:\n\n"
+        
+        for username, count in sorted(user_stats.items(), key=lambda x: x[1], reverse=True):
+            profile_link = f"t.me/habitry_bot/app?startapp=profile_{username}"
+            message += f"@{username}: {count} привычек\n"
+            message += f"Профиль: {profile_link}\n\n"
+            
+        await msg.answer(message)
+        
+    except Exception as e:
+        logging.error(f"Error in today_list_users command: {e}")
         await msg.answer(f"Ошибка при получении статистики: {str(e)}")
 
 
