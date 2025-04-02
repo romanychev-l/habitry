@@ -267,7 +267,7 @@
           sharedByTelegramId = sharedByUserId;
           showHabitLinkModal = true;
         } else if (startParam.startsWith('profile_')) {
-          const [prefix, username] = startParam.split('_', 1);
+          const username = startParam.slice(8);
           console.log('Показываем профиль пользователя:', username);
           
           profileUsername = username;
