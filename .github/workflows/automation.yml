@@ -132,6 +132,7 @@ jobs:
           MONGO_HOST: ${{ secrets.MONGO_HOST }}
           MONGO_PORT: ${{ secrets.MONGO_PORT }}
           MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
+          BOT_USERNAME: ${{ secrets.BOT_USERNAME }}
           BACKEND_PORT: ${{ secrets.BACKEND_PORT }}
           TON_WALLET_ADDRESS: ${{ secrets.TON_WALLET_ADDRESS }}
           TON_CENTER_API_KEY: ${{ secrets.TON_CENTER_API_KEY }}
@@ -142,7 +143,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          envs: GITHUB_TOKEN,BOT_TOKEN,MONGO_HOST,MONGO_PORT,MONGO_DB_NAME,BACKEND_PORT,TON_WALLET_ADDRESS,TON_CENTER_API_KEY,WALLET_SEED_PHRASE,USDT_MASTER_ADDRESS
+          envs: GITHUB_TOKEN,BOT_TOKEN,MONGO_HOST,MONGO_PORT,MONGO_DB_NAME,BOT_USERNAME,BACKEND_PORT,TON_WALLET_ADDRESS,TON_CENTER_API_KEY,WALLET_SEED_PHRASE,USDT_MASTER_ADDRESS
           script: |
             cd prod/habitry
             git pull
@@ -153,6 +154,7 @@ jobs:
             MONGO_HOST=${MONGO_HOST}
             MONGO_PORT=${MONGO_PORT}
             MONGO_DB_NAME=${MONGO_DB_NAME}
+            BOT_USERNAME=${BOT_USERNAME}
             BACKEND_PORT=${BACKEND_PORT}
             TON_WALLET_ADDRESS=${TON_WALLET_ADDRESS}
             TON_CENTER_API_KEY=${TON_CENTER_API_KEY}
