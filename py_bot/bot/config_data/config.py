@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     MONGO_HOST: str
     MONGO_PORT: int
     MONGO_DB_NAME: str
+    BOT_USERNAME: str
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

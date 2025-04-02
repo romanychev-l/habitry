@@ -5,12 +5,10 @@ from aiogram.types import Message, ReplyKeyboardRemove, ReplyKeyboardMarkup, Key
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram_dialog import DialogManager, StartMode
+from aiogram_dialog import DialogManager
 from fluentogram import TranslatorRunner
-from zoneinfo import ZoneInfo
 
-from bot.config_data.config import db
-from bot.states.start import StartSG
+from bot.config_data.config import db, config_settings
 
 other_router = Router()
 
@@ -119,7 +117,7 @@ async def cmd_today_list_users(msg: Message):
         message = "📊 Статистика выполнения привычек сегодня:\n\n"
         
         for username, count in sorted(user_stats.items(), key=lambda x: x[1], reverse=True):
-            profile_link = f"t.me/habitry_bot/app?startapp=profile_{username}"
+            profile_link = f"t.me/{config_settings.BOT_USERNAME}/app?startapp=profile_{username}"
             message += f"@{username}: {count} привычек\n"
             message += f"Профиль: {profile_link}\n\n"
             
