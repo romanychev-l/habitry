@@ -10,6 +10,7 @@
   
   const dispatch = createEventDispatcher();
   export let habit: Habit | null = null;
+  export let show = false;
   let title = habit?.title || '';
   let selectedDays = new Set(habit?.days || []);
   let isOneTime = habit?.is_one_time || false;
@@ -24,6 +25,15 @@
   let showWantToBecomeTooltip = false;
   let showStakeTooltip = false;
   let showDaysTooltip = false;
+
+  // Предотвращаем скролл на основной странице
+  function disableBodyScroll() {
+    document.body.style.overflow = 'hidden';
+  }
+  
+  function enableBodyScroll() {
+    document.body.style.overflow = '';
+  }
 
   function updateModalHeight() {
     const vh = window.visualViewport?.height || window.innerHeight;
@@ -49,7 +59,15 @@
     window.visualViewport?.removeEventListener('resize', updateModalHeight);
     window.visualViewport?.removeEventListener('scroll', updateModalHeight);
     window.removeEventListener('resize', updateModalHeight);
+    enableBodyScroll();
   });
+
+  // Добавляем обработчик для управления скроллом при изменении видимости модального окна
+  $: if (show) {
+    disableBodyScroll();
+  } else {
+    enableBodyScroll();
+  }
 
   function toggleDay(index: number) {
     if (selectedDays.has(index)) {

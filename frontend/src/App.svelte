@@ -555,6 +555,7 @@
 
   {#if showModal}
     <NewHabitModal 
+      show={showModal}
       on:save={handleNewHabit}
       on:close={() => showModal = false}
     />
@@ -562,6 +563,7 @@
 
   {#if showHabitLinkModal}
     <HabitLinkModal
+      show={showHabitLinkModal}
       habits={habitsList}
       {sharedHabitId}
       {sharedByTelegramId}
@@ -589,6 +591,7 @@
 
   {#if showBuyTokens}
     <BuyTokensModal 
+      show={showBuyTokens}
       telegramId={$user?.id || 0}
       on:close={() => showBuyTokens = false}
       on:buy={event => {

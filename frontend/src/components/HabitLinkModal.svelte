@@ -1,12 +1,15 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import type { Habit } from '../types';
+  import { popup } from '@telegram-apps/sdk-svelte';
+
   const dispatch = createEventDispatcher();
   
   export let habits: Habit[] = [];
   export let sharedHabitId: string;
   export let sharedByTelegramId: string;
+  export let show = false;
 
   function handleHabitSelect(habit_id: string) {
     dispatch('select', {
@@ -18,6 +21,32 @@
 
   function handleClose() {
     dispatch('close');
+  }
+
+  // Предотвращаем скролл на основной странице
+  function disableBodyScroll() {
+    document.body.style.overflow = 'hidden';
+  }
+  
+  function enableBodyScroll() {
+    document.body.style.overflow = '';
+  }
+
+  onMount(() => {
+    if (show) {
+      disableBodyScroll();
+    }
+  });
+
+  onDestroy(() => {
+    enableBodyScroll();
+  });
+
+  // Добавляем обработчик для управления скроллом при изменении видимости модального окна
+  $: if (show) {
+    disableBodyScroll();
+  } else {
+    enableBodyScroll();
   }
 </script>
 

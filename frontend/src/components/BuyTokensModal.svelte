@@ -8,9 +8,19 @@
   import { TonClient, JettonMaster } from '@ton/ton';
   import { popup } from '@telegram-apps/sdk-svelte';
 
+  // Предотвращаем скролл на основной странице
+  function disableBodyScroll() {
+    document.body.style.overflow = 'hidden';
+  }
+  
+  function enableBodyScroll() {
+    document.body.style.overflow = '';
+  }
+
   // Используем уже объявленные глобальные типы без declare global
   
   export let telegramId: number;
+  export let show = false;
   
   const dispatch = createEventDispatcher();
   let tokensAmount = 100;
@@ -61,7 +71,15 @@
       unsubscribe();
       unsubscribe = null;
     }
+    enableBodyScroll();
   });
+
+  // Добавляем обработчик для управления скроллом при изменении видимости модального окна
+  $: if (show) {
+    disableBodyScroll();
+  } else {
+    enableBodyScroll();
+  }
 
   // Функция для загрузки баланса пользователя
   async function loadUserBalance() {
