@@ -143,12 +143,11 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          envs: GITHUB_TOKEN,BOT_TOKEN,MONGO_HOST,MONGO_PORT,MONGO_DB_NAME,BOT_USERNAME,BACKEND_PORT,TON_WALLET_ADDRESS,TON_CENTER_API_KEY,WALLET_SEED_PHRASE,USDT_MASTER_ADDRESS
           script: |
             cd prod/habitry
             git pull
             
-            # Создаем только один .env файл для docker-compose
+            # Создаем .env файл из переменных окружения
             cat > .env << EOL
             BOT_TOKEN=${BOT_TOKEN}
             MONGO_HOST=${MONGO_HOST}
