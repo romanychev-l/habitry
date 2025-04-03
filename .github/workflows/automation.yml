@@ -9,6 +9,7 @@ on:
       - 'backend/**'
       - 'frontend/**'
       - '.github/workflows/**'
+      - 'compose.yml'
 
 jobs:
   build-and-deploy-backend:
