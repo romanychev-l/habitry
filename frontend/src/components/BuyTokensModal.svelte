@@ -7,6 +7,12 @@
   import { beginCell, Address, toNano } from '@ton/core'
   import { TonClient, JettonMaster } from '@ton/ton';
   import { popup } from '@telegram-apps/sdk-svelte';
+  import InstructionsModal from './InstructionsModal.svelte';
+
+  // Константы с ссылками на инструкции
+  const TON_SPACE_GUIDE = 'https://walletru.helpscoutdocs.com/article/84-chto-takoe-ton-space';
+  const P2P_GUIDE = 'https://walletru.helpscoutdocs.com/article/74-znakomstvo-s-r2r-marketom';
+  const USDT_GUIDE = 'https://walletru.helpscoutdocs.com/article/60-znakomstvo-s-wallet';
 
   // Предотвращаем скролл на основной странице
   function disableBodyScroll() {
@@ -45,6 +51,8 @@
   // Добавляем переменную для хранения баланса пользователя
   let userBalance = 0;
   let isLoadingBalance = false;
+
+  let showInstructions = false;
 
   onMount(async () => {
     // Подписываемся на изменения состояния кошелька
@@ -725,6 +733,11 @@
       console.error('Ошибка при проверке статуса транзакции:', error);
     }
   }
+
+  // Заменяем функцию openInstructions на:
+  function openInstructions() {
+    showInstructions = true;
+  }
 </script>
 
 <div class="wrapper">
@@ -792,6 +805,10 @@
                 {calculateUsdt(tokensAmount)} USDT
               </span>
             </div>
+
+            <button class="instructions-btn" on:click={openInstructions}>
+              {$_('payment.how_to_buy')}
+            </button>
           </div>
 
           {#if transactionError}
@@ -884,6 +901,11 @@
     </div>
   </div>
 </div>
+
+<InstructionsModal 
+  show={showInstructions} 
+  on:close={() => showInstructions = false} 
+/>
 
 <style>
   .wrapper {
@@ -1192,5 +1214,34 @@
 
   :global([data-theme="dark"]) .max-btn {
     color: #ffffff;
+  }
+
+  .instructions-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 16px;
+    border: 2px solid var(--tg-theme-button-color);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--tg-theme-button-color);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .instructions-btn:hover {
+    background: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+  }
+
+  :global([data-theme="dark"]) .instructions-btn {
+    color: #ffffff;
+    border-color: #ffffff;
+  }
+
+  :global([data-theme="dark"]) .instructions-btn:hover {
+    background: #ffffff;
+    color: var(--tg-theme-bg-color);
   }
 </style>

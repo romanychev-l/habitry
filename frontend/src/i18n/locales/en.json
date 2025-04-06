@@ -216,7 +216,19 @@
     "invalid_usdt_master_address": "Invalid USDT master contract address. Please check the configuration.",
     "invalid_app_wallet_address": "Invalid application wallet address. Please check the configuration.",
     "wallet_app_error": "Error in wallet application. Please try using a different wallet or update the application.",
-    "transaction_send_error": "Error occurred while sending the transaction"
+    "transaction_send_error": "Error occurred while sending the transaction",
+    "how_to_buy": "How to buy cryptocurrency?",
+    "instructions_title": "Instructions",
+    "instructions_message": "Want to learn how to buy cryptocurrency?",
+    "start_guide": "Start",
+    "ton_space_guide": "Step 1: Create Wallet",
+    "ton_space_description": "First, you need to create a crypto wallet in TON Space. It's free and takes just a few minutes.",
+    "p2p_guide": "Step 2: Buy TON",
+    "p2p_description": "Now you can buy TON cryptocurrency on the P2P market in the Wallet bot.",
+    "usdt_guide": "Step 3: Get USDT",
+    "usdt_description": "Final step - exchange TON for USDT in your TON Space wallet.",
+    "open_guide": "Open Guide",
+    "next_step": "Next Step"
   },
   "onboarding": {
     "welcome": {
