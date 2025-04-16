@@ -12,7 +12,7 @@ on:
       - 'compose.yml'
 
 jobs:
-  build-and-deploy-backend:
+  build-backend:
     runs-on: ubuntu-latest
     
     permissions:
@@ -37,6 +37,81 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}/backend:latest
 
+  build-bot:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push bot Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./py_bot
+          push: true
+          tags: ghcr.io/${{ github.repository }}/bot:latest
+
+  deploy:
+    needs: [build-bot, build-backend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          MONGO_HOST: ${{ secrets.MONGO_HOST }}
+          MONGO_PORT: ${{ secrets.MONGO_PORT }}
+          MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
+          BOT_USERNAME: ${{ secrets.BOT_USERNAME }}
+          BACKEND_PORT: ${{ secrets.BACKEND_PORT }}
+          TON_WALLET_ADDRESS: ${{ secrets.TON_WALLET_ADDRESS }}
+          TON_CENTER_API_KEY: ${{ secrets.TON_CENTER_API_KEY }}
+          WALLET_SEED_PHRASE: ${{ secrets.WALLET_SEED_PHRASE }}
+          USDT_MASTER_ADDRESS: ${{ secrets.USDT_MASTER_ADDRESS }}
+          GIN_MODE: release
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          envs: GITHUB_TOKEN,BOT_TOKEN,MONGO_HOST,MONGO_PORT,MONGO_DB_NAME,BOT_USERNAME,BACKEND_PORT,TON_WALLET_ADDRESS,TON_CENTER_API_KEY,WALLET_SEED_PHRASE,USDT_MASTER_ADDRESS,GIN_MODE
+          script: |
+            cd prod/habitry
+            git pull
+            
+            cat > .env << EOL
+            BOT_TOKEN=${BOT_TOKEN}
+            MONGO_HOST=${MONGO_HOST}
+            MONGO_PORT=${MONGO_PORT}
+            MONGO_DB_NAME=${MONGO_DB_NAME}
+            BOT_USERNAME=${BOT_USERNAME}
+            BACKEND_PORT=${BACKEND_PORT}
+            TON_WALLET_ADDRESS=${TON_WALLET_ADDRESS}
+            TON_CENTER_API_KEY=${TON_CENTER_API_KEY}
+            WALLET_SEED_PHRASE=${WALLET_SEED_PHRASE}
+            USDT_MASTER_ADDRESS=${USDT_MASTER_ADDRESS}
+            GIN_MODE=${GIN_MODE}
+            EOL
+            
+            rm -f ~/.docker/config.json
+            docker logout ghcr.io || true
+            echo $GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose pull
+            docker compose down
+            docker compose up -d
+  
   build-and-deploy-frontend:
     needs: [deploy]
     runs-on: ubuntu-latest
@@ -82,90 +157,10 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            # Сначала создаем директорию
             mkdir -p /var/www/html/habitry
-            
-            # Затем удаляем старые файлы (но не саму директорию)
             rm -rf /var/www/html/habitry/*
-            
-            # Копируем новые файлы
             cp -r /tmp/frontend-new/* /var/www/html/habitry/
-            
-            # Устанавливаем корректные права
             chown -R www-data:www-data /var/www/html/habitry
             chmod -R 755 /var/www/html/habitry
             find /var/www/html/habitry -type f -exec chmod 644 {} \;
   
-  build-and-deploy-bot:
-    runs-on: ubuntu-latest
-    
-    permissions:
-      contents: read
-      packages: write
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push bot Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./py_bot
-          push: true
-          tags: ghcr.io/${{ github.repository }}/bot:latest
-
-  deploy:
-    needs: [build-and-deploy-bot, build-and-deploy-backend]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          MONGO_HOST: ${{ secrets.MONGO_HOST }}
-          MONGO_PORT: ${{ secrets.MONGO_PORT }}
-          MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
-          BOT_USERNAME: ${{ secrets.BOT_USERNAME }}
-          BACKEND_PORT: ${{ secrets.BACKEND_PORT }}
-          TON_WALLET_ADDRESS: ${{ secrets.TON_WALLET_ADDRESS }}
-          TON_CENTER_API_KEY: ${{ secrets.TON_CENTER_API_KEY }}
-          WALLET_SEED_PHRASE: ${{ secrets.WALLET_SEED_PHRASE }}
-          USDT_MASTER_ADDRESS: ${{ secrets.USDT_MASTER_ADDRESS }}
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          envs: GITHUB_TOKEN,BOT_TOKEN,MONGO_HOST,MONGO_PORT,MONGO_DB_NAME,BOT_USERNAME,BACKEND_PORT,TON_WALLET_ADDRESS,TON_CENTER_API_KEY,WALLET_SEED_PHRASE,USDT_MASTER_ADDRESS
-          script: |
-            cd prod/habitry
-            git pull
-            
-            # Создаем только один .env файл для docker-compose
-            cat > .env << EOL
-            BOT_TOKEN=${BOT_TOKEN}
-            MONGO_HOST=${MONGO_HOST}
-            MONGO_PORT=${MONGO_PORT}
-            MONGO_DB_NAME=${MONGO_DB_NAME}
-            BOT_USERNAME=${BOT_USERNAME}
-            BACKEND_PORT=${BACKEND_PORT}
-            TON_WALLET_ADDRESS=${TON_WALLET_ADDRESS}
-            TON_CENTER_API_KEY=${TON_CENTER_API_KEY}
-            WALLET_SEED_PHRASE=${WALLET_SEED_PHRASE}
-            USDT_MASTER_ADDRESS=${USDT_MASTER_ADDRESS}
-            EOL
-            
-            rm -f ~/.docker/config.json
-            docker logout ghcr.io || true
-            echo $GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker compose pull
-            docker compose down
-            docker compose up -d

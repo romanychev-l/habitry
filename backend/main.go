@@ -17,6 +17,7 @@ import (
 	"backend/handlers/ton"
 	"backend/handlers/user"
 
+	"github.com/gin-gonic/gin"
 	tgbot "github.com/go-telegram/bot"
 	"github.com/joho/godotenv"
 	"github.com/rs/cors"
@@ -28,6 +29,15 @@ func main() {
 	// Удаляем загрузку .env файла
 	if err := godotenv.Load(".env"); err != nil {
 		log.Printf("Ошибка загрузки .env файла: %v", err)
+	}
+
+	// Устанавливаем режим Gin
+	ginMode := os.Getenv("GIN_MODE")
+	if ginMode == "release" {
+		gin.SetMode(gin.ReleaseMode)
+		log.Println("Запуск в режиме release")
+	} else {
+		log.Println("Запуск в режиме debug")
 	}
 
 	port := os.Getenv("BACKEND_PORT")
