@@ -41,9 +41,11 @@ func main() {
 	}
 
 	port := os.Getenv("BACKEND_PORT")
+	log.Println("PORT", port)
 	if port == "" {
 		port = "8080" // значение по умолчанию
 	}
+	log.Println("PORT_FINAL", port)
 
 	// Получаем все переменные окружения
 	botToken := os.Getenv("BOT_TOKEN")
@@ -108,41 +110,43 @@ func main() {
 
 	// Настройка CORS middleware
 	corsMiddleware := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"}, // Разрешаем запросы с любого источника в режиме разработки
+		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Content-Type", "Content-Length", "Accept-Encoding", "Authorization", "X-CSRF-Token", "X-Telegram-Data"},
 		AllowCredentials: true,
-		Debug:            true, // Включаем отладочный режим для CORS
+		Debug:            true,
 	})
 
 	// Настройка роутера
 	r := setupGinRouter(userHandler, habitHandler, invoiceHandler, followerHandler, tonHandler, pingHandler, botToken)
+	r.Use(func(c *gin.Context) {
+		corsMiddleware.ServeHTTP(c.Writer, c.Request, func(w http.ResponseWriter, r *http.Request) {
+			c.Next()
+		})
+	})
 
 	// Запуск сервера
-	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%s", port),
-		Handler: corsMiddleware.Handler(r),
-	}
+	serverAddr := fmt.Sprintf(":%s", port)
+	log.Printf("Запуск сервера на адресе %s", serverAddr)
 
 	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	// Запускаем сервер в отдельной горутине
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
+		if err := r.Run(serverAddr); err != nil {
+			log.Fatalf("Ошибка запуска сервера: %v", err)
 		}
 	}()
 
-	// Ожидаем сигнал для graceful shutdown
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	// Ожидаем сигнал завершения
 	<-quit
 	log.Println("Shutting down server...")
 
 	// Даем серверу 5 секунд для завершения активных соединений
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("Server forced to shutdown:", err)
-	}
 
 	log.Println("Server exiting")
 }

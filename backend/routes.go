@@ -21,7 +21,12 @@ func setupGinRouter(
 	pingHandler *ping.Handler,
 	botToken string,
 ) *gin.Engine {
-	r := gin.Default()
+	// Создаем роутер без middleware
+	r := gin.New()
+
+	// Добавляем middleware вручную
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
 
 	// Применяем middleware аутентификации
 	r.Use(middleware.AuthMiddleware(botToken))
