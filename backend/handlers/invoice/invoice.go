@@ -3,12 +3,11 @@ package invoice
 import (
 	"backend/models"
 	"context"
-	"encoding/json"
-	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
 
+	"github.com/gin-gonic/gin"
 	"github.com/go-telegram/bot"
 	tgbotapi "github.com/go-telegram/bot/models"
 )
@@ -23,24 +22,12 @@ func NewHandler(b *bot.Bot) *Handler {
 	}
 }
 
-func (h *Handler) HandleCreateInvoice(w http.ResponseWriter, r *http.Request) {
-	// Включаем CORS
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
+func (h *Handler) HandleCreateInvoice(c *gin.Context) {
 	// Получаем сумму из параметров запроса
-	amountStr := r.URL.Query().Get("amount")
+	amountStr := c.Query("amount")
 	amount, err := strconv.Atoi(amountStr)
-	log.Println(amount)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "Неверная сумма", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid amount"})
 		return
 	}
 
@@ -58,14 +45,10 @@ func (h *Handler) HandleCreateInvoice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	invoiceURL, err := h.bot.CreateInvoiceLink(context.Background(), &params)
-
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "Ошибка при создании инвойса", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create invoice"})
 		return
 	}
 
-	response := models.InvoiceResponse{URL: invoiceURL}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	c.JSON(http.StatusOK, models.InvoiceResponse{URL: invoiceURL})
 }

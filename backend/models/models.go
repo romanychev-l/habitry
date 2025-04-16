@@ -53,6 +53,7 @@ type HabitResponse struct {
 	WantToBecome  string             `json:"want_to_become"`
 	Days          []int              `json:"days"`
 	IsOneTime     bool               `json:"is_one_time"`
+	IsAuto        bool               `json:"is_auto"`
 	CreatedAt     time.Time          `json:"created_at"`
 	LastClickDate string             `json:"last_click_date"`
 	Streak        int                `json:"streak"`
@@ -69,6 +70,10 @@ type FollowerInfo struct {
 	LastClickDate string             `json:"last_click_date"`
 	Streak        int                `json:"streak"`
 	Score         int                `json:"score"`
+	Username      string             `json:"username"`
+	FirstName     string             `json:"first_name"`
+	PhotoURL      string             `json:"photo_url"`
+	IsMutual      bool               `json:"is_mutual"`
 }
 
 type HabitRequest struct {
@@ -102,4 +107,38 @@ type User struct {
 	Timezone             string             `bson:"timezone" json:"timezone"`
 	NotificationsEnabled bool               `bson:"notifications_enabled" json:"notifications_enabled"`
 	NotificationTime     string             `bson:"notification_time" json:"notification_time"`
+}
+
+type UserResponseWithHabits struct {
+	ID                   primitive.ObjectID `json:"_id,omitempty"`
+	TelegramID           int64              `json:"telegram_id"`
+	Username             string             `json:"username"`
+	FirstName            string             `json:"first_name"`
+	LanguageCode         string             `json:"language_code"`
+	PhotoURL             string             `json:"photo_url"`
+	CreatedAt            time.Time          `json:"created_at"`
+	Balance              int                `json:"balance"`
+	LastVisit            string             `json:"last_visit"`
+	Timezone             string             `json:"timezone"`
+	NotificationsEnabled bool               `json:"notifications_enabled"`
+	NotificationTime     string             `json:"notification_time"`
+	Habits               []Habit            `json:"habits"`
+}
+
+func (u *User) ToResponseWithHabits(habits []Habit) UserResponseWithHabits {
+	return UserResponseWithHabits{
+		ID:                   u.ID,
+		TelegramID:           u.TelegramID,
+		Username:             u.Username,
+		FirstName:            u.FirstName,
+		LanguageCode:         u.LanguageCode,
+		PhotoURL:             u.PhotoURL,
+		CreatedAt:            u.CreatedAt,
+		Balance:              u.Balance,
+		LastVisit:            u.LastVisit,
+		Timezone:             u.Timezone,
+		NotificationsEnabled: u.NotificationsEnabled,
+		NotificationTime:     u.NotificationTime,
+		Habits:               habits,
+	}
 }

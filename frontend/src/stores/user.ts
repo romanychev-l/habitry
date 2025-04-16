@@ -4,10 +4,10 @@ import type { User } from '../types';
 // Тип для данных пользователя, получаемых от Telegram WebApp
 interface TelegramUser {
   id: number;
-  firstName?: string;
+  first_name: string;
   username?: string;
-  languageCode?: string;
-  photoUrl?: string;
+  language_code?: string;
+  photo_url?: string;
 }
 
 // Store для данных пользователя из Telegram

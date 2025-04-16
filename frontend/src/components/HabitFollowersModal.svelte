@@ -59,36 +59,26 @@
             loading = true;
             console.log('Loading followers for habit:', habit._id, 'telegramId:', telegramId);
             
-            // Всегда делаем запрос к API для получения актуальных данных
-            const data = await api.getHabitFollowers(habit._id, telegramId);
+            // Получаем данные от API
+            const data = await api.getHabitFollowers(habit._id);
             console.log('Received followers data:', data);
             
-            // Добавляем подробное логирование для отладки
+            // Проверяем и обрабатываем данные
             if (!Array.isArray(data)) {
-                console.warn('API returned null or undefined data');
-            } else if (data.length === 0) {
-                console.warn('API returned empty array');
-            } else {
-                console.log('API returned array with length:', data.length);
-            }
-            
-            // Обновляем followers независимо от результата запроса
-            // (пустой массив - это нормальный результат после удаления)
-            if (Array.isArray(data)) {
-                followers = data;
-            } else {
                 console.warn('Setting followers to empty array because data is not an array');
                 followers = [];
+            } else {
+                followers = data;
+                console.log('Processed followers:', followers);
             }
-            console.log('Processed followers:', followers);
             
             // Отправляем событие обновления в родительский компонент
             dispatch('followersUpdated', { followers });
             
             error = ''; // Сбрасываем ошибку если запрос успешен
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error loading followers:', err);
-            error = err.message || $_('habits.errors.load_followers');
+            error = err instanceof Error ? err.message : $_('habits.errors.load_followers');
             
             // В случае ошибки, если есть initialFollowers, используем его
             if (initialFollowers && initialFollowers.length > 0) {
@@ -104,9 +94,9 @@
     async function loadActivityData() {
         console.log("Loading activity data for habit:", habit);
         try {
-            const data = await api.getHabitActivity(habit._id, telegramId);
+            const data = await api.getHabitActivity(habit._id);
             console.log("Activity data response:", data);
-            activityData = [...data];
+            activityData = Array.isArray(data) ? data : [];
         } catch (err) {
             console.error('Error loading activity data:', err);
             activityData = [];

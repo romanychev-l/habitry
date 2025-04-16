@@ -95,8 +95,7 @@
     
     try {
       isLoadingBalance = true;
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const userData = await api.getUser(telegramId, timezone);
+      const userData = await api.getUser({});
       userBalance = userData.balance || 0;
       console.log('Баланс пользователя загружен:', userBalance);
     } catch (error) {
@@ -184,8 +183,7 @@
           transaction_id: transactionId,
           will_amount: withdrawAmount,
           amount: usdtAmount,
-          wallet_address: walletAddress,
-          telegram_id: telegramId
+          wallet_address: walletAddress
         });
         
         console.log('Ответ сервера:', response);
@@ -438,7 +436,6 @@
             amount: usdtAmount,
             will_amount: tokensAmount,
             wallet_address: walletAddress,
-            telegram_id: telegramId,
             usdt_master_address: rawUsdtMasterAddress // Используем исходный строковый адрес
           });
           
@@ -524,7 +521,8 @@
 
   async function checkUsdtTransactionStatus(transactionId: string) {
     try {
-      const data = await api.checkUsdtTransaction(transactionId, telegramId);
+      console.log('Проверяем статус USDT транзакции:', transactionId);
+      const data = await api.checkUsdtTransaction(transactionId);
       console.log('Статус USDT транзакции:', data);
       
       if (data.tx_status === 'completed') {
@@ -551,8 +549,14 @@
         // Удаляем ID транзакции из localStorage
         localStorage.removeItem('last_usdt_tx');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Ошибка при проверке статуса USDT транзакции:', error);
+      
+      // Если транзакция не найдена, очищаем localStorage
+      if (error.response?.data?.error === 'transaction not found') {
+        localStorage.removeItem('last_usdt_tx');
+        console.log('Транзакция не найдена, очищаем localStorage');
+      }
     }
   }
 

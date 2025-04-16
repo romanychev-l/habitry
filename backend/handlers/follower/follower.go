@@ -3,12 +3,12 @@ package follower
 import (
 	"backend/models"
 	"context"
-	"encoding/json"
-	"log"
 	"net/http"
-	"strconv"
 	"time"
 
+	"backend/middleware"
+
+	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -26,219 +26,34 @@ func NewHandler(habitsCollection, usersCollection *mongo.Collection) *Handler {
 	}
 }
 
-// HandleGetFollowers возвращает список подписчиков для привычки
-func (h *Handler) HandleGetFollowers(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	if r.Method != "GET" {
-		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
-		return
-	}
-
-	habitID := r.URL.Query().Get("habit_id")
+func (h *Handler) HandleHabitProgress(c *gin.Context) {
+	habitID := c.Query("habit_id")
 	if habitID == "" {
-		http.Error(w, "habit_id обязателен", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "habit_id is required"})
 		return
 	}
 
-	// Получаем привычку
-	habitObjectID, err := primitive.ObjectIDFromHex(habitID)
+	// Получаем timezone из контекста
+	timezone, exists := middleware.CtxTimezone(c.Request.Context())
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Timezone not provided in context"})
+		return
+	}
+
+	// Получаем текущее время в часовом поясе пользователя
+	loc, err := time.LoadLocation(timezone)
 	if err != nil {
-		http.Error(w, "Неверный формат habit_id", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid timezone"})
 		return
 	}
 
-	var habit models.Habit
-	err = h.habitsCollection.FindOne(context.Background(), bson.M{"_id": habitObjectID}).Decode(&habit)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			http.Error(w, "Привычка не найдена", http.StatusNotFound)
-			return
-		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Получаем информацию о подписчиках
-	var followers []models.FollowerInfo
-	if len(habit.Followers) > 0 {
-		// Преобразуем строковые ID в ObjectID
-		var followerObjectIDs []primitive.ObjectID
-		for _, followerID := range habit.Followers {
-			objectID, err := primitive.ObjectIDFromHex(followerID)
-			if err != nil {
-				log.Printf("Ошибка при преобразовании ID подписчика: %v", err)
-				continue
-			}
-			followerObjectIDs = append(followerObjectIDs, objectID)
-		}
-
-		// Получаем привычки подписчиков
-		cursor, err := h.habitsCollection.Find(context.Background(), bson.M{
-			"_id": bson.M{"$in": followerObjectIDs},
-		})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		defer cursor.Close(context.Background())
-
-		// Собираем информацию о подписчиках
-		for cursor.Next(context.Background()) {
-			var followerHabit models.Habit
-			if err := cursor.Decode(&followerHabit); err != nil {
-				log.Printf("Ошибка при декодировании привычки подписчика: %v", err)
-				continue
-			}
-
-			// Получаем информацию о пользователе
-			var user models.User
-			err := h.usersCollection.FindOne(
-				context.Background(),
-				bson.M{"telegram_id": followerHabit.TelegramID},
-			).Decode(&user)
-
-			if err == nil {
-				followers = append(followers, models.FollowerInfo{
-					ID:            followerHabit.ID,
-					TelegramID:    followerHabit.TelegramID,
-					Title:         followerHabit.Title,
-					LastClickDate: followerHabit.LastClickDate,
-					Streak:        followerHabit.Streak,
-					Score:         followerHabit.Score,
-				})
-			}
-		}
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(followers)
-}
-
-// HandleGetFollowing возвращает список привычек, на которые подписан пользователь
-func (h *Handler) HandleGetFollowing(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	if r.Method != "GET" {
-		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
-		return
-	}
-
-	telegramIDStr := r.URL.Query().Get("telegram_id")
-	if telegramIDStr == "" {
-		http.Error(w, "telegram_id обязателен", http.StatusBadRequest)
-		return
-	}
-
-	telegramID, err := strconv.ParseInt(telegramIDStr, 10, 64)
-	if err != nil {
-		http.Error(w, "Неверный формат telegram_id", http.StatusBadRequest)
-		return
-	}
-
-	// Получаем все привычки пользователя
-	cursor, err := h.habitsCollection.Find(context.Background(), bson.M{
-		"telegram_id": telegramID,
-	})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer cursor.Close(context.Background())
-
-	var userHabits []models.Habit
-	if err = cursor.All(context.Background(), &userHabits); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Собираем все ID привычек, на которые подписан пользователь
-	var followingHabits []models.HabitResponse
-	for _, habit := range userHabits {
-		if len(habit.Followers) > 0 {
-			// Получаем информацию о привычках, на которые подписан пользователь
-			for _, followerID := range habit.Followers {
-				followerObjectID, err := primitive.ObjectIDFromHex(followerID)
-				if err != nil {
-					continue
-				}
-
-				var followedHabit models.Habit
-				err = h.habitsCollection.FindOne(
-					context.Background(),
-					bson.M{"_id": followerObjectID},
-				).Decode(&followedHabit)
-
-				if err == nil {
-					// Получаем информацию о создателе привычки
-					var creator models.User
-					err = h.usersCollection.FindOne(
-						context.Background(),
-						bson.M{"telegram_id": followedHabit.TelegramID},
-					).Decode(&creator)
-
-					if err == nil {
-						habitResponse := models.HabitResponse{
-							ID:            followedHabit.ID,
-							TelegramID:    followedHabit.TelegramID,
-							Title:         followedHabit.Title,
-							WantToBecome:  followedHabit.WantToBecome,
-							Days:          followedHabit.Days,
-							IsOneTime:     followedHabit.IsOneTime,
-							CreatedAt:     followedHabit.CreatedAt,
-							LastClickDate: followedHabit.LastClickDate,
-							Streak:        followedHabit.Streak,
-							Score:         followedHabit.Score,
-							Followers:     []models.FollowerInfo{}, // Можно добавить при необходимости
-						}
-						followingHabits = append(followingHabits, habitResponse)
-					}
-				}
-			}
-		}
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(followingHabits)
-}
-
-func (h *Handler) HandleHabitProgress(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
-	habitID := r.URL.Query().Get("habit_id")
-	log.Printf("habitID: %s", habitID)
-
-	if habitID == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "habit_id and telegram_id are required"})
-		return
-	}
-
-	// Получаем текущую дату
-	today := time.Now().Format("2006-01-02")
+	// Получаем текущую дату с учетом таймзоны
+	today := time.Now().In(loc).Format("2006-01-02")
 
 	// Преобразуем habitID в ObjectID
 	habitObjectID, err := primitive.ObjectIDFromHex(habitID)
 	if err != nil {
-		log.Printf("Error converting habit_id to ObjectID: %v", err)
-		w.WriteHeader(http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid habit_id format"})
 		return
 	}
 
@@ -247,32 +62,25 @@ func (h *Handler) HandleHabitProgress(w http.ResponseWriter, r *http.Request) {
 	err = h.habitsCollection.FindOne(context.Background(), bson.M{
 		"_id": habitObjectID,
 	}).Decode(&habit)
-	log.Printf("Found habit: %+v", habit)
 
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			c.JSON(http.StatusOK, gin.H{
 				"total_followers": 0,
 				"completed_today": 0,
 				"progress":        0,
 			})
 			return
 		}
-		log.Printf("Error finding habit: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
 	// Проверяем, выполнил ли владелец привычку
-	ownerCompleted := false
 	completedToday := 0
 	if habit.LastClickDate == today {
-		ownerCompleted = true
 		completedToday++
 	}
-
-	log.Printf("Owner completed: %v", ownerCompleted)
 
 	// Подсчитываем количество подписчиков, выполнивших привычку сегодня
 	totalFollowers := len(habit.Followers) + 1 // +1 для владельца
@@ -282,7 +90,6 @@ func (h *Handler) HandleHabitProgress(w http.ResponseWriter, r *http.Request) {
 		for _, followerID := range habit.Followers {
 			objectID, err := primitive.ObjectIDFromHex(followerID)
 			if err != nil {
-				log.Printf("Error converting follower ID: %v", err)
 				continue
 			}
 			followerObjectIDs = append(followerObjectIDs, objectID)
@@ -293,8 +100,7 @@ func (h *Handler) HandleHabitProgress(w http.ResponseWriter, r *http.Request) {
 			"_id": bson.M{"$in": followerObjectIDs},
 		})
 		if err != nil {
-			log.Printf("Error finding follower habits: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
 		}
 		defer cursor.Close(context.Background())
@@ -303,7 +109,6 @@ func (h *Handler) HandleHabitProgress(w http.ResponseWriter, r *http.Request) {
 		for cursor.Next(context.Background()) {
 			var followerHabit models.Habit
 			if err := cursor.Decode(&followerHabit); err != nil {
-				log.Printf("Error decoding follower habit: %v", err)
 				continue
 			}
 			if followerHabit.LastClickDate == today {
@@ -317,42 +122,28 @@ func (h *Handler) HandleHabitProgress(w http.ResponseWriter, r *http.Request) {
 		progress = float64(completedToday) / float64(totalFollowers)
 	}
 
-	log.Printf("Progress: %d out of %d completed (%f%%)", completedToday, totalFollowers, progress*100)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	c.JSON(http.StatusOK, gin.H{
 		"total_followers": totalFollowers,
 		"completed_today": completedToday,
 		"progress":        progress,
 	})
 }
 
-func (h *Handler) HandleUnfollow(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
+func (h *Handler) HandleUnfollow(c *gin.Context) {
 	var request struct {
 		HabitID    string `json:"habit_id"`
 		UnfollowID int64  `json:"unfollow_id"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		log.Printf("Ошибка при декодировании запроса: %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
-
-	log.Printf("Получен запрос на отписку: %+v", request)
 
 	// Преобразуем ID привычки в ObjectID
 	habitObjectID, err := primitive.ObjectIDFromHex(request.HabitID)
 	if err != nil {
-		log.Printf("Ошибка при преобразовании ID привычки: %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid habit_id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid habit_id"})
 		return
 	}
 
@@ -363,13 +154,10 @@ func (h *Handler) HandleUnfollow(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			log.Printf("Привычка не найдена: %v", err)
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(map[string]string{"error": "habit not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "habit not found"})
 			return
 		}
-		log.Printf("Ошибка при поиске привычки: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		c.Status(http.StatusInternalServerError)
 		return
 	}
 
@@ -379,7 +167,6 @@ func (h *Handler) HandleUnfollow(w http.ResponseWriter, r *http.Request) {
 		for _, followerID := range habit.Followers {
 			objectID, err := primitive.ObjectIDFromHex(followerID)
 			if err != nil {
-				log.Printf("Ошибка при преобразовании ID подписчика: %v", err)
 				continue
 			}
 			followerObjectIDs = append(followerObjectIDs, objectID)
@@ -390,18 +177,17 @@ func (h *Handler) HandleUnfollow(w http.ResponseWriter, r *http.Request) {
 			"_id": bson.M{"$in": followerObjectIDs},
 		})
 		if err != nil {
-			log.Printf("Ошибка при поиске привычек подписчиков: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
+			c.Status(http.StatusInternalServerError)
 			return
 		}
 		defer cursor.Close(context.Background())
 
 		// Создаем массив ID привычек, которые нужно удалить из followers
+		// (если пользователь подписался на одну и туже привычку дважды - они все удалятся)
 		var habitsToRemove []string
 		for cursor.Next(context.Background()) {
 			var followerHabit models.Habit
 			if err := cursor.Decode(&followerHabit); err != nil {
-				log.Printf("Ошибка при декодировании привычки подписчика: %v", err)
 				continue
 			}
 
@@ -428,12 +214,9 @@ func (h *Handler) HandleUnfollow(w http.ResponseWriter, r *http.Request) {
 			)
 
 			if err != nil {
-				log.Printf("Ошибка при обновлении списка подписчиков: %v", err)
-				w.WriteHeader(http.StatusInternalServerError)
+				c.Status(http.StatusInternalServerError)
 				return
 			}
-
-			log.Printf("Успешно удалили привычки %v из followers привычки %s", habitsToRemove, request.HabitID)
 		}
 	}
 
@@ -444,13 +227,9 @@ func (h *Handler) HandleUnfollow(w http.ResponseWriter, r *http.Request) {
 	}).Decode(&updatedHabit)
 
 	if err != nil {
-		log.Printf("Ошибка при получении обновленной привычки: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		c.Status(http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"habit": updatedHabit,
-	})
+	c.JSON(http.StatusOK, updatedHabit)
 }

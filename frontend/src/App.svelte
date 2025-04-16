@@ -54,7 +54,6 @@
 
     try {
       // Получаем данные пользователя через initData
-      
       const userData = initData.user();
       console.log('userData', userData);
       if (userData) {
@@ -63,10 +62,10 @@
         
         user.set({
           id: userData.id,
-          firstName: userData.first_name,
+          first_name: userData.first_name,
           username: userData.username,
-          languageCode: userData.language_code,
-          photoUrl: photoUrl
+          language_code: userData.language_code,
+          photo_url: photoUrl
         });
         console.log('Пользователь:', userData);
       } else {
@@ -148,11 +147,11 @@
   
   // Функция для проверки незавершенных TON транзакций
   async function checkPendingTonTransactions() {
-    const lastTonTx = localStorage.getItem('last_ton_tx');
-    if (lastTonTx) {
-      console.log('Найдена незавершенная TON транзакция:', lastTonTx);
-      checkTransactionStatus(lastTonTx);
-    }
+    // const lastTonTx = localStorage.getItem('last_ton_tx');
+    // if (lastTonTx) {
+    //   console.log('Найдена незавершенная TON транзакция:', lastTonTx);
+    //   checkTransactionStatus(lastTonTx);
+    // }
     
     // Добавляем проверку USDT-транзакций
     const lastUsdtTx = localStorage.getItem('last_usdt_tx');
@@ -210,10 +209,10 @@
   // Функция для проверки статуса USDT-транзакции
   async function checkUsdtTransactionStatus(transactionId: string) {
     try {
-      const data = await api.checkUsdtTransaction(transactionId, $user?.id || 0);
+      const data = await api.checkUsdtTransaction(transactionId);
       console.log('Статус USDT транзакции:', data);
       
-      if (data.tx_status === 'completed') {
+      if (data.status === 'completed') {
         // Транзакция успешно обработана
         try {
           await popup.open({
@@ -227,12 +226,12 @@
         
         // Удаляем ID транзакции из localStorage
         localStorage.removeItem('last_usdt_tx');
-      } else if (data.tx_status === 'pending') {
+      } else if (data.status === 'pending') {
         // Транзакция все еще в обработке, проверим еще раз через минуту
         setTimeout(() => {
           checkUsdtTransactionStatus(transactionId);
         }, 60000);
-      } else if (data.tx_status === 'failed') {
+      } else if (data.status === 'failed') {
         // Транзакция не удалась
         try {
           await popup.open({
@@ -328,7 +327,11 @@
       console.log('User timezone:', userTimezone);
       
       try {
-        const data = await api.getUser(telegramId, userTimezone);
+        // Отправляем все данные пользователя при каждом запросе
+        const data = await api.getUser({
+          photo_url: $user.photo_url
+        });
+        
         habits.update(currentHabits => data.habits || []);
         console.log('Setting balance from API response:', data.balance);
         balance.set(data.balance);
@@ -343,39 +346,9 @@
         if (data.last_visit !== userDate && data.balance > 0) {
           console.log('Showing invoice and updating last_visit');
           // openTelegramInvoice(data.balance);
-          
-          try {
-            console.log('Updating last_visit', telegramId, userTimezone);
-            await api.updateLastVisit({
-              telegram_id: telegramId,
-              timezone: userTimezone
-            });
-            console.log('Last visit updated successfully');
-          } catch (error) {
-            console.error('Error updating last_visit:', error);
-          }
         }
       } catch (error) {
-        console.log('error user', error);
-        console.log('error type:', typeof error);
-        console.log('error message:', error instanceof Error ? error.message : 'not an Error instance');
-        if (error instanceof Error && (error.message.includes('404') || error.message.startsWith('404:'))) {
-          console.log('create user');
-          showOnboarding = true;
-          await api.createUser({
-            telegram_id: telegramId,
-            first_name: $user.firstName,
-            username: $user.username,
-            language_code: $user.languageCode,
-            photo_url: $user.photoUrl,
-            timezone: userTimezone,  // Сохраняем часовой пояс пользователя
-            balance: 100
-          });
-          balance.set(100);
-          habits.update(currentHabits => []);
-        } else {
-          throw error;
-        }
+        console.error('Ошибка при инициаизации пользователя:', error);
       }
       
       isInitialized = true;
@@ -398,29 +371,21 @@
 
       console.log('Sending habit data:', event.detail);
       const habitData = {
-        telegram_id: telegramId,
-        habit: {
-          title: event.detail.title,
-          want_to_become: event.detail.want_to_become,
-          days: event.detail.days,
-          is_one_time: event.detail.is_one_time,
-          is_auto: event.detail.is_auto,
-          stake: event.detail.stake
-        }
+        title: event.detail.title,
+        want_to_become: event.detail.want_to_become,
+        days: event.detail.days,
+        is_one_time: event.detail.is_one_time,
+        is_auto: event.detail.is_auto,
+        stake: event.detail.stake
       };
 
       console.log('Request payload:', JSON.stringify(habitData));
 
-      const data = await api.createHabit(habitData);
-      console.log('Response:', data);
+      const newHabit = await api.createHabit(habitData);
+      console.log('Response:', newHabit);
       
-      if (data.habit) {
-        habits.update(currentHabits => [...currentHabits, data.habit]);
-        showModal = false;
-      } else {
-        console.error('No habit in response');
-        throw new Error('No habit in response');
-      }
+      habits.update(currentHabits => [...currentHabits, newHabit]);
+      showModal = false;
     } catch (error) {
       console.error('Ошибка при создании привычки:', error);
       popup.open({
@@ -498,15 +463,15 @@
           class="profile-button"
           on:click={() => showSettings = true}
         >
-          {#if $user.photoUrl}
+          {#if $user.photo_url}
             <img 
-              src={$user.photoUrl} 
+              src={$user.photo_url} 
               alt="Profile" 
               class="profile-photo"
             />
           {:else}
             <div class="profile-placeholder">
-              {$user.firstName?.[0] || $user.username?.[0] || '?'}
+              {$user.first_name?.[0] || $user.username?.[0] || '?'}
             </div>
           {/if}
         </button>

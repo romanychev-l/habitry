@@ -113,43 +113,36 @@
     async function updateHabitOnServer() {
         try {
             console.log('Отправляем запрос на обновление привычки:', {
-                telegram_id: telegramId,
-                habit: {
-                    _id: habit._id
-                }
+                _id: habit._id
             });
             
-            const data = await api.updateHabit({
-                telegram_id: telegramId,
-                habit: {
-                    _id: habit._id
-                }
+            const updatedHabit = await api.updateHabit({
+                _id: habit._id
             });
             
-            console.log('Получен ответ от сервера:', data);
+            console.log('Получен ответ от сервера:', updatedHabit);
             
-            if (data.habit) {
-                isAnimating = true;
-                // Сбрасываем флаг анимации после её завершения
-                setTimeout(() => {
-                    isAnimating = false;
-                }, 800);
-                
-                console.log('Обновляем store habits. Текущее состояние:', $habits);
-                
-                // Обновляем store habits для пересортировки
-                habits.update(currentHabits => {
-                    const updatedHabits = currentHabits.map(h => 
-                        h._id === data.habit._id ? data.habit : h
-                    );
-                    console.log('Новое состояние store:', updatedHabits);
-                    return updatedHabits;
-                });
-                
-                // После обновления store пересчитываем прогресс
-                await updateProgress();
-            }
-            return data;
+            isAnimating = true;
+            // Сбрасываем флаг анимации после её завершения
+            setTimeout(() => {
+                isAnimating = false;
+            }, 800);
+            
+            console.log('Обновляем store habits. Текущее состояние:', $habits);
+            
+            // Обновляем store habits для пересортировки
+            habits.update(currentHabits => {
+                const updatedHabits = currentHabits.map(h => 
+                    h._id === updatedHabit._id ? updatedHabit : h
+                );
+                console.log('Новое состояние store:', updatedHabits);
+                return updatedHabits;
+            });
+            
+            // После обновления store пересчитываем прогресс
+            await updateProgress();
+            
+            return updatedHabit;
         } catch (error) {
             console.error('Ошибка при обновлении привычки:', error);
             throw error;
@@ -158,36 +151,27 @@
     
     async function handleUndo() {
         try {
-            const data = await api.undoHabit({
-                telegram_id: telegramId,
-                habit: {
-                    _id: habit._id
-                }
+            const updatedHabit = await api.undoHabit({
+                _id: habit._id
             });
             
-            if (data.habit) {
-                isAnimating = true;
-                // Сбрасываем флаг анимации после её завершения
-                setTimeout(() => {
-                    isAnimating = false;
-                }, 800);
+            isAnimating = true;
+            setTimeout(() => {
+                isAnimating = false;
+            }, 800);
 
-                // Обновляем локальное состояние
-                completed = false;
+            completed = false;
 
-                console.log('handleUndo in HabitCard.svelte', data);
+            console.log('handleUndo in HabitCard.svelte', updatedHabit);
 
-                // Обновляем store habits для пересортировки
-                habits.update(currentHabits => {
-                    const updatedHabits = currentHabits.map(h => 
-                        h._id === data.habit._id ? data.habit : h
-                    );
-                    return updatedHabits;
-                });
-                
-                // После обновления store пересчитываем прогресс
-                await updateProgress();
-            }
+            habits.update(currentHabits => {
+                const updatedHabits = currentHabits.map(h => 
+                    h._id === updatedHabit._id ? updatedHabit : h
+                );
+                return updatedHabits;
+            });
+            
+            await updateProgress();
         } catch (error) {
             console.error('Error undoing habit click:', error);
             await popup.open({
@@ -241,7 +225,7 @@
         console.log('calculateProgress', completed);
         
         try {
-            const data = await api.getHabitProgress(habit._id, telegramId);
+            const data = await api.getHabitProgress(habit._id);
             console.log('Progress data:', data);
             return data.progress;
         } catch (error) {
@@ -252,39 +236,32 @@
 
     async function handleEdit(event: CustomEvent) {
         try {
-            // Создаем новый объект для отправки на сервер
             console.log('EditHabit event.detail:', event.detail);
             console.log('Original habit:', habit);
             
             const habitData = {
-                telegram_id: telegramId,
-                habit: {
-                    _id: habit._id,
-                    telegram_id: habit.telegram_id,
-                    title: event.detail.title,
-                    want_to_become: event.detail.want_to_become,
-                    days: event.detail.days,
-                    is_one_time: event.detail.is_one_time,
-                    is_auto: event.detail.is_auto,
-                    stake: event.detail.stake,
-                    created_at: habit.created_at,
-                    last_click_date: habit.last_click_date,
-                    streak: habit.streak,
-                    score: habit.score
-                    // Не включаем поле followers
-                }
+                _id: habit._id,
+                title: event.detail.title,
+                want_to_become: event.detail.want_to_become,
+                days: event.detail.days,
+                is_one_time: event.detail.is_one_time,
+                is_auto: event.detail.is_auto,
+                stake: event.detail.stake,
+                created_at: habit.created_at,
+                last_click_date: habit.last_click_date,
+                streak: habit.streak,
+                score: habit.score
             };
             
             console.log('HabitData being sent to server:', habitData);
 
-            const data = await api.editHabit(habitData);
-            console.log('Response from server:', data);
+            const updatedHabit = await api.editHabit(habitData);
+            console.log('Response from server:', updatedHabit);
             
-            if (data.habit) {
-                habits.update(currentHabits => 
-                    currentHabits.map(h => h._id === habit._id ? data.habit : h)
-                );
-            }
+            habits.update(currentHabits => 
+                currentHabits.map(h => h._id === habit._id ? updatedHabit : h)
+            );
+            
             showEditModal = false;
         } catch (error) {
             if (error instanceof Error && error.message.includes('403')) {
@@ -298,7 +275,7 @@
 
     async function loadFollowers() {
         try {
-            const data = await api.getHabitFollowers(habit._id, telegramId);
+            const data = await api.getHabitFollowers(habit._id);
             preloadedFollowers = data;
         } catch (error) {
             console.error('Error loading followers:', error);

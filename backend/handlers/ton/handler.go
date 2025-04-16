@@ -11,6 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"backend/middleware"
+
+	"github.com/gin-gonic/gin"
 	"github.com/xssnick/tonutils-go/address"
 	"github.com/xssnick/tonutils-go/liteclient"
 	"github.com/xssnick/tonutils-go/tlb"
@@ -45,7 +48,6 @@ type DepositRequest struct {
 	Currency      string  `json:"currency"`
 	WillAmount    int     `json:"will_amount"`
 	WalletAddress string  `json:"wallet_address"`
-	TelegramID    int64   `json:"telegram_id"`
 }
 
 // UsdtDepositRequest структура для запроса депозита USDT
@@ -55,7 +57,6 @@ type UsdtDepositRequest struct {
 	Currency          string  `json:"currency"`
 	WillAmount        int     `json:"will_amount"`
 	WalletAddress     string  `json:"wallet_address"`
-	TelegramID        int64   `json:"telegram_id"`
 	UsdtMasterAddress string  `json:"usdt_master_address"`
 }
 
@@ -75,72 +76,58 @@ type TonTransaction struct {
 }
 
 // HandleDeposit обрабатывает депозиты TON
-func (h *TonHandler) HandleDeposit(w http.ResponseWriter, r *http.Request) {
+func (h *TonHandler) HandleDeposit(c *gin.Context) {
+	// Получаем данные из контекста Telegram
+	initData, exists := middleware.CtxInitData(c.Request.Context())
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: no user data in context"})
+		return
+	}
+
 	var req DepositRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid request: %v", err), http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request format"})
 		return
 	}
 
-	// Валидация
-	if req.TransactionID == "" || req.Amount <= 0 || req.WillAmount <= 0 {
-		http.Error(w, "Invalid parameters", http.StatusBadRequest)
+	// Проверяем обязательные поля
+	if req.TransactionID == "" || req.Amount <= 0 || req.Currency == "" || req.WalletAddress == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing required fields"})
 		return
 	}
 
-	// Устанавливаем currency = "ton" если не указана
-	if req.Currency == "" {
-		req.Currency = "ton"
-	} else if req.Currency != "ton" {
-		http.Error(w, "Invalid currency for TON deposit", http.StatusBadRequest)
+	// Нормализуем адрес кошелька
+	normalizedAddr := normalizeAddress(req.WalletAddress)
+	if normalizedAddr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid wallet address"})
 		return
 	}
 
-	// Проверка, что транзакция с таким ID еще не существует
-	var existingTx TonTransaction
-	err := h.txCollection.FindOne(r.Context(), bson.M{"transaction_id": req.TransactionID}).Decode(&existingTx)
-	if err == nil {
-		// Транзакция уже существует
-		http.Error(w, "Transaction with this ID already exists", http.StatusConflict)
-		return
-	} else if err != mongo.ErrNoDocuments {
-		// Произошла ошибка при поиске транзакции
-		log.Printf("Error checking existing transaction: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	// Создание записи о транзакции
+	// Создаем транзакцию
 	tx := TonTransaction{
 		TransactionID: req.TransactionID,
 		Amount:        req.Amount,
 		Currency:      req.Currency,
 		WillAmount:    req.WillAmount,
-		WalletAddress: req.WalletAddress,
-		TelegramID:    req.TelegramID,
+		WalletAddress: normalizedAddr,
+		TelegramID:    initData.User.ID,
 		Status:        "pending",
 		PaymentType:   "deposit",
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 	}
 
-	// Сохранение транзакции в БД
-	_, err = h.txCollection.InsertOne(r.Context(), tx)
+	// Сохраняем транзакцию в базу данных
+	_, err := h.txCollection.InsertOne(context.Background(), tx)
 	if err != nil {
-		log.Printf("Error saving transaction: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save transaction"})
 		return
 	}
 
-	// Ответ клиенту
-	response := map[string]interface{}{
-		"success":        true,
-		"transaction_id": req.TransactionID,
-		"status":         "pending",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	c.JSON(http.StatusOK, gin.H{
+		"success":     true,
+		"transaction": tx,
+	})
 }
 
 // Добавим вспомогательную функцию для конвертации адресов
@@ -162,180 +149,255 @@ func normalizeAddress(addr string) string {
 }
 
 // HandleUsdtDeposit обрабатывает депозиты USDT (Jetton)
-func (h *TonHandler) HandleUsdtDeposit(w http.ResponseWriter, r *http.Request) {
+func (h *TonHandler) HandleUsdtDeposit(c *gin.Context) {
+	// Получаем данные из контекста Telegram
+	initData, exists := middleware.CtxInitData(c.Request.Context())
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: no user data in context"})
+		return
+	}
+
 	var req UsdtDepositRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid request: %v", err), http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request format"})
 		return
 	}
 
-	// Валидация
-	if req.TransactionID == "" || req.Amount <= 0 || req.WillAmount <= 0 || req.UsdtMasterAddress == "" {
-		http.Error(w, "Invalid parameters", http.StatusBadRequest)
+	// Проверяем обязательные поля
+	if req.TransactionID == "" || req.Amount <= 0 || req.Currency == "" || req.WalletAddress == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing required fields"})
 		return
 	}
 
-	// Устанавливаем currency = "usdt" если не указана
-	if req.Currency == "" {
-		req.Currency = "usdt"
-	} else if req.Currency != "usdt" {
-		http.Error(w, "Invalid currency for USDT deposit", http.StatusBadRequest)
+	// Нормализуем адрес кошелька
+	normalizedAddr := normalizeAddress(req.WalletAddress)
+	if normalizedAddr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid wallet address"})
 		return
 	}
 
-	// Нормализуем адреса
-	normalizedWalletAddress := normalizeAddress(req.WalletAddress)
-	normalizedMasterAddress := normalizeAddress(req.UsdtMasterAddress)
-
-	log.Printf("Обработка USDT-депозита: ID=%s, сумма=%f, адрес=%s, мастер=%s",
-		req.TransactionID, req.Amount, normalizedWalletAddress, normalizedMasterAddress)
-
-	// Проверка, что транзакция с таким ID еще не существует
-	var existingTx TonTransaction
-	err := h.txCollection.FindOne(r.Context(), bson.M{"transaction_id": req.TransactionID}).Decode(&existingTx)
-	if err == nil {
-		// Транзакция уже существует
-		http.Error(w, "Transaction with this ID already exists", http.StatusConflict)
-		return
-	} else if err != mongo.ErrNoDocuments {
-		// Произошла ошибка при поиске транзакции
-		log.Printf("Error checking existing transaction: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	// Создание записи о транзакции с нормализованными адресами
+	// Создаем транзакцию
 	tx := TonTransaction{
 		TransactionID:    req.TransactionID,
 		Amount:           req.Amount,
 		Currency:         req.Currency,
 		WillAmount:       req.WillAmount,
-		WalletAddress:    normalizedWalletAddress,
-		TelegramID:       req.TelegramID,
+		WalletAddress:    normalizedAddr,
+		TelegramID:       initData.User.ID,
 		Status:           "pending",
 		PaymentType:      "deposit",
-		JettonMasterAddr: normalizedMasterAddress,
+		JettonMasterAddr: req.UsdtMasterAddress,
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
 
-	// Сохранение транзакции в БД
-	_, err = h.txCollection.InsertOne(r.Context(), tx)
+	// Сохраняем транзакцию в базу данных
+	_, err := h.txCollection.InsertOne(context.Background(), tx)
 	if err != nil {
-		log.Printf("Error saving transaction: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save transaction"})
 		return
 	}
 
-	// Ответ клиенту
-	response := map[string]interface{}{
-		"success":        true,
-		"transaction_id": req.TransactionID,
-		"status":         "pending",
-	}
+	c.JSON(http.StatusOK, gin.H{
+		"success":     true,
+		"transaction": tx,
+	})
+}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+// CheckTransactionRequest структура для запроса проверки транзакции
+type CheckTransactionRequest struct {
+	TransactionID string `json:"transaction_id" binding:"required"`
 }
 
 // HandleCheckTransaction проверяет статус TON-транзакции
-func (h *TonHandler) HandleCheckTransaction(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		TransactionID string `json:"transaction_id"`
-		TelegramID    int64  `json:"telegram_id"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid request: %v", err), http.StatusBadRequest)
+func (h *TonHandler) HandleCheckTransaction(c *gin.Context) {
+	transactionID := c.Query("transaction_id")
+	if transactionID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "transaction_id is required"})
 		return
 	}
 
-	if req.TransactionID == "" || req.TelegramID == 0 {
-		http.Error(w, "Invalid parameters", http.StatusBadRequest)
-		return
-	}
-
-	// Получаем информацию о транзакции из БД
+	// Получаем транзакцию из базы данных
 	var tx TonTransaction
-	err := h.txCollection.FindOne(r.Context(), bson.M{
-		"transaction_id": req.TransactionID,
-		"telegram_id":    req.TelegramID,
-		"currency":       "ton",
-	}).Decode(&tx)
-
+	err := h.txCollection.FindOne(
+		context.Background(),
+		bson.M{"transaction_id": transactionID},
+	).Decode(&tx)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			http.Error(w, "Transaction not found", http.StatusNotFound)
-		} else {
-			log.Printf("Error fetching transaction: %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			c.JSON(http.StatusNotFound, gin.H{"error": "transaction not found"})
+			return
 		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
-	// Формируем ответ
-	response := map[string]interface{}{
-		"transaction_id": tx.TransactionID,
-		"amount":         tx.Amount,
-		"currency":       tx.Currency,
-		"will_amount":    tx.WillAmount,
-		"tx_status":      tx.Status,
-		"payment_type":   tx.PaymentType,
-		"created_at":     tx.CreatedAt,
-		"updated_at":     tx.UpdatedAt,
+	// Если транзакция уже завершена, возвращаем её статус
+	if tx.Status == "completed" {
+		c.JSON(http.StatusOK, gin.H{
+			"success":     true,
+			"status":      "completed",
+			"transaction": tx,
+		})
+		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	// Проверяем статус транзакции в блокчейне
+	completed, err := checkTonTransaction(context.Background(), os.Getenv("APP_WALLET_ADDRESS"), tx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check transaction"})
+		return
+	}
+
+	if completed {
+		// Обновляем статус транзакции
+		_, err = h.txCollection.UpdateOne(
+			context.Background(),
+			bson.M{"transaction_id": transactionID},
+			bson.M{
+				"$set": bson.M{
+					"status":     "completed",
+					"updated_at": time.Now(),
+				},
+			},
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update transaction status"})
+			return
+		}
+
+		// Увеличиваем баланс пользователя
+		_, err = h.usersCollection.UpdateOne(
+			context.Background(),
+			bson.M{"telegram_id": tx.TelegramID},
+			bson.M{
+				"$inc": bson.M{
+					"balance": tx.WillAmount,
+				},
+			},
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update user balance"})
+			return
+		}
+
+		tx.Status = "completed"
+		c.JSON(http.StatusOK, gin.H{
+			"success":     true,
+			"status":      "completed",
+			"transaction": tx,
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"success":     true,
+			"status":      "pending",
+			"transaction": tx,
+		})
+	}
 }
 
 // HandleCheckUsdtTransaction проверяет статус USDT-транзакции
-func (h *TonHandler) HandleCheckUsdtTransaction(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		TransactionID string `json:"transaction_id"`
-		TelegramID    int64  `json:"telegram_id"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid request: %v", err), http.StatusBadRequest)
+func (h *TonHandler) HandleCheckUsdtTransaction(c *gin.Context) {
+	// Получаем данные из контекста Telegram
+	initData, exists := middleware.CtxInitData(c.Request.Context())
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: no user data in context"})
 		return
 	}
 
-	if req.TransactionID == "" || req.TelegramID == 0 {
-		http.Error(w, "Invalid parameters", http.StatusBadRequest)
+	var req CheckTransactionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request format"})
 		return
 	}
 
-	// Получаем информацию о транзакции из БД
+	log.Printf("Проверяем транзакцию %s", req.TransactionID)
+
+	// Получаем транзакцию из базы данных
 	var tx TonTransaction
-	err := h.txCollection.FindOne(r.Context(), bson.M{
-		"transaction_id": req.TransactionID,
-		"telegram_id":    req.TelegramID,
-		"currency":       "usdt",
-	}).Decode(&tx)
-
+	err := h.txCollection.FindOne(
+		context.Background(),
+		bson.M{"transaction_id": req.TransactionID},
+	).Decode(&tx)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			http.Error(w, "Transaction not found", http.StatusNotFound)
-		} else {
-			log.Printf("Error fetching transaction: %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			c.JSON(http.StatusNotFound, gin.H{"error": "transaction not found"})
+			return
 		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
-	// Формируем ответ
-	response := map[string]interface{}{
-		"transaction_id": tx.TransactionID,
-		"amount":         tx.Amount,
-		"currency":       tx.Currency,
-		"will_amount":    tx.WillAmount,
-		"tx_status":      tx.Status,
-		"payment_type":   tx.PaymentType,
-		"created_at":     tx.CreatedAt,
-		"updated_at":     tx.UpdatedAt,
+	log.Printf("Транзакция найдена: %+v", tx)
+
+	// Проверяем, что транзакция принадлежит текущему пользователю
+	if tx.TelegramID != initData.User.ID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	// Проверяем статус транзакции
+	if tx.Status == "completed" {
+		c.JSON(http.StatusOK, gin.H{
+			"success":     true,
+			"status":      "completed",
+			"transaction": tx,
+		})
+		return
+	}
+
+	// Проверяем транзакцию в блокчейне
+	completed, err := checkTonTransaction(context.Background(), tx.WalletAddress, tx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check transaction"})
+		return
+	}
+
+	if completed {
+		// Обновляем статус транзакции
+		_, err = h.txCollection.UpdateOne(
+			context.Background(),
+			bson.M{"transaction_id": req.TransactionID},
+			bson.M{
+				"$set": bson.M{
+					"status":     "completed",
+					"updated_at": time.Now(),
+				},
+			},
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update transaction status"})
+			return
+		}
+
+		// Обновляем баланс пользователя
+		_, err = h.usersCollection.UpdateOne(
+			context.Background(),
+			bson.M{"telegram_id": initData.User.ID},
+			bson.M{
+				"$inc": bson.M{
+					"balance": tx.WillAmount,
+				},
+			},
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update user balance"})
+			return
+		}
+
+		tx.Status = "completed"
+		c.JSON(http.StatusOK, gin.H{
+			"success":     true,
+			"status":      "completed",
+			"transaction": tx,
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"success":     true,
+			"status":      "pending",
+			"transaction": tx,
+		})
+	}
 }
 
 // checkTonTransaction проверяет TON-транзакцию
@@ -1017,120 +1079,96 @@ type WithdrawRequest struct {
 	Amount        float64 `json:"amount"`
 	Currency      string  `json:"currency"`
 	WalletAddress string  `json:"wallet_address"`
-	TelegramID    int64   `json:"telegram_id"`
 }
 
 // HandleWithdraw обрабатывает запросы на вывод WILL токенов
-func (h *TonHandler) HandleWithdraw(w http.ResponseWriter, r *http.Request) {
+func (h *TonHandler) HandleWithdraw(c *gin.Context) {
+	// Получаем данные из контекста Telegram
+	initData, exists := middleware.CtxInitData(c.Request.Context())
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: no user data in context"})
+		return
+	}
+
 	var req WithdrawRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid request: %v", err), http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request format"})
 		return
 	}
 
-	// Валидация параметров запроса
-	if req.TransactionID == "" || req.WillAmount <= 0 || req.WalletAddress == "" || req.TelegramID == 0 {
-		http.Error(w, "Invalid parameters", http.StatusBadRequest)
-		return
-	}
-
-	// Устанавливаем currency = "usdt" если не указана
-	if req.Currency == "" {
-		req.Currency = "usdt"
-	} else if req.Currency != "usdt" && req.Currency != "ton" {
-		http.Error(w, "Invalid currency for withdrawal", http.StatusBadRequest)
-		return
-	}
-
-	// Проверка существования транзакции с таким ID
-	var existingTx TonTransaction
-	err := h.txCollection.FindOne(r.Context(), bson.M{"transaction_id": req.TransactionID}).Decode(&existingTx)
-	if err == nil {
-		// Транзакция уже существует
-		http.Error(w, "Transaction with this ID already exists", http.StatusConflict)
-		return
-	} else if err != mongo.ErrNoDocuments {
-		// Произошла ошибка при поиске транзакции
-		log.Printf("Error checking existing transaction: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	// Получаем информацию о пользователе
-	var user struct {
-		TelegramID int64 `bson:"telegram_id"`
-		Balance    int   `bson:"balance"`
-	}
-	err = h.usersCollection.FindOne(r.Context(), bson.M{"telegram_id": req.TelegramID}).Decode(&user)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			http.Error(w, "User not found", http.StatusNotFound)
-		} else {
-			log.Printf("Error fetching user: %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-		}
-		return
-	}
-
-	// Проверяем, достаточно ли средств у пользователя
-	if user.Balance < req.WillAmount {
-		http.Error(w, fmt.Sprintf("Insufficient funds. Current balance: %d WILL", user.Balance), http.StatusBadRequest)
+	// Проверяем обязательные поля
+	if req.TransactionID == "" || req.Amount <= 0 || req.Currency == "" || req.WalletAddress == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing required fields"})
 		return
 	}
 
 	// Нормализуем адрес кошелька
-	normalizedWalletAddress := normalizeAddress(req.WalletAddress)
-
-	// Создаем запись о транзакции вывода
-	tx := TonTransaction{
-		TransactionID:    req.TransactionID,
-		Amount:           req.Amount,
-		Currency:         req.Currency,
-		WillAmount:       -req.WillAmount, // Отрицательное значение, так как это вывод
-		WalletAddress:    normalizedWalletAddress,
-		TelegramID:       req.TelegramID,
-		Status:           "pending",
-		PaymentType:      "withdraw",
-		JettonMasterAddr: os.Getenv("USDT_MASTER_ADDRESS"), // Используем адрес из конфигурации
-		CreatedAt:        time.Now(),
-		UpdatedAt:        time.Now(),
-	}
-
-	// Сохраняем транзакцию в БД
-	_, err = h.txCollection.InsertOne(r.Context(), tx)
-	if err != nil {
-		log.Printf("Error saving withdraw transaction: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	normalizedAddr := normalizeAddress(req.WalletAddress)
+	if normalizedAddr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid wallet address"})
 		return
 	}
 
-	// Уменьшаем баланс пользователя
+	// Проверяем баланс пользователя
+	var user struct {
+		Balance int `bson:"balance"`
+	}
+	err := h.usersCollection.FindOne(
+		context.Background(),
+		bson.M{"telegram_id": initData.User.ID},
+	).Decode(&user)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	if user.Balance < req.WillAmount {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "insufficient balance"})
+		return
+	}
+
+	// Создаем транзакцию
+	tx := TonTransaction{
+		TransactionID: req.TransactionID,
+		Amount:        req.Amount,
+		Currency:      req.Currency,
+		WillAmount:    req.WillAmount,
+		WalletAddress: normalizedAddr,
+		TelegramID:    initData.User.ID,
+		Status:        "pending",
+		PaymentType:   "withdraw",
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+	}
+
+	// Сохраняем транзакцию в базу данных
+	_, err = h.txCollection.InsertOne(context.Background(), tx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save transaction"})
+		return
+	}
+
+	// Резервируем средства пользователя
 	_, err = h.usersCollection.UpdateOne(
-		r.Context(),
-		bson.M{"telegram_id": req.TelegramID},
-		bson.M{"$inc": bson.M{"balance": -req.WillAmount}}, // Уменьшаем баланс
+		context.Background(),
+		bson.M{"telegram_id": initData.User.ID},
+		bson.M{
+			"$inc": bson.M{
+				"balance": -req.WillAmount,
+			},
+		},
 	)
 	if err != nil {
-		log.Printf("Error updating user balance: %v", err)
-
-		// Откатываем изменения - удаляем транзакцию
-		_, deleteErr := h.txCollection.DeleteOne(r.Context(), bson.M{"transaction_id": req.TransactionID})
-		if deleteErr != nil {
-			log.Printf("Error rolling back transaction: %v", deleteErr)
-		}
-
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to reserve funds"})
 		return
 	}
 
-	// Формируем ответ
-	response := map[string]interface{}{
-		"success":        true,
-		"transaction_id": req.TransactionID,
-		"status":         "pending",
-		"message":        "Withdraw request accepted and will be processed within 24 hours",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	c.JSON(http.StatusOK, gin.H{
+		"success":     true,
+		"transaction": tx,
+	})
 }

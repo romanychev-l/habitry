@@ -17,25 +17,19 @@ async function request(endpoint: string, options: RequestOptions = {}) {
         });
     }
 
-    // Получаем данные инициализации через initData
-    // const userData = initData.state();
-    
-    
-    console.log('Telegram initDataRaw', initDataRaw());
-    
     // Добавляем заголовки
     const headers = new Headers(fetchOptions.headers);
-    if (initDataRaw) {
-        headers.set('X-Telegram-Data', `${initDataRaw()}`);
+    
+    // Добавляем timezone в заголовки
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    console.log('timezone', timezone);
+    headers.set('X-Timezone', timezone);
+    
+    // Используем правильный формат авторизации для Telegram Mini Apps
+    if (initDataRaw()) {
+        headers.set('Authorization', `tma ${initDataRaw()}`);
     } else {
         console.warn('No Telegram authentication data available');
-        
-        // ВРЕМЕННОЕ РЕШЕНИЕ: Передаем минимальные данные для тестирования
-        // ВНИМАНИЕ: Это решение только для разработки, убрать в production!
-        if (endpoint.includes('/api/user')) {
-            console.warn('Используем тестовые данные для аутентификации, ТОЛЬКО ДЛЯ РАЗРАБОТКИ!');
-            headers.set('X-Telegram-Test-Auth', 'true');
-        }
     }
     headers.set('Content-Type', 'application/json');
 
@@ -108,7 +102,6 @@ async function registerUsdtDeposit(data: {
   amount: number;
   will_amount: number;
   wallet_address: string;
-  telegram_id: number;
   usdt_master_address: string;
 }) {
   console.log('registerUsdtDeposit вызван с данными:', data);
@@ -156,13 +149,13 @@ async function registerUsdtDeposit(data: {
 }
 
 // Проверка статуса USDT-транзакции
-async function checkUsdtTransaction(transactionId: string, telegramId: number) {
+async function checkUsdtTransaction(transactionId: string) {
   return request('/api/ton/check-usdt-transaction', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ transaction_id: transactionId, telegram_id: telegramId }),
+    body: JSON.stringify({ transaction_id: transactionId }),
   });
 }
 
@@ -172,7 +165,6 @@ async function registerWithdrawal(data: {
   will_amount: number;
   amount: number;
   wallet_address: string;
-  telegram_id: number;
 }) {
   console.log('registerWithdrawal вызван с данными:', data);
   try {
@@ -216,26 +208,28 @@ async function registerWithdrawal(data: {
 // API методы
 export const api = {
     // Пользователь
-    getUser: (telegramId: number, timezone: string) => 
-        request('/api/user', { params: { telegram_id: telegramId.toString(), timezone } }),
-    
-    createUser: (userData: any) => 
-        request('/api/user', { method: 'POST', body: JSON.stringify(userData) }),
-    
-    updateLastVisit: (data: { telegram_id: number; timezone: string }) => {
-        console.log('updateLastVisit called with data:', data);
-        const body = JSON.stringify(data);
-        console.log('Request body:', body);
-        return request('/api/user/last-visit', { 
-            method: 'PUT', 
-            body: body
+    getUser: async (data: {
+        photo_url?: string;
+    }) => {
+        return request('/api/user', {
+            method: 'POST',
+            body: JSON.stringify(data)
         });
     },
     
-    getUserSettings: (telegramId: number) =>
-        request('/api/user/settings', { params: { telegram_id: telegramId.toString() } }),
+    updateLastVisit: async () => {
+        return request('/api/user/last_visit', {
+            method: 'PUT'
+        });
+    },
     
-    updateUserSettings: (data: any) =>
+    getUserSettings: () =>
+        request('/api/user/settings'),
+    
+    updateUserSettings: (data: {
+        notifications_enabled: boolean;
+        notification_time: string;
+    }) =>
         request('/api/user/settings', { method: 'PUT', body: JSON.stringify(data) }),
     
     getUserProfile: (username: string) =>
@@ -243,7 +237,7 @@ export const api = {
     
     // Привычки
     createHabit: (data: any) =>
-        request('/api/habit', { method: 'POST', body: JSON.stringify(data) }),
+        request('/api/habit/create', { method: 'POST', body: JSON.stringify(data) }),
     
     updateHabit: (data: any) =>
         request('/api/habit/click', { method: 'PUT', body: JSON.stringify(data) }),
@@ -251,7 +245,7 @@ export const api = {
     editHabit: (data: any) =>
         request('/api/habit/edit', { method: 'PUT', body: JSON.stringify(data) }),
     
-    deleteHabit: (data: { telegram_id: number; habit_id: string }) =>
+    deleteHabit: (data: any) =>
         request('/api/habit/delete', { method: 'DELETE', body: JSON.stringify(data) }),
     
     undoHabit: (data: any) =>
@@ -260,19 +254,14 @@ export const api = {
     joinHabit: (data: any) =>
         request('/api/habit/join', { method: 'POST', body: JSON.stringify(data) }),
     
-    getHabitFollowers: (habitId: string, telegramId: number) =>
-        request('/api/habit/followers', { 
-            params: { 
-                habit_id: habitId, 
-                telegram_id: telegramId.toString() 
-            }
-        }),
+    getHabitFollowers: (habitId: string) =>
+        request('/api/habit/followers', { params: { habit_id: habitId } }),
     
-    getHabitProgress: (habitId: string, telegramId: number) =>
-        request('/api/habit/progress', { params: { habit_id: habitId, telegram_id: telegramId.toString() } }),
+    getHabitProgress: (habitId: string) =>
+        request('/api/habit/progress', { params: { habit_id: habitId } }),
     
-    getHabitActivity: (habitId: string, telegramId: number) =>
-        request('/api/habit/activity', { params: { habit_id: habitId, telegram_id: telegramId.toString() } }),
+    getHabitActivity: (habitId: string) =>
+        request('/api/habit/activity', { params: { habit_id: habitId } }),
     
     unfollowHabit: (data: any) =>
         request('/api/habit/unfollow', { method: 'POST', body: JSON.stringify(data) }),

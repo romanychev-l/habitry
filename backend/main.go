@@ -6,20 +6,22 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
-	"backend/db"
 	"backend/handlers/follower"
 	"backend/handlers/habit"
 	"backend/handlers/invoice"
 	"backend/handlers/ping"
 	"backend/handlers/ton"
 	"backend/handlers/user"
-	"backend/middleware"
 
 	tgbot "github.com/go-telegram/bot"
 	"github.com/joho/godotenv"
 	"github.com/rs/cors"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func main() {
@@ -51,39 +53,47 @@ func main() {
 	// Формируем строку подключения к MongoDB
 	mongoURI := fmt.Sprintf("mongodb://%s:%s", mongoHost, mongoPort)
 
-	// Подключение к БД
-	client, err := db.Connect(mongoURI)
+	// Инициализация подключения к MongoDB
+	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer client.Disconnect(context.Background())
 
-	// Инициализация обработчиков
-	database := client.Database(dbName)
-	usersCollection := database.Collection("users")
-	historyCollection := database.Collection("history")
-	habitsCollection := database.Collection("habits")
-	tonTxCollection := database.Collection("ton_transactions")
-	settingsCollection := database.Collection("settings")
-	pingsCollection := database.Collection("pings")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	err = client.Connect(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Disconnect(ctx)
+
+	// Получаем коллекции
+	db := client.Database(dbName)
+	usersCollection := db.Collection("users")
+	historyCollection := db.Collection("history")
+	habitsCollection := db.Collection("habits")
+	txCollection := db.Collection("transactions")
+	settingsCollection := db.Collection("settings")
+	pingsCollection := db.Collection("pings")
 
 	b, err := tgbot.New(botToken)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Инициализация хендлеров
+	// Инициализация обработчиков
 	userHandler := user.NewHandler(usersCollection, historyCollection, habitsCollection)
 	habitHandler := habit.NewHandler(habitsCollection, historyCollection, usersCollection)
 	invoiceHandler := invoice.NewHandler(b)
 	followerHandler := follower.NewHandler(habitsCollection, usersCollection)
-	tonHandler := ton.NewHandler(usersCollection, tonTxCollection, settingsCollection)
+	tonHandler := ton.NewHandler(usersCollection, txCollection, settingsCollection)
 	pingHandler := ping.NewHandler(pingsCollection)
 
-	// Запускаем процессор транзакций в отдельной горутине
+	// Запускаем процесс транзакций в отдельной горутине
 	go runTonTransactionProcessor(tonHandler)
 
-	// Запускаем процессор вывода средств в отдельной горутине
+	// Запускаем процесс вывода средств в отдельной горутине
 	go runWithdrawalsProcessor(tonHandler)
 
 	// Настройка CORS middleware
@@ -95,43 +105,36 @@ func main() {
 		Debug:            true, // Включаем отладочный режим для CORS
 	})
 
-	// Настройка маршрутов
-	http.HandleFunc("/api/user", middleware.TelegramAuthMiddleware(userHandler.HandleUser))
-	http.HandleFunc("/api/user/settings", middleware.TelegramAuthMiddleware(userHandler.HandleSettings))
-	http.HandleFunc("/api/user/last-visit", middleware.TelegramAuthMiddleware(userHandler.HandleUpdateLastVisit))
-	http.HandleFunc("/api/user/profile", middleware.TelegramAuthMiddleware(userHandler.HandleUserProfile))
-	http.HandleFunc("/api/habit", middleware.TelegramAuthMiddleware(habitHandler.HandleCreate))
-	http.HandleFunc("/api/habit/join", middleware.TelegramAuthMiddleware(habitHandler.HandleJoin))
-	http.HandleFunc("/api/habit/click", middleware.TelegramAuthMiddleware(habitHandler.HandleUpdate))
-	http.HandleFunc("/api/habit/edit", middleware.TelegramAuthMiddleware(habitHandler.HandleEdit))
-	http.HandleFunc("/api/habit/followers", middleware.TelegramAuthMiddleware(habitHandler.HandleGetFollowers))
-	http.HandleFunc("/api/habit/following", middleware.TelegramAuthMiddleware(followerHandler.HandleGetFollowing))
-	http.HandleFunc("/api/habit/progress", middleware.TelegramAuthMiddleware(followerHandler.HandleHabitProgress))
-	http.HandleFunc("/api/habit/unfollow", middleware.TelegramAuthMiddleware(followerHandler.HandleUnfollow))
-	http.HandleFunc("/api/habit/activity", middleware.TelegramAuthMiddleware(habitHandler.HandleGetActivity))
-	http.HandleFunc("/api/habit/delete", middleware.TelegramAuthMiddleware(habitHandler.HandleDelete))
-	http.HandleFunc("/api/habit/undo", middleware.TelegramAuthMiddleware(habitHandler.HandleUndo))
-	http.HandleFunc("/api/invoice", middleware.TelegramAuthMiddleware(invoiceHandler.HandleCreateInvoice))
-
-	// Добавляем маршруты для TON платежей
-	// http.HandleFunc("/api/ton/deposit", middleware.TelegramAuthMiddleware(tonHandler.HandleDeposit))
-	// http.HandleFunc("/api/ton/transaction", middleware.TelegramAuthMiddleware(tonHandler.HandleCheckTransaction))
-
-	// Добавляем новые маршруты для USDT платежей
-	http.HandleFunc("/api/ton/usdt-deposit", middleware.TelegramAuthMiddleware(tonHandler.HandleUsdtDeposit))
-	http.HandleFunc("/api/ton/check-usdt-transaction", middleware.TelegramAuthMiddleware(tonHandler.HandleCheckUsdtTransaction))
-
-	// Добавляем маршрут для обработки запросов на вывод WILL
-	http.HandleFunc("/api/ton/withdraw", middleware.TelegramAuthMiddleware(tonHandler.HandleWithdraw))
-
-	// Добавляем маршрут для создания пингов
-	http.HandleFunc("/api/pings/create", middleware.TelegramAuthMiddleware(pingHandler.HandleCreatePing))
+	// Настройка роутера
+	r := setupGinRouter(userHandler, habitHandler, invoiceHandler, followerHandler, tonHandler, pingHandler, botToken)
 
 	// Запуск сервера
-	wrappedHandler := corsMiddleware.Handler(http.DefaultServeMux)
-	serverAddr := fmt.Sprintf(":%s", port)
-	log.Printf("Сервер запущен на порту %s", port)
-	log.Fatal(http.ListenAndServe(serverAddr, wrappedHandler))
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%s", port),
+		Handler: corsMiddleware.Handler(r),
+	}
+
+	// Graceful shutdown
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %s\n", err)
+		}
+	}()
+
+	// Ожидаем сигнал для graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	// Даем серверу 5 секунд для завершения активных соединений
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown:", err)
+	}
+
+	log.Println("Server exiting")
 }
 
 // runTonTransactionProcessor запускает периодическую обработку TON транзакций
