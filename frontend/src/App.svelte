@@ -73,15 +73,35 @@
       }
     
       // Инициализируем и привязываем параметры темы
+      console.log('Проверка доступности themeParams.mount:', themeParams.mount.isAvailable());
       if (themeParams.mount.isAvailable()) {
         try {
+          console.log('Попытка монтирования темы...');
           await themeParams.mount();
+          console.log('Тема успешно смонтирована');
+          
+          console.log('Привязка CSS переменных...');
           themeParams.bindCssVars();
-          isDarkTheme = themeParams.backgroundColor() === '#000000';
+          console.log('CSS переменные привязаны');
+          
+          const bgColor = themeParams.backgroundColor();
+          console.log('Цвет фона темы:', bgColor);
+          isDarkTheme = bgColor === '#000000';
           console.log('Тема установлена:', isDarkTheme ? 'dark' : 'light');
+          
+          // Проверяем значения CSS переменных
+          console.log('CSS переменные темы:', {
+            bgColor: getComputedStyle(document.documentElement).getPropertyValue('--tg-theme-bg-color'),
+            textColor: getComputedStyle(document.documentElement).getPropertyValue('--tg-theme-text-color'),
+            buttonColor: getComputedStyle(document.documentElement).getPropertyValue('--tg-theme-button-color'),
+            buttonTextColor: getComputedStyle(document.documentElement).getPropertyValue('--tg-theme-button-text-color'),
+            secondaryBgColor: getComputedStyle(document.documentElement).getPropertyValue('--tg-theme-secondary-bg-color')
+          });
         } catch (err) {
           console.error('Ошибка при инициализации темы:', err);
         }
+      } else {
+        console.warn('themeParams.mount недоступен');
       }
       
       console.log('Telegram WebApp успешно инициализирован');

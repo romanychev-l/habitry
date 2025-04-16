@@ -230,41 +230,22 @@ func (h *Handler) HandleUser(c *gin.Context) {
 		updatedHabit := habit
 		newStreak := habit.Streak
 		newScore := habit.Score
+		wasDoneYesterday := err != mongo.ErrNoDocuments
 
-		// Если привычка не была выполнена в предыдущий день - обнуляем streak
-		if err == mongo.ErrNoDocuments {
-			if habit.IsAuto {
+		updateFields := bson.M{}
+
+		// Обновляем стрик и скор в зависимости от типа привычки и выполнения
+		if habit.IsAuto {
+			if !wasDoneYesterday {
+				// Случай 1: Автопривычка не была выполнена вчера
 				newStreak = 1
 				newScore += 1
+			} else {
+				// Случай 2: Автопривычка была выполнена вчера
+				newStreak += 1
+				newScore += 1
 			}
-			_, err = h.habitsCollection.UpdateOne(
-				context.Background(),
-				bson.M{"_id": habit.ID},
-				bson.M{"$set": bson.M{"streak": newStreak, "score": newScore}},
-			)
-			if err != nil {
-				log.Printf("Ошибка при обнулении streak для привычки %s: %v", habit.ID.Hex(), err)
-			}
-		} else if habit.IsAuto {
-			newStreak += 1
-			newScore += 1
-			_, err = h.habitsCollection.UpdateOne(
-				context.Background(),
-				bson.M{"_id": habit.ID},
-				bson.M{
-					"$set": bson.M{
-						"last_click_date": today,
-						"streak":          newStreak,
-						"score":           newScore,
-					},
-				},
-			)
-			if err != nil {
-				log.Printf("Ошибка при обновлении автопривычки: %v", err)
-				continue
-			}
-
-			// Создаем запись в истории для автопривычки
+			// Для автопривычек всегда обновляем историю
 			history := models.History{
 				TelegramID: user.TelegramID,
 				Date:       today,
@@ -274,17 +255,35 @@ func (h *Handler) HandleUser(c *gin.Context) {
 					Done:    true,
 				}},
 			}
-
-			// Добавляем в историю
 			err = h.upsertHistory(user.TelegramID, today, history)
 			if err != nil {
 				log.Printf("Ошибка при обновлении истории для автопривычки: %v", err)
 			}
+
+			updateFields["last_click_date"] = today
+			updatedHabit.LastClickDate = today
+		} else if !wasDoneYesterday {
+			// Случай 4: Не автопривычка и не была выполнена вчера
+			newStreak = 0
 		}
+		// Случай 3: Не автопривычка и была выполнена вчера - ничего не делаем
+
+		// Обновляем привычку в базе
+
+		updateFields["streak"] = newStreak
+		updateFields["score"] = newScore
+
+		_, err = h.habitsCollection.UpdateOne(
+			context.Background(),
+			bson.M{"_id": habit.ID},
+			bson.M{"$set": updateFields},
+		)
+		if err != nil {
+			log.Printf("Ошибка при обновлении привычки %s: %v", habit.ID.Hex(), err)
+		}
+
 		updatedHabit.Streak = newStreak
 		updatedHabit.Score = newScore
-		updatedHabit.LastClickDate = today
-
 		todayHabits = append(todayHabits, updatedHabit)
 	}
 
