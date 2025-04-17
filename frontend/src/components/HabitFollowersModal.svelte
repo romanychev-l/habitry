@@ -32,6 +32,19 @@
     
     const API_URL = import.meta.env.VITE_API_URL;
     
+    // Функция для получения текущей даты с учетом часового пояса
+    function getCurrentDate() {
+        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const date = new Date();
+        const localDate = new Date(date.toLocaleString('en-US', { timeZone: userTimezone }));
+        
+        const year = localDate.getFullYear();
+        const month = String(localDate.getMonth() + 1).padStart(2, '0');
+        const day = String(localDate.getDate()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}`;
+    }
+    
     // Предотвращаем скролл на основной странице
     function disableBodyScroll() {
         document.body.style.overflow = 'hidden';
@@ -145,7 +158,7 @@
     
     function handlePingClick(follower: { username: string; telegram_id: number; first_name?: string; photo_url?: string }) {
         // Проверяем, выполнил ли пользователь привычку сегодня
-        const today = new Date().toISOString().split('T')[0]; // формат YYYY-MM-DD
+        const today = getCurrentDate();
         if (habit.last_click_date !== today) {
             // Показываем стандартный алерт с предупреждением
             popup.open({
@@ -202,7 +215,7 @@
     // Новая функция для отправки пинга всем подписчикам, которые не выполнили привычку
     function handlePingAllClick() {
         // Проверяем, выполнил ли пользователь привычку сегодня
-        const today = new Date().toISOString().split('T')[0]; // формат YYYY-MM-DD
+        const today = getCurrentDate();
         if (habit.last_click_date !== today) {
             // Показываем стандартный алерт с предупреждением
             popup.open({

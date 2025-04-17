@@ -46,6 +46,15 @@
   let calendarData: { date: string; count: number }[] = [];
   let monthLabels: { text: string; column: number }[] = [];
   
+  // Функция для форматирования даты в формат YYYY-MM-DD
+  function formatDate(date: Date, timezone: string): string {
+    const localDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }));
+    const year = localDate.getFullYear();
+    const month = String(localDate.getMonth() + 1).padStart(2, '0');
+    const day = String(localDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   $: {
     console.log("Data changed:", data);
     const today = new Date();
@@ -63,8 +72,11 @@
     let lastMonth = -1;
     monthLabels = [];
     
+    // Получаем часовой пояс пользователя
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
     while (currentDate <= today) {
-      const dateStr = currentDate.toISOString().split('T')[0];
+      const dateStr = formatDate(currentDate, userTimezone);
       const activity = data.find(d => d.date === dateStr);
       
       // Проверяем, начался ли новый месяц

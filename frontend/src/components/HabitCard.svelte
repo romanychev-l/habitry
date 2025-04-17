@@ -11,7 +11,7 @@
     import type { Habit } from '../types';
     import { onMount } from 'svelte';
     import { api } from '../utils/api';
-    import { popup, initData } from '@telegram-apps/sdk-svelte';
+    import { popup, initData, hapticFeedback } from '@telegram-apps/sdk-svelte';
     
     export let habit: Habit;
     export let telegramId: number;
@@ -56,12 +56,12 @@
             isPressed = true;
             isPressTimeout = setTimeout(async () => {
                 try {
-                    if (navigator.vibrate) {
-                        navigator.vibrate([50]);
+                    if (hapticFeedback.impactOccurred.isAvailable()) {
+                        hapticFeedback.impactOccurred('medium');
                     }
                     const data = await updateHabitOnServer();
-                    if (data.habit && navigator.vibrate) {
-                        navigator.vibrate(50);
+                    if (data.habit && hapticFeedback.impactOccurred.isAvailable()) {
+                        hapticFeedback.impactOccurred('medium');
                     }
                 } catch (error) {
                     // Ошибка уже обработана в updateHabitOnServer
@@ -91,6 +91,24 @@
     let progress = 0;
     let completed = false;
     
+    // Функция для получения текущей даты с учетом часового пояса
+    function getCurrentDate() {
+        // Для тестирования - раскомментируйте нужную строку
+        // return '2024-03-20'; // Вчера
+        // return '2024-03-21'; // Сегодня
+        // return '2024-03-22'; // Завтра
+        
+        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const date = new Date();
+        const localDate = new Date(date.toLocaleString('en-US', { timeZone: userTimezone }));
+        
+        const year = localDate.getFullYear();
+        const month = String(localDate.getMonth() + 1).padStart(2, '0');
+        const day = String(localDate.getDate()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}`;
+    }
+    
     async function updateProgress() {
         progress = await calculateProgress();
     }
@@ -101,8 +119,10 @@
     // Обновляем состояние при изменении habit
     $: {
         if (habit) {
-            const today = new Date().toISOString().split('T')[0];
+            const today = getCurrentDate();
             completed = habit.last_click_date === today;
+            console.log('today', today);
+            console.log('habit.last_click_date', habit.last_click_date);
             updateProgress();
             loadFollowers(); // Обновляем список подписчиков при изменении привычки
         }
