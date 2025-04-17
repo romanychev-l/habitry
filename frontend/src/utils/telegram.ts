@@ -1,6 +1,7 @@
 import { user } from '../stores/user';
 import { api } from './api';
 import { invoice } from '@telegram-apps/sdk-svelte';
+import { balance } from '../stores/user';
 
 export async function openTelegramInvoice(starsAmount: number) {
     try {
@@ -23,14 +24,16 @@ export async function openTelegramInvoice(starsAmount: number) {
         switch (status) {
             case 'paid':
                 console.log('Оплата прошла успешно');
-                window.location.reload();
+                const userData = await api.getUser({});
+                balance.set(userData.balance);
                 break;
             case 'failed':
                 console.log('Ошибка оплаты');
                 break;
             case 'cancelled':
                 console.log('Оплата отменена');
-                window.location.reload();
+                const cancelledUserData = await api.getUser({});
+                balance.set(cancelledUserData.balance);
                 break;
             case 'pending':
                 console.log('Оплата в процессе');

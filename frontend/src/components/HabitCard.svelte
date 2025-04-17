@@ -209,8 +209,11 @@
                 habit_id: habit._id
             });
             
-            // Перезагружаем страницу после успешного удаления
-            window.location.reload();
+            // Обновляем store вместо перезагрузки страницы
+            habits.update(currentHabits => 
+                currentHabits.filter(h => h._id !== habit._id)
+            );
+            showDeleteConfirm = false;
         } catch (error) {
             console.error('Error deleting habit:', error);
             await popup.open({
