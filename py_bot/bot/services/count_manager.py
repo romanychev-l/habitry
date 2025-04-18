@@ -25,6 +25,9 @@ class CountManager:
             check_date = (datetime.now(timezone.utc) - timedelta(hours=36)).date()
             logger.info(f"Calculating rewards for date: {check_date} (UTC)")
             
+            # Словарь для хранения информации о транзакциях каждого пользователя
+            user_transactions = {}  # {telegram_id: {'sent': [], 'received': []}}
+            
             unfulfilled_habits = get_unfulfilled_habits_with_stake(check_date)
             
             # Теперь можно работать с этими привычками дальше...
@@ -32,7 +35,7 @@ class CountManager:
             enriched_habits = []
             for habit in unfulfilled_habits:
                 followers_data = []
-                logger.info(f"habit: {habit}")
+                habit_name = habit.get('name', 'Без названия')
                 for follower_id in habit['followers']:
                     follower_habit = db.habits.find_one({"_id": ObjectId(follower_id)})
                     logger.info(f"follower_habit: {follower_habit}")
@@ -41,7 +44,12 @@ class CountManager:
                     if (follower_habit and 
                         str(habit['_id']) in follower_habit['followers'] and 
                         is_habit_completed(check_date, follower_habit['telegram_id'], follower_habit['_id'])):
-                        followers_data.append([follower_habit['_id'], follower_habit['telegram_id'], follower_habit['stake']])
+                        followers_data.append([
+                            follower_habit['_id'],
+                            follower_habit['telegram_id'],
+                            follower_habit['stake'],
+                            follower_habit.get('name', 'Без названия')
+                        ])
 
                 enriched_habit = habit
                 enriched_habit['followers'] = followers_data
@@ -51,7 +59,7 @@ class CountManager:
 
             winnings = {}
             for habit in enriched_habits:
-                sum_stakes_of_followers = sum(stake for _, _, stake in habit['followers'])
+                sum_stakes_of_followers = sum(stake for _, _, stake, _ in habit['followers'])
                 user_balance = db.users.find_one({"telegram_id": habit['telegram_id']})['balance']
                 stake_of_owner = min(habit['stake'], user_balance)
                 logger.info(f"stake_of_owner: {stake_of_owner}")
@@ -62,11 +70,21 @@ class CountManager:
                 if stake_of_owner <= 0:
                     continue
 
-                # Обновляем баланс владельца
-                db.users.update_one({"telegram_id": habit['telegram_id']}, 
-                                    {"$inc": {"balance": -stake_of_owner}})
+                # Инициализируем запись для владельца привычки
+                if habit['telegram_id'] not in user_transactions:
+                    user_transactions[habit['telegram_id']] = {'sent': [], 'received': []}
 
-                # Если нет последователей с ненулевой ставкой, добавляем ставку в settings.balance
+                # Записываем информацию о списании у владельца
+                user_transactions[habit['telegram_id']]['sent'].append({
+                    'amount': stake_of_owner,
+                    'habit_name': habit.get('name', 'Без названия')
+                })
+
+                db.users.update_one(
+                    {"telegram_id": habit['telegram_id']}, 
+                    {"$inc": {"balance": -stake_of_owner}}
+                )
+
                 if sum_stakes_of_followers <= 0:
                     db.settings.update_one(
                         {"_id": "system_settings"},
@@ -77,12 +95,24 @@ class CountManager:
 
                 total_distributed = 0
                 for follower in habit['followers']:
-                    follower_id, follower_telegram_id, follower_stake = follower  # распаковываем список
-                    # Пропускаем последователей с нулевой ставкой
+                    follower_id, follower_telegram_id, follower_stake, follower_habit_name = follower
                     if follower_stake <= 0:
                         continue
-                    win_amount = int((stake_of_owner / sum_stakes_of_followers) * follower_stake)  # Округляем вниз
+                    
+                    win_amount = int((stake_of_owner / sum_stakes_of_followers) * follower_stake)
                     total_distributed += win_amount
+                    
+                    # Инициализируем запись для получателя
+                    if follower_telegram_id not in user_transactions:
+                        user_transactions[follower_telegram_id] = {'sent': [], 'received': []}
+                    
+                    # Записываем информацию о получении
+                    user_transactions[follower_telegram_id]['received'].append({
+                        'amount': win_amount,
+                        'from_habit': habit.get('name', 'Без названия'),
+                        'for_habit': follower_habit_name
+                    })
+                    
                     if follower_telegram_id not in winnings:
                         winnings[follower_telegram_id] = win_amount
                     else:
@@ -97,11 +127,43 @@ class CountManager:
                         upsert=True
                     )
 
-            logger.info(f"winnings: {winnings}")
-
-            for key, value in winnings.items():
-                db.users.update_one({"telegram_id": key}, 
-                                    {"$inc": {"balance": value}})
+            # Обновляем балансы и отправляем уведомления
+            for telegram_id, transactions in user_transactions.items():
+                if telegram_id in winnings:
+                    db.users.update_one(
+                        {"telegram_id": telegram_id}, 
+                        {"$inc": {"balance": winnings[telegram_id]}}
+                    )
+                
+                # Формируем сообщение для пользователя
+                message_parts = []
+                
+                if transactions['sent']:
+                    sent_text = "📤 Списания:\n"
+                    for tx in transactions['sent']:
+                        sent_text += f"- {tx['amount']} токенов за привычку '{tx['habit_name']}'\n"
+                    message_parts.append(sent_text)
+                
+                if transactions['received']:
+                    received_text = "📥 Получено:\n"
+                    for tx in transactions['received']:
+                        received_text += f"- {tx['amount']} токенов от '{tx['from_habit']}' за выполнение '{tx['for_habit']}'\n"
+                    message_parts.append(received_text)
+                
+                if message_parts:
+                    total_sent = sum(tx['amount'] for tx in transactions['sent'])
+                    total_received = sum(tx['amount'] for tx in transactions['received'])
+                    summary = f"💰 Итого: -{total_sent} / +{total_received} токенов"
+                    message_parts.append(summary)
+                    
+                    full_message = "\n\n".join(message_parts)
+                    try:
+                        await self.bot.send_message(
+                            telegram_id,
+                            f"Отчёт о движении токенов за {check_date}:\n\n{full_message}"
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to send message to user {telegram_id}: {e}")
 
             logger.info("Daily rewards calculated and distributed successfully")
         except Exception as e:
