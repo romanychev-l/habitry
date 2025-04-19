@@ -23,12 +23,20 @@
     y: 0
   };
   
-  function getColorForCount(count: number): string {
-    if (count === 0) return '#ebedf0';
-    if (count <= 3) return '#9be9a8';
-    if (count <= 6) return '#40c463';
-    if (count <= 9) return '#30a14e';
-    return '#216e39';
+  // Новая функция для генерации стиля на основе count и переменных темы
+  function getStyleForCount(count: number): string {
+    if (count === 0) {
+      // Используем вторичный цвет фона для неактивных дней
+      return 'background-color: var(--tg-theme-secondary-bg-color);';
+    } else {
+      // Используем цвет кнопки с разной прозрачностью для активных дней
+      // let opacity = 0.4;
+      // if (count > 3) opacity = 0.6;
+      // if (count > 6) opacity = 0.8;
+      // if (count > 9) opacity = 1;
+      let opacity = 1;
+      return `background-color: var(--tg-theme-button-color); opacity: ${opacity};`;
+    }
   }
   
   function showTooltip(event: MouseEvent, text: string) {
@@ -67,24 +75,24 @@
     const today = new Date();
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(today.getFullYear() - 1);
-
+    
     // Устанавливаем дату на начало недели (понедельник)
     const startDate = new Date(oneYearAgo);
     startDate.setDate(startDate.getDate() - startDate.getDay() + 1);
     if (startDate.getDay() === 0) startDate.setDate(startDate.getDate() - 6);
-
+    
     const calendar = [];
     let currentDate = new Date(startDate);
     let currentColumn = 0;
     let lastMonth = -1;
     monthLabels = [];
-
+    
     while (currentDate <= today) {
       const dateStr = formatDate(currentDate, userTimezone);
       // Используем исторические данные по умолчанию
       const activity = data.find(d => d.date === dateStr);
       const historicalCount = activity ? activity.count : 0;
-
+      
       // Проверяем, начался ли новый месяц
       if (currentDate.getMonth() !== lastMonth) {
         monthLabels.push({
@@ -93,13 +101,13 @@
         });
         lastMonth = currentDate.getMonth();
       }
-
+      
       calendar.push({
         date: dateStr,
         // Сохраняем исторический count пока
         count: historicalCount
       });
-
+      
       // Переходим к следующему дню и увеличиваем счетчик колонки каждые 7 дней
       currentDate.setDate(currentDate.getDate() + 1);
       if (calendar.length % 7 === 0) {
@@ -151,7 +159,7 @@
           {#each calendarData as day}
             <button 
               class="square" 
-              style="background-color: {getColorForCount(day.count)}"
+              style={getStyleForCount(day.count)}
               on:click={(e) => showTooltip(e, `${day.date}: ${day.count} contributions`)}
               type="button"
               aria-label="{day.date}: {day.count} contributions"
