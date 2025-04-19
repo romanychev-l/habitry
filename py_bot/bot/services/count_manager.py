@@ -39,10 +39,11 @@ class CountManager:
                 for follower_id in habit['followers']:
                     follower_habit = db.habits.find_one({"_id": ObjectId(follower_id)})
                     logger.info(f"follower_habit: {follower_habit}")
-                    logger.info(str(habit['_id']) in follower_habit['followers'])
-                    logger.info(is_habit_completed(check_date, follower_habit['telegram_id'], follower_habit['_id']))
-                    if (follower_habit and 
-                        str(habit['_id']) in follower_habit['followers'] and 
+                    # Проверяем, что подписчик действительно следует за этой привычкой (взаимность)
+                    # и что подписчик выполнил свою привычку в check_date
+                    if (follower_habit and
+                        # Используем 'followers' для проверки взаимной подписки, как описано пользователем
+                        str(habit['_id']) in follower_habit.get('followers', []) and
                         is_habit_completed(check_date, follower_habit['telegram_id'], follower_habit['_id'])):
                         followers_data.append([
                             follower_habit['_id'],
