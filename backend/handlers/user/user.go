@@ -115,7 +115,7 @@ func (h *Handler) HandleUser(c *gin.Context) {
 	} else {
 		todayWeekday--
 	}
-	// lastVisit инициализируется позже
+	originalLastVisitDate := ""
 
 	// Пытаемся найти существующего пользователя
 	var existingUser models.User
@@ -147,6 +147,7 @@ func (h *Handler) HandleUser(c *gin.Context) {
 		return
 	} else {
 		// Обновляем существующего пользователя
+		originalLastVisitDate = existingUser.LastVisit // Сохраняем исходный LAST VISIT
 		// lastVisit = existingUser.LastVisit // Закомментируем, так как lastVisit нужен перед циклом привычек
 		update := bson.M{
 			"$set": bson.M{
@@ -202,7 +203,8 @@ func (h *Handler) HandleUser(c *gin.Context) {
 
 	// Фильтруем привычки для текущего дня, обновляем streak и ГОТОВИМ ОТВЕТ С ПРОГРЕССОМ
 	todayHabitResponses := []models.HabitResponse{}
-	lastVisitDate := existingUser.LastVisit // Используем lastVisit из existingUser до обновления стрейков
+	log.Printf("originalLastVisitDate: %v", originalLastVisitDate)
+	log.Printf("today: %v", today)
 
 	// Для каждой привычки
 	for _, habit := range habits {
@@ -214,10 +216,11 @@ func (h *Handler) HandleUser(c *gin.Context) {
 		updatedHabit := habit // Копируем привычку для модификаций
 
 		// Обновляем стрик, если нужно (логика обновления стрейка остается прежней)
-		if lastVisitDate != today {
+		if originalLastVisitDate != today {
 			daysAgo := findPrevHabitDay(habit.Days, todayWeekday)
 			prevDate := now.AddDate(0, 0, -daysAgo)
 			prevDateStr := prevDate.Format("2006-01-02")
+			log.Printf("prevDateStr: %v", prevDateStr)
 
 			// Проверяем, была ли привычка выполнена в предыдущий день
 			var prevHistory models.History
