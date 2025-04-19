@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"backend/middleware"
+	// "backend/services" // <--- ЗАКОММЕНТИРОВАТЬ ИЛИ УДАЛИТЬ
+	"backend/services" // <--- ИСПОЛЬЗУЕМ ПРАВИЛЬНЫЙ ПУТЬ МОДУЛЯ
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -927,6 +929,28 @@ func (h *Handler) HandleUndo(c *gin.Context) {
 
 // Вспомогательная функция для обогащения данных привычки информацией о подписчиках
 func (h *Handler) enrichHabitWithFollowers(ctx context.Context, habit models.Habit) (models.HabitResponse, error) {
+	// Получаем timezone
+	timezone := "UTC" // Значение по умолчанию
+	userTimezone, userExists := middleware.CtxTimezone(ctx)
+	if userExists {
+		timezone = userTimezone
+	} else {
+		var user models.User
+		err := h.usersCollection.FindOne(ctx, bson.M{"telegram_id": habit.TelegramID}).Decode(&user)
+		if err == nil && user.Timezone != "" {
+			timezone = user.Timezone
+		} else {
+			log.Printf("Не удалось получить таймзону для пользователя %d, используется UTC", habit.TelegramID)
+		}
+	}
+
+	// Рассчитываем прогресс выполнения подписчиками через сервис
+	progress, err := services.CalculateHabitCompletionProgress(ctx, habit, timezone, h.habitsCollection)
+	if err != nil {
+		log.Printf("Ошибка расчета прогресса для привычки %s: %v. Установлен прогресс 0.", habit.ID.Hex(), err)
+		progress = 0.0
+	}
+
 	response := models.HabitResponse{
 		ID:            habit.ID,
 		TelegramID:    habit.TelegramID,
@@ -941,6 +965,7 @@ func (h *Handler) enrichHabitWithFollowers(ctx context.Context, habit models.Hab
 		Score:         habit.Score,
 		Stake:         habit.Stake,
 		Followers:     []models.FollowerInfo{},
+		Progress:      progress,
 	}
 
 	// Если есть подписчики, получаем их данные

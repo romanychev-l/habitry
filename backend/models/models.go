@@ -60,6 +60,7 @@ type HabitResponse struct {
 	Score         int                `json:"score"`
 	Stake         int                `json:"stake"`
 	Followers     []FollowerInfo     `json:"followers"` // Обогащенная информация о подписчиках
+	Progress      float64            `json:"progress"`
 }
 
 // FollowerInfo - информация о подписчике для отправки на фронтенд
@@ -122,10 +123,10 @@ type UserResponseWithHabits struct {
 	Timezone             string             `json:"timezone"`
 	NotificationsEnabled bool               `json:"notifications_enabled"`
 	NotificationTime     string             `json:"notification_time"`
-	Habits               []Habit            `json:"habits"`
+	Habits               []HabitResponse    `json:"habits"`
 }
 
-func (u *User) ToResponseWithHabits(habits []Habit) UserResponseWithHabits {
+func (u *User) ToResponseWithHabits(habitResponses []HabitResponse) UserResponseWithHabits {
 	return UserResponseWithHabits{
 		ID:                   u.ID,
 		TelegramID:           u.TelegramID,
@@ -139,6 +140,6 @@ func (u *User) ToResponseWithHabits(habits []Habit) UserResponseWithHabits {
 		Timezone:             u.Timezone,
 		NotificationsEnabled: u.NotificationsEnabled,
 		NotificationTime:     u.NotificationTime,
-		Habits:               habits,
+		Habits:               habitResponses, // Просто передаем готовый слайс
 	}
 }

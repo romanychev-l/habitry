@@ -8,12 +8,12 @@
     import NewHabitModal from './NewHabitModal.svelte';
     import HabitFollowersModal from './HabitFollowersModal.svelte';
     import HabitLinkModal from './HabitLinkModal.svelte';
-    import type { Habit } from '../types';
+    import type { Habit as HabitType } from '../types';
     import { onMount } from 'svelte';
     import { api } from '../utils/api';
     import { popup, initData, hapticFeedback } from '@telegram-apps/sdk-svelte';
     
-    export let habit: Habit;
+    export let habit: HabitType & { progress: number };
     export let telegramId: number;
     export let readonly: boolean = false;
     
@@ -88,7 +88,6 @@
         isPressed = false;
     }
 
-    let progress = 0;
     let completed = false;
     
     // Функция для получения текущей даты с учетом часового пояса
@@ -109,10 +108,6 @@
         return `${year}-${month}-${day}`;
     }
     
-    async function updateProgress() {
-        progress = await calculateProgress();
-    }
-    
     // Загружаем данные при монтировании компонента
     onMount(loadFollowers);
 
@@ -123,7 +118,6 @@
             completed = habit.last_click_date === today;
             console.log('today', today);
             console.log('habit.last_click_date', habit.last_click_date);
-            updateProgress();
             loadFollowers(); // Обновляем список подписчиков при изменении привычки
         }
     }
@@ -159,9 +153,6 @@
                 return updatedHabits;
             });
             
-            // После обновления store пересчитываем прогресс
-            await updateProgress();
-            
             return updatedHabit;
         } catch (error) {
             console.error('Ошибка при обновлении привычки:', error);
@@ -190,8 +181,6 @@
                 );
                 return updatedHabits;
             });
-            
-            await updateProgress();
         } catch (error) {
             console.error('Error undoing habit click:', error);
             await popup.open({
@@ -242,20 +231,6 @@
     let showActions = false;
     let showDeleteConfirm = false;
     let showEditModal = false;
-
-    // Добавляем функцию подсчета прогресса
-    async function calculateProgress(): Promise<number> {
-        console.log('calculateProgress', completed);
-        
-        try {
-            const data = await api.getHabitProgress(habit._id);
-            console.log('Progress data:', data);
-            return data.progress;
-        } catch (error) {
-            console.error('Error fetching progress:', error);
-            return 0;
-        }
-    }
 
     async function handleEdit(event: CustomEvent) {
         try {
@@ -343,7 +318,7 @@
     }
 </script>
   
-<div class="habit-wrapper" style="--habit-gradient: {gradientStyle}; --progress: {progress}">
+<div class="habit-wrapper" style="--habit-gradient: {gradientStyle}; --progress: {habit.progress}">
   <div class="card-shadow">
     <div
       class="habit-card"

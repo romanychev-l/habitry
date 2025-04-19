@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"backend/middleware"
+	"backend/services"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -114,7 +115,7 @@ func (h *Handler) HandleUser(c *gin.Context) {
 	} else {
 		todayWeekday--
 	}
-	lastVisit := time.Now().In(loc).Format("2006-01-02")
+	// lastVisit инициализируется позже
 
 	// Пытаемся найти существующего пользователя
 	var existingUser models.User
@@ -136,21 +137,24 @@ func (h *Handler) HandleUser(c *gin.Context) {
 			return
 		}
 		existingUser = user
-		c.JSON(http.StatusOK, existingUser.ToResponseWithHabits([]models.Habit{}))
+
+		// Для нового пользователя привычек нет, возвращаем пустой []HabitResponse
+		response := existingUser.ToResponseWithHabits([]models.HabitResponse{}) // Используем обновленный метод
+		c.JSON(http.StatusOK, response)
 		return
 	} else if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	} else {
 		// Обновляем существующего пользователя
-		lastVisit = existingUser.LastVisit
+		// lastVisit = existingUser.LastVisit // Закомментируем, так как lastVisit нужен перед циклом привычек
 		update := bson.M{
 			"$set": bson.M{
 				"first_name":    user.FirstName,
 				"username":      user.Username,
 				"language_code": user.LanguageCode,
 				"timezone":      user.Timezone,
-				"last_visit":    today,
+				"last_visit":    today, // Обновляем last_visit здесь
 			},
 		}
 
@@ -167,6 +171,15 @@ func (h *Handler) HandleUser(c *gin.Context) {
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 			return
+		}
+		// Обновляем existingUser после апдейта, чтобы иметь актуальные данные
+		existingUser.FirstName = user.FirstName
+		existingUser.Username = user.Username
+		existingUser.LanguageCode = user.LanguageCode
+		existingUser.Timezone = user.Timezone
+		existingUser.LastVisit = today
+		if req.PhotoURL != nil {
+			existingUser.PhotoURL = *req.PhotoURL
 		}
 	}
 
@@ -187,12 +200,9 @@ func (h *Handler) HandleUser(c *gin.Context) {
 		return
 	}
 
-	// Фильтруем привычки для текущего дня и обновляем streak
-	todayHabits := []models.Habit{}
-	loc, _ = time.LoadLocation(user.Timezone)
-	if loc == nil {
-		loc = time.UTC
-	}
+	// Фильтруем привычки для текущего дня, обновляем streak и ГОТОВИМ ОТВЕТ С ПРОГРЕССОМ
+	todayHabitResponses := []models.HabitResponse{}
+	lastVisitDate := existingUser.LastVisit // Используем lastVisit из existingUser до обновления стрейков
 
 	// Для каждой привычки
 	for _, habit := range habits {
@@ -201,93 +211,113 @@ func (h *Handler) HandleUser(c *gin.Context) {
 			continue
 		}
 
-		if lastVisit == today {
-			todayHabits = append(todayHabits, habit)
-			continue
-		}
+		updatedHabit := habit // Копируем привычку для модификаций
 
-		// Находим предыдущий день, когда привычка должна была быть выполнена
-		daysAgo := findPrevHabitDay(habit.Days, todayWeekday)
-		prevDate := now.AddDate(0, 0, -daysAgo)
-		prevDateStr := prevDate.Format("2006-01-02")
+		// Обновляем стрик, если нужно (логика обновления стрейка остается прежней)
+		if lastVisitDate != today {
+			daysAgo := findPrevHabitDay(habit.Days, todayWeekday)
+			prevDate := now.AddDate(0, 0, -daysAgo)
+			prevDateStr := prevDate.Format("2006-01-02")
 
-		// Проверяем, была ли привычка выполнена в предыдущий день
-		var prevHistory models.History
-		err = h.historyCollection.FindOne(
-			context.Background(),
-			bson.M{
-				"telegram_id": user.TelegramID,
-				"date":        prevDateStr,
-				"habits": bson.M{
-					"$elemMatch": bson.M{
-						"habit_id": habit.ID,
-						"done":     true,
+			// Проверяем, была ли привычка выполнена в предыдущий день
+			var prevHistory models.History
+			err = h.historyCollection.FindOne(
+				context.Background(),
+				bson.M{
+					"telegram_id": user.TelegramID,
+					"date":        prevDateStr,
+					"habits": bson.M{
+						"$elemMatch": bson.M{
+							"habit_id": habit.ID,
+							"done":     true,
+						},
 					},
 				},
-			},
-		).Decode(&prevHistory)
+			).Decode(&prevHistory)
 
-		updatedHabit := habit
-		newStreak := habit.Streak
-		newScore := habit.Score
-		wasDoneYesterday := err != mongo.ErrNoDocuments
+			newStreak := habit.Streak
+			newScore := habit.Score
+			wasDoneYesterday := err != mongo.ErrNoDocuments
 
-		updateFields := bson.M{}
+			updateFields := bson.M{}
 
-		// Обновляем стрик и скор в зависимости от типа привычки и выполнения
-		if habit.IsAuto {
-			if !wasDoneYesterday {
-				// Случай 1: Автопривычка не была выполнена вчера
-				newStreak = 1
-				newScore += 1
-			} else {
-				// Случай 2: Автопривычка была выполнена вчера
-				newStreak += 1
-				newScore += 1
+			// Обновляем стрик и скор в зависимости от типа привычки и выполнения
+			if habit.IsAuto {
+				if !wasDoneYesterday {
+					newStreak = 1
+					newScore += 1
+				} else {
+					newStreak += 1
+					newScore += 1
+				}
+				// Для автопривычек всегда обновляем историю
+				history := models.History{
+					TelegramID: user.TelegramID,
+					Date:       today,
+					Habits: []models.HabitHistory{{
+						HabitID: habit.ID,
+						Title:   habit.Title,
+						Done:    true,
+					}},
+				}
+				err = h.upsertHistory(user.TelegramID, today, history)
+				if err != nil {
+					log.Printf("Ошибка при обновлении истории для автопривычки: %v", err)
+				}
+
+				updateFields["last_click_date"] = today
+				updatedHabit.LastClickDate = today // Обновляем копию
+			} else if !wasDoneYesterday {
+				newStreak = 0
 			}
-			// Для автопривычек всегда обновляем историю
-			history := models.History{
-				TelegramID: user.TelegramID,
-				Date:       today,
-				Habits: []models.HabitHistory{{
-					HabitID: habit.ID,
-					Title:   habit.Title,
-					Done:    true,
-				}},
-			}
-			err = h.upsertHistory(user.TelegramID, today, history)
+			// Случай 3: Не автопривычка и была выполнена вчера - ничего не делаем
+
+			// Обновляем привычку в базе
+			updateFields["streak"] = newStreak
+			updateFields["score"] = newScore
+
+			_, err = h.habitsCollection.UpdateOne(
+				context.Background(),
+				bson.M{"_id": habit.ID},
+				bson.M{"$set": updateFields},
+			)
 			if err != nil {
-				log.Printf("Ошибка при обновлении истории для автопривычки: %v", err)
+				log.Printf("Ошибка при обновлении привычки %s: %v", habit.ID.Hex(), err)
 			}
 
-			updateFields["last_click_date"] = today
-			updatedHabit.LastClickDate = today
-		} else if !wasDoneYesterday {
-			// Случай 4: Не автопривычка и не была выполнена вчера
-			newStreak = 0
+			updatedHabit.Streak = newStreak // Обновляем копию
+			updatedHabit.Score = newScore   // Обновляем копию
 		}
-		// Случай 3: Не автопривычка и была выполнена вчера - ничего не делаем
 
-		// Обновляем привычку в базе
-
-		updateFields["streak"] = newStreak
-		updateFields["score"] = newScore
-
-		_, err = h.habitsCollection.UpdateOne(
-			context.Background(),
-			bson.M{"_id": habit.ID},
-			bson.M{"$set": updateFields},
-		)
+		// Вызываем функцию из сервиса
+		progress, err := services.CalculateHabitCompletionProgress(c.Request.Context(), updatedHabit, timezone, h.habitsCollection)
 		if err != nil {
-			log.Printf("Ошибка при обновлении привычки %s: %v", habit.ID.Hex(), err)
+			log.Printf("Ошибка расчета прогресса для привычки %s в HandleUser: %v. Установлен прогресс 0.", updatedHabit.ID.Hex(), err)
+			progress = 0.0 // Устанавливаем 0 в случае ошибки
 		}
 
-		updatedHabit.Streak = newStreak
-		updatedHabit.Score = newScore
-		todayHabits = append(todayHabits, updatedHabit)
+		// Добавляем HabitResponse в результат
+		todayHabitResponses = append(todayHabitResponses, models.HabitResponse{
+			ID:            updatedHabit.ID,
+			TelegramID:    updatedHabit.TelegramID,
+			Title:         updatedHabit.Title,
+			WantToBecome:  updatedHabit.WantToBecome,
+			Days:          updatedHabit.Days,
+			IsOneTime:     updatedHabit.IsOneTime,
+			IsAuto:        updatedHabit.IsAuto,
+			CreatedAt:     updatedHabit.CreatedAt,
+			LastClickDate: updatedHabit.LastClickDate,
+			Streak:        updatedHabit.Streak,
+			Score:         updatedHabit.Score,
+			Stake:         updatedHabit.Stake,
+			Followers:     []models.FollowerInfo{}, // Подписчиков здесь не обогащаем
+			Progress:      progress,
+		})
 	}
 
-	c.JSON(http.StatusOK, existingUser.ToResponseWithHabits(todayHabits))
+	// Формируем и отправляем ответ
+	response := existingUser.ToResponseWithHabits(todayHabitResponses) // Используем обновленный метод
+	c.JSON(http.StatusOK, response)
 }
 
 // HandleSettings обрабатывает запросы на получение и обновление настроек пользователя

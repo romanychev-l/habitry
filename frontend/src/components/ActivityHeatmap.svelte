@@ -1,7 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { _ } from 'svelte-i18n';
+  import type { Habit } from '../types'; // Убедись, что тип импортирован
   export let data: { date: string; count: number }[] = [];
+  export let habit: Habit; // <--- Добавь эту строку
   
   const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
   const days = ['monday', 'wednesday', 'friday'];
@@ -57,28 +59,32 @@
 
   $: {
     console.log("Data changed:", data);
+    console.log("Habit changed:", habit); // Для отладки
+
+    // Получаем часовой пояс пользователя
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
     const today = new Date();
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(today.getFullYear() - 1);
-    
+
     // Устанавливаем дату на начало недели (понедельник)
     const startDate = new Date(oneYearAgo);
     startDate.setDate(startDate.getDate() - startDate.getDay() + 1);
     if (startDate.getDay() === 0) startDate.setDate(startDate.getDate() - 6);
-    
+
     const calendar = [];
     let currentDate = new Date(startDate);
     let currentColumn = 0;
     let lastMonth = -1;
     monthLabels = [];
-    
-    // Получаем часовой пояс пользователя
-    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    
+
     while (currentDate <= today) {
       const dateStr = formatDate(currentDate, userTimezone);
+      // Используем исторические данные по умолчанию
       const activity = data.find(d => d.date === dateStr);
-      
+      const historicalCount = activity ? activity.count : 0;
+
       // Проверяем, начался ли новый месяц
       if (currentDate.getMonth() !== lastMonth) {
         monthLabels.push({
@@ -87,19 +93,38 @@
         });
         lastMonth = currentDate.getMonth();
       }
-      
+
       calendar.push({
         date: dateStr,
-        count: activity ? activity.count : 0
+        // Сохраняем исторический count пока
+        count: historicalCount
       });
-      
+
       // Переходим к следующему дню и увеличиваем счетчик колонки каждые 7 дней
       currentDate.setDate(currentDate.getDate() + 1);
       if (calendar.length % 7 === 0) {
         currentColumn++;
       }
     }
-    console.log("Generated calendar data:", calendar);
+
+    // --- КОРРЕКТИРОВКА ДЛЯ СЕГОДНЯ ---
+    const todayDateStr = formatDate(new Date(), userTimezone);
+    const todayIndex = calendar.findIndex(d => d.date === todayDateStr);
+
+    if (todayIndex !== -1 && habit) { // Убедимся, что habit передан
+      // Определяем, выполнена ли привычка СЕГОДНЯ по данным из habit
+      const isCompletedToday = habit.last_click_date === todayDateStr;
+
+      // Перезаписываем count для сегодняшнего дня:
+      // 1 (или больше) если выполнена, 0 если нет.
+      // Это гарантирует, что цвет будет правильным независимо от исторических данных.
+      calendar[todayIndex].count = isCompletedToday ? 1 : 0;
+      console.log(`Adjusting today's (${todayDateStr}) square based on habit. Completed: ${isCompletedToday}`);
+    }
+    // --- КОНЕЦ КОРРЕКТИРОВКИ ---
+
+
+    console.log("Generated calendar data (final):", calendar);
     calendarData = calendar;
   }
 </script>

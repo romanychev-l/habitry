@@ -54,7 +54,6 @@ func setupGinRouter(
 			habitGroup.PUT("/undo", habitHandler.HandleUndo)
 			habitGroup.POST("/join", habitHandler.HandleJoin)
 			habitGroup.GET("/followers", habitHandler.HandleGetFollowers)
-			habitGroup.GET("/progress", followerHandler.HandleHabitProgress)
 			habitGroup.GET("/activity", habitHandler.HandleGetActivity)
 			habitGroup.POST("/unfollow", followerHandler.HandleUnfollow)
 		}

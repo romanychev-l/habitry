@@ -325,7 +325,7 @@
             >
                 <div class="activity-section">
                     <h3>{$_('habits.activity')}</h3>
-                    <ActivityHeatmap data={activityData} />
+                    <ActivityHeatmap {habit} data={activityData} />
                 </div>
                 
                 <!-- Кнопка "Пингануть всех" между секциями -->

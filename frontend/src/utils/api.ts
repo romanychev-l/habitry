@@ -257,9 +257,6 @@ export const api = {
     getHabitFollowers: (habitId: string) =>
         request('/api/habit/followers', { params: { habit_id: habitId } }),
     
-    getHabitProgress: (habitId: string) =>
-        request('/api/habit/progress', { params: { habit_id: habitId } }),
-    
     getHabitActivity: (habitId: string) =>
         request('/api/habit/activity', { params: { habit_id: habitId } }),
     

@@ -4,9 +4,6 @@ import (
 	"backend/models"
 	"context"
 	"net/http"
-	"time"
-
-	"backend/middleware"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -24,109 +21,6 @@ func NewHandler(habitsCollection, usersCollection *mongo.Collection) *Handler {
 		habitsCollection: habitsCollection,
 		usersCollection:  usersCollection,
 	}
-}
-
-func (h *Handler) HandleHabitProgress(c *gin.Context) {
-	habitID := c.Query("habit_id")
-	if habitID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "habit_id is required"})
-		return
-	}
-
-	// Получаем timezone из контекста
-	timezone, exists := middleware.CtxTimezone(c.Request.Context())
-	if !exists {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Timezone not provided in context"})
-		return
-	}
-
-	// Получаем текущее время в часовом поясе пользователя
-	loc, err := time.LoadLocation(timezone)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid timezone"})
-		return
-	}
-
-	// Получаем текущую дату с учетом таймзоны
-	today := time.Now().In(loc).Format("2006-01-02")
-
-	// Преобразуем habitID в ObjectID
-	habitObjectID, err := primitive.ObjectIDFromHex(habitID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid habit_id format"})
-		return
-	}
-
-	// Находим привычку
-	var habit models.Habit
-	err = h.habitsCollection.FindOne(context.Background(), bson.M{
-		"_id": habitObjectID,
-	}).Decode(&habit)
-
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			c.JSON(http.StatusOK, gin.H{
-				"total_followers": 0,
-				"completed_today": 0,
-				"progress":        0,
-			})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
-		return
-	}
-
-	// Проверяем, выполнил ли владелец привычку
-	completedToday := 0
-	if habit.LastClickDate == today {
-		completedToday++
-	}
-
-	// Подсчитываем количество подписчиков, выполнивших привычку сегодня
-	totalFollowers := len(habit.Followers) + 1 // +1 для владельца
-	if len(habit.Followers) > 0 {
-		// Преобразуем строковые ID в ObjectID
-		var followerObjectIDs []primitive.ObjectID
-		for _, followerID := range habit.Followers {
-			objectID, err := primitive.ObjectIDFromHex(followerID)
-			if err != nil {
-				continue
-			}
-			followerObjectIDs = append(followerObjectIDs, objectID)
-		}
-
-		// Получаем привычки подписчиков
-		cursor, err := h.habitsCollection.Find(context.Background(), bson.M{
-			"_id": bson.M{"$in": followerObjectIDs},
-		})
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
-			return
-		}
-		defer cursor.Close(context.Background())
-
-		// Подсчитываем выполненные привычки
-		for cursor.Next(context.Background()) {
-			var followerHabit models.Habit
-			if err := cursor.Decode(&followerHabit); err != nil {
-				continue
-			}
-			if followerHabit.LastClickDate == today {
-				completedToday++
-			}
-		}
-	}
-
-	progress := 0.0
-	if totalFollowers > 0 {
-		progress = float64(completedToday) / float64(totalFollowers)
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"total_followers": totalFollowers,
-		"completed_today": completedToday,
-		"progress":        progress,
-	})
 }
 
 func (h *Handler) HandleUnfollow(c *gin.Context) {
