@@ -104,7 +104,8 @@ func (h *Handler) HandleUser(c *gin.Context) {
 
 	loc, err := time.LoadLocation(user.Timezone)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid timezone"})
+		log.Printf("ERROR: Failed to load timezone '%s' for user %d: %v", user.Timezone, user.TelegramID, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid timezone provided"})
 		return
 	}
 	today := time.Now().In(loc).Format("2006-01-02")
