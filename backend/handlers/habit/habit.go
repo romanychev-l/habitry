@@ -703,26 +703,10 @@ func (h *Handler) HandleGetFollowers(c *gin.Context) {
 
 		// Проверяем взаимную подписку
 		isMutual := false
-		// Получаем все привычки подписчика
-		cursor, err := h.habitsCollection.Find(context.Background(), bson.M{
-			"telegram_id": followerHabit.TelegramID,
-		})
-		if err == nil {
-			defer cursor.Close(context.Background())
-			var followerHabits []models.Habit
-			if err = cursor.All(context.Background(), &followerHabits); err == nil {
-				// Проверяем, есть ли среди привычек подписчика те, которые подписаны на текущую привычку
-				for _, fh := range followerHabits {
-					for _, fFollowerID := range fh.Followers {
-						if fFollowerID == habitID {
-							isMutual = true
-							break
-						}
-					}
-					if isMutual {
-						break
-					}
-				}
+		for _, fFollowerID := range followerHabit.Followers {
+			if fFollowerID == habitID {
+				isMutual = true
+				break
 			}
 		}
 
