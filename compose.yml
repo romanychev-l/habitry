@@ -5,6 +5,12 @@ services:
         env_file:
             - .env
         network_mode: host
+        init: true
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
 
     backend:
         image: ghcr.io/romanychev-l/habitry/backend:latest
@@ -12,3 +18,9 @@ services:
         env_file:
             - .env
         restart: unless-stopped
+        init: true
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"

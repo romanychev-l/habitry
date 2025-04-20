@@ -108,8 +108,13 @@ jobs:
             rm -f ~/.docker/config.json
             docker logout ghcr.io || true
             echo $GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker compose pull
+            
+            # Очистка только контейнеров и образов текущего проекта
             docker compose down
+            docker image prune -f --filter "label=com.docker.compose.project=habitry"
+            
+            # Запуск новых контейнеров
+            docker compose pull
             docker compose up -d
   
   build-and-deploy-frontend:

@@ -12,5 +12,3 @@ RUN go build -o main .
 EXPOSE ${PORT}
 
 CMD ["./main"]
-
-RUN apt-get update && apt-get install -y tzdata && rm -rf /var/lib/apt/lists/*
