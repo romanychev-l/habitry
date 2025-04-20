@@ -677,6 +677,28 @@ func (h *Handler) HandleGetFollowers(c *gin.Context) {
 		return
 	}
 
+	// Получаем timezone из контекста
+	timezone, exists := middleware.CtxTimezone(c.Request.Context())
+	if !exists {
+		// Если таймзона не передана, пытаемся получить ее из данных пользователя
+		var requestingUser models.User
+		err := h.usersCollection.FindOne(context.Background(), bson.M{"telegram_id": habit.TelegramID}).Decode(&requestingUser)
+		if err == nil && requestingUser.Timezone != "" {
+			timezone = requestingUser.Timezone
+		} else {
+			timezone = "UTC" // Фоллбэк на UTC
+			log.Printf("Таймзона не найдена для пользователя %d в запросе GetFollowers, используется UTC", habit.TelegramID)
+		}
+	}
+
+	// Получаем текущую дату в нужном часовом поясе
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		log.Printf("Ошибка загрузки таймзоны %s: %v. Используется UTC.", timezone, err)
+		loc = time.UTC
+	}
+	today := time.Now().In(loc).Format("2006-01-02")
+
 	// Инициализируем массив с начальной емкостью равной количеству подписчиков
 	followers := make([]models.FollowerInfo, 0, len(habit.Followers))
 
@@ -710,18 +732,22 @@ func (h *Handler) HandleGetFollowers(c *gin.Context) {
 			}
 		}
 
+		// Определяем, выполнил ли подписчик привычку сегодня
+		completedToday := followerHabit.LastClickDate == today
+
 		// Добавляем полную информацию о подписчике
 		followers = append(followers, models.FollowerInfo{
-			ID:            followerHabit.ID,
-			TelegramID:    followerHabit.TelegramID,
-			Title:         followerHabit.Title,
-			LastClickDate: followerHabit.LastClickDate,
-			Streak:        followerHabit.Streak,
-			Score:         followerHabit.Score,
-			Username:      user.Username,
-			FirstName:     user.FirstName,
-			PhotoURL:      user.PhotoURL,
-			IsMutual:      isMutual,
+			ID:             followerHabit.ID,
+			TelegramID:     followerHabit.TelegramID,
+			Title:          followerHabit.Title,
+			LastClickDate:  followerHabit.LastClickDate,
+			Streak:         followerHabit.Streak,
+			Score:          followerHabit.Score,
+			Username:       user.Username,
+			FirstName:      user.FirstName,
+			PhotoURL:       user.PhotoURL,
+			IsMutual:       isMutual,
+			CompletedToday: completedToday,
 		})
 	}
 

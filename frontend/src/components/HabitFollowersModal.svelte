@@ -378,6 +378,7 @@
                                     </div>
                                     <div class="follower-actions">
                                         {#if follower.is_mutual}
+                                            <h1>{follower.completed_today == null}</h1>
                                             {#if !follower.completed_today}
                                                 <button 
                                                     class="ping-button"

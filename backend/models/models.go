@@ -65,16 +65,17 @@ type HabitResponse struct {
 
 // FollowerInfo - информация о подписчике для отправки на фронтенд
 type FollowerInfo struct {
-	ID            primitive.ObjectID `json:"_id"`
-	TelegramID    int64              `json:"telegram_id"`
-	Title         string             `json:"title"`
-	LastClickDate string             `json:"last_click_date"`
-	Streak        int                `json:"streak"`
-	Score         int                `json:"score"`
-	Username      string             `json:"username"`
-	FirstName     string             `json:"first_name"`
-	PhotoURL      string             `json:"photo_url"`
-	IsMutual      bool               `json:"is_mutual"`
+	ID             primitive.ObjectID `json:"_id"`
+	TelegramID     int64              `json:"telegram_id"`
+	Title          string             `json:"title"`
+	LastClickDate  string             `json:"last_click_date"`
+	Streak         int                `json:"streak"`
+	Score          int                `json:"score"`
+	Username       string             `json:"username"`
+	FirstName      string             `json:"first_name"`
+	PhotoURL       string             `json:"photo_url"`
+	IsMutual       bool               `json:"is_mutual"`
+	CompletedToday bool               `json:"completed_today"`
 }
 
 type HabitRequest struct {
