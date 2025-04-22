@@ -42,7 +42,7 @@ async def main() -> None:
     await notification_manager.load_existing_notifications()
 
     # Инициализируем и запускаем менеджер подсчета выигрышей
-    count_manager = CountManager(bot)
+    count_manager = CountManager(bot, translator_hub)
     count_manager.start()
     
     # Инициализируем и запускаем менеджер пингов
