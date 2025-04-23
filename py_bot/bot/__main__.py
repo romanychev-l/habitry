@@ -12,6 +12,7 @@ from bot.dialogs.start.dialogs import start_dialog
 from bot.handlers.commands import commands_router
 from bot.handlers.other import other_router
 from bot.middlewares.i18n import TranslatorRunnerMiddleware
+from bot.middlewares.recieve import RecieveWillCallbackMiddleware
 from bot.utils.i18n import create_translator_hub
 from bot.services.notification_manager import NotificationManager
 from bot.services.count_manager import CountManager
@@ -54,6 +55,7 @@ async def main() -> None:
     dp.include_router(start_dialog)
 
     dp.update.middleware(TranslatorRunnerMiddleware())
+    dp.callback_query.outer_middleware(RecieveWillCallbackMiddleware())
 
     setup_dialogs(dp)
     await dp.start_polling(bot, _translator_hub=translator_hub)

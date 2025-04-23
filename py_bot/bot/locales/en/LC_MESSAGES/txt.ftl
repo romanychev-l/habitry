@@ -33,3 +33,16 @@ ping-message = 🔔 Time to check in on your habits!
 
 # --- Notification Manager ---
 notification-reminder = ⏰ Reminder! Don't forget about your habit '{ $habitTitle }'! { $link }
+
+# --- Send Command ---
+send-usage = Usage: /send @username <amount>
+send-invalid-amount = Please enter a valid positive amount.
+send-sender-not-found = Error: Could not find your user account.
+send-insufficient-funds = Insufficient funds. Your balance is { $balance } WILL.
+send-recipient-not-found = Error: User @{ $username } not found.
+send-send-to-self = You cannot send WILL to yourself.
+send-success-sender = Successfully sent { $amount } WILL to @{ $username }
+send-success-recipient = You have received { $amount } WILL from @{ $username }
+
+# --- Generic Errors ---
+error-generic = An unexpected error occurred. Please try again later.
