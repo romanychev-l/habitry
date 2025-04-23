@@ -48,9 +48,15 @@ class CountManager:
                             follower_id = ObjectId(follower_id_str)
                             follower_habit = db.habits.find_one({"_id": follower_id})
                             # logger.info(f"follower_habit: {follower_habit}") # Слишком многословно
-                            # Проверяем, что подписчик действительно следует за этой привычкой (взаимность)
+
+                            # Получаем данные пользователя-фолловера для проверки баланса
+                            follower_user = db.users.find_one({"telegram_id": follower_habit['telegram_id']})
+
+                            # Проверяем, что подписчик существует, имеет положительный баланс,
+                            # действительно следует за этой привычкой (взаимность)
                             # и что подписчик выполнил свою привычку в check_date
                             if (follower_habit and
+                                follower_user and follower_user.get('balance', 0) > 0 and # <-- Новая проверка баланса
                                 # Используем 'followers' для проверки взаимной подписки, как описано пользователем
                                 str(habit['_id']) in follower_habit.get('followers', []) and
                                 is_habit_completed(check_date, follower_habit['telegram_id'], follower_habit['_id'])):
@@ -60,6 +66,10 @@ class CountManager:
                                     follower_habit['stake'],
                                     follower_habit.get('title', 'Без названия')
                                 ])
+                            # Добавим логгирование для случаев, когда фолловер пропускается из-за баланса
+                            elif follower_user and follower_user.get('balance', 0) <= 0:
+                                logger.debug(f"Skipping follower {follower_habit['telegram_id']} for habit {habit_id} due to zero or negative balance.")
+
                         except Exception as e_follower:
                             logger.error(f"Error processing follower {follower_id_str} for habit {habit_id}: {e_follower}")
                             continue # Пропускаем этого подписчика
@@ -131,12 +141,15 @@ class CountManager:
                     for follower in habit['followers']:
                         try: # Обработка ошибок для одного подписчика
                             follower_id, follower_telegram_id, follower_stake, follower_habit_title = follower
+
                             if follower_stake <= 0:
+                                logger.debug(f"Follower {follower_telegram_id} has zero stake for habit '{follower_habit_title}'. Skipping.")
                                 continue # Пропускаем подписчиков с нулевой ставкой
 
                             # Рассчитываем выигрыш пропорционально ставке подписчика
                             win_amount = int((stake_of_owner / sum_stakes_of_followers) * follower_stake)
                             if win_amount <= 0: # Пропускаем нулевые выигрыши
+                                logger.debug(f"Calculated win amount is zero or negative ({win_amount}) for follower {follower_telegram_id}. Skipping.")
                                 continue
 
                             total_distributed_for_habit += win_amount
