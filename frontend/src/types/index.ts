@@ -21,6 +21,7 @@ export interface Habit {
     score: number;
     stake: number;
     followers: FollowerInfo[];
+    progress: number;
 }
 
 export type ViewMode = 'card' | 'list';
