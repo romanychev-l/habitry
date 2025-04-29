@@ -370,8 +370,10 @@
       {/if}
     </div>
   </div>
-  <div class="streak-counter" style="--habit-gradient: {gradientStyle}">
-    {$displayScore ? (habit.score || 0) : (habit.streak || 0)}
+  <div class="streak-shadow">
+    <div class="streak-counter" style="--habit-gradient: {gradientStyle}">
+      {$displayScore ? (habit.score || 0) : (habit.streak || 0)}
+    </div>
   </div>
 </div>
 
@@ -512,12 +514,30 @@
     transition: width 0.8s ease;
   }
 
-  .streak-counter {
+  .streak-shadow {
     position: absolute;
     top: 5px;
     right: -5px;
     width: 60px;
     height: 60px;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08));
+    z-index: 1;
+  }
+
+  :global(.list-view) .streak-shadow {
+    left: 20px;
+    right: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    filter: none;
+  }
+
+  .streak-counter {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background: var(--habit-gradient);
     color: white;
     display: flex;
@@ -525,7 +545,6 @@
     justify-content: center;
     font-weight: bold;
     font-size: 24px;
-    z-index: 1;
     padding: 0;
     line-height: 0; /* Убираем влияние line-height на SVG */
     mask: url('/src/assets/streak.svg') no-repeat center / contain;
@@ -533,10 +552,8 @@
   }
 
   :global(.list-view) .streak-counter {
-    left: 20px;
-    right: auto;
-    top: 50%;
-    transform: translateY(-50%);
+    width: 60px;
+    height: 60px;
   }
 
   /* Изменяем цвет счетчика стрика при полном выполнении */
