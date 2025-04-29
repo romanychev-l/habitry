@@ -13,6 +13,7 @@
     import { api } from '../utils/api';
     import { popup, initData, hapticFeedback } from '@telegram-apps/sdk-svelte';
     import { gradients } from '../utils/gradients'; // Import gradients
+    import SolarUndoLeftRoundBoldDuotone from '../assets/SolarUndoLeftRoundBoldDuotone.svelte'; // Импортируем иконку
 
     export let habit: HabitType & { progress: number };
     export let telegramId: number;
@@ -355,7 +356,7 @@
           <button 
             class="undo-button" 
             on:click|stopPropagation={handleUndo}
-          >&larr;</button>
+          ><SolarUndoLeftRoundBoldDuotone /></button>
         {/if}
       </div>
 
@@ -525,6 +526,8 @@
     font-weight: bold;
     font-size: 24px;
     z-index: 1;
+    padding: 0;
+    line-height: 0; /* Убираем влияние line-height на SVG */
     mask: url('/src/assets/streak.svg') no-repeat center / contain;
     -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
   }
@@ -578,9 +581,11 @@
     left: 50%;
     transform: translateX(-50%);
     background: none;
+    display: flex; /* Центрируем иконку */
+    align-items: center;
+    justify-content: center;
     border: none;
-    font-size: 24px;
-    padding: 8px;
+    font-size: 28px; /* Уменьшаем размер иконки */
     cursor: pointer;
     opacity: 0.8;
     z-index: 3;
@@ -592,13 +597,7 @@
     right: 30px;
     left: auto;
     transform: translateY(-50%);
-    font-size: 20px;
-    margin: 0;
-    padding: 8px;
-    height: 24px;
-    line-height: 24px;
-    display: flex;
-    align-items: center;
+    font-size: 22px; 
   }
 
   .undo-button:hover {
