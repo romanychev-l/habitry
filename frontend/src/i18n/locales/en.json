@@ -146,7 +146,8 @@
     "share_profile": "Share profile",
     "share_profile_description": "Share profile link",
     "share": "Share",
-    "username_required": "Telegram username is required to share profile"
+    "username_required": "Telegram username is required to share profile",
+    "display_score": "Show score instead of streak"
   },
   "profile": {
     "title": "User Profile",

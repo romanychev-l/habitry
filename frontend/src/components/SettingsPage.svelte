@@ -2,7 +2,7 @@
   import { _ } from 'svelte-i18n';
   import { createEventDispatcher } from 'svelte';
   import { user } from '../stores/user';
-  import { isListView } from '../stores/view';
+  import { isListView, displayScore } from '../stores/view';
   import { api } from '../utils/api';
 
   const dispatch = createEventDispatcher();
@@ -20,7 +20,7 @@
     try {
       if (!$user?.id) return;
       
-      const data = await api.getUserSettings($user.id);
+      const data = await api.getUserSettings();
       notificationsEnabled = data.notifications_enabled || false;
       notificationTime = data.notification_time || "";
     } catch (error) {
@@ -29,10 +29,10 @@
   }
 
   // Сохраняем настройки с debounce
-  async function saveSettings() {
+  async function saveNotificationSettings() {
     try {
       if (!$user?.id) return;
-      
+
       // Очищаем предыдущий таймер
       if (saveTimeout) {
         clearTimeout(saveTimeout);
@@ -43,18 +43,15 @@
         isSaving = true;
         saveMessage = "";
 
-        console.log('Сохраняем настройки:', {
+        console.log('Сохраняем настройки уведомлений:', {
           telegram_id: $user.id,
           notifications_enabled: notificationsEnabled,
           notification_time: notificationTime,
-          is_list_view: $isListView
         });
 
         await api.updateUserSettings({
-          telegram_id: $user.id,
           notifications_enabled: notificationsEnabled,
-          notification_time: notificationTime,
-          is_list_view: $isListView
+          notification_time: notificationTime
         });
 
         saveMessage = $_('settings.saved');
@@ -109,7 +106,7 @@
             <span>{$_('settings.notifications_enabled')}</span>
           </div>
           <label class="switch">
-            <input type="checkbox" bind:checked={notificationsEnabled} on:change={saveSettings}>
+            <input type="checkbox" bind:checked={notificationsEnabled} on:change={saveNotificationSettings}>
             <span class="slider"></span>
           </label>
         </div>
@@ -123,7 +120,7 @@
               type="time" 
               bind:value={notificationTime}
               class="time-input"
-              on:change={saveSettings}
+              on:change={saveNotificationSettings}
               placeholder={$_('settings.notification_time_placeholder')}
             />
           </div>
@@ -136,7 +133,19 @@
             <span>{$_('habits.compact_view')}</span>
           </div>
           <label class="switch">
-            <input type="checkbox" bind:checked={$isListView} on:change={saveSettings}>
+            <input type="checkbox" bind:checked={$isListView}>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="setting-item">
+          <div class="setting-label">
+            <span>{$_('settings.display_score')}</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" bind:checked={$displayScore}>
             <span class="slider"></span>
           </label>
         </div>

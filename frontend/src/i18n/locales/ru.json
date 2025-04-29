@@ -146,7 +146,8 @@
     "share_profile": "Поделиться профилем",
     "share_profile_description": "Отправить ссылку на профиль",
     "share": "Поделиться",
-    "username_required": "Для шаринга профиля нужен username в Telegram"
+    "username_required": "Для шаринга профиля нужен username в Telegram",
+    "display_score": "Показывать очки вместо серии"
   },
   "profile": {
     "title": "Профиль пользователя",

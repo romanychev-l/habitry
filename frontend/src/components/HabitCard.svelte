@@ -1,6 +1,6 @@
 <script lang="ts">
     import { _ } from 'svelte-i18n';
-    import { isListView } from '../stores/view';
+    import { isListView, displayScore } from '../stores/view';
     import { habits } from '../stores/habit';
     import { user } from '../stores/user';
     import HabitActionsModal from './HabitActionsModal.svelte';
@@ -371,7 +371,7 @@
     </div>
   </div>
   <div class="streak-counter" style="--habit-gradient: {gradientStyle}">
-    {habit.streak || 0}
+    {$displayScore ? (habit.score || 0) : (habit.streak || 0)}
   </div>
 </div>
 
