@@ -26,6 +26,11 @@
   let showStakeTooltip = false;
   let showDaysTooltip = false;
 
+  // Ошибки валидации
+  let titleError = '';
+  let wantToBecomeError = '';
+  const MAX_LENGTH = 34;
+
   // Предотвращаем скролл на основной странице
   function disableBodyScroll() {
     document.body.style.overflow = 'hidden';
@@ -121,6 +126,23 @@
   function toggleDaysTooltip() {
     showDaysTooltip = !showDaysTooltip;
   }
+
+  // Реактивная валидация длины полей
+  $: {
+    if (title.length > MAX_LENGTH) {
+      titleError = $_('habits.errors.max_length', { values: { max: MAX_LENGTH } }) || `Максимум ${MAX_LENGTH} символов`;
+    } else {
+      titleError = '';
+    }
+  }
+
+  $: {
+    if (wantToBecome.length > MAX_LENGTH) {
+      wantToBecomeError = $_('habits.errors.max_length', { values: { max: MAX_LENGTH } }) || `Максимум ${MAX_LENGTH} символов`;
+    } else {
+      wantToBecomeError = '';
+    }
+  }
 </script>
 
 <div class="wrapper" bind:this={contentWrapper}>
@@ -150,6 +172,9 @@
             placeholder="{$_('habits.title_placeholder') || 'Например: Медитация'}"
             class="input"
           />
+          {#if titleError}
+            <p class="error-message">{titleError}</p>
+          {/if}
         </div>
         
         <div class="form-control">
@@ -172,6 +197,9 @@
             class="input"
             placeholder={$_('habits.want_to_become_placeholder')}
           />
+          {#if wantToBecomeError}
+            <p class="error-message">{wantToBecomeError}</p>
+          {/if}
         </div>
         
         <div class="form-control">
@@ -260,7 +288,7 @@
         <button 
           class="save-btn" 
           on:click={handleSave}
-          disabled={!title || (!isOneTime && selectedDays.size === 0)}
+          disabled={!title || !!titleError || !!wantToBecomeError || (!isOneTime && selectedDays.size === 0)}
         >
           {$_('habits.save')}
         </button>
@@ -496,7 +524,8 @@
     border: none;
     font-size: 16px;
     cursor: pointer;
-    color: #999;
+    color: var(--tg-theme-text-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
 
   .checkbox-container {
@@ -532,5 +561,12 @@
     background: var(--tg-theme-bg-color);
     color: var(--tg-theme-text-color);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .error-message {
+    color: var(--tg-theme-destructive-text-color);
+    font-size: 12px;
+    margin-top: 4px;
+    margin-bottom: 0;
   }
 </style>

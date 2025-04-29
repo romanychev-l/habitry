@@ -12,7 +12,8 @@
     import { onMount } from 'svelte';
     import { api } from '../utils/api';
     import { popup, initData, hapticFeedback } from '@telegram-apps/sdk-svelte';
-    
+    import { gradients } from '../utils/gradients'; // Import gradients
+
     export let habit: HabitType & { progress: number };
     export let telegramId: number;
     export let readonly: boolean = false;
@@ -213,20 +214,20 @@
         }
     }
 
-    // Функция для генерации цвета на основе строки
-    function stringToColor(str: string): string {
+    // Helper function to calculate a hash from a string
+    function simpleHash(str: string): number {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
         }
-        const h = Math.abs(hash % 360);
-        return `hsl(${h}, 70%, 60%)`; // Используем HSL для сохранения яркости
+        return Math.abs(hash);
     }
 
-    // Получаем два цвета для градиента и мемоизируем их
-    $: color1 = stringToColor(habit._id);
-    $: color2 = stringToColor(habit._id.split('').reverse().join(''));
-    $: gradientStyle = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
+    // Select a gradient based on the habit ID hash
+    $: gradientIndex = simpleHash(habit._id) % gradients.length;
+    $: gradientStyle = gradients[gradientIndex];
 
     let showActions = false;
     let showDeleteConfirm = false;
@@ -468,6 +469,7 @@
     mask: url('/src/assets/squircley.svg') no-repeat center / contain;
     -webkit-mask: url('/src/assets/squircley.svg') no-repeat center / contain;
     background: white;
+    font-family: 'Manrope', sans-serif;
   }
 
   .habit-card::before {
@@ -545,8 +547,18 @@
     z-index: 1;
     margin: 0;
     font-size: 20px;
-    font-weight: 700;
+    font-weight: 600;
     color: #333;
+    /* Ограничение двумя строками */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Отступы слева и справа */
+    padding: 0 10px; 
+    word-break: break-word; /* Перенос слов */
+    line-height: 1.5; /* Немного увеличим межстрочный интервал */
   }
 
   :global(.list-view) .habit-card h3 {
@@ -607,11 +619,22 @@
   .want-to-become .label {
     font-size: 12px;
     opacity: 0.7;
+    font-weight: 400;
   }
 
   .want-to-become .value {
     font-size: 20px;
-    font-weight: 700;
+    font-weight: 600;
+    /* Ограничение двумя строками */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Отступы слева и справа */
+    padding: 0 10px;
+    word-break: break-word; /* Перенос слов */
+    line-height: 1.5; /* Немного увеличим межстрочный интервал */
   }
 
   .content {

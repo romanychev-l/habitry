@@ -94,7 +94,8 @@
       "title_required": "Enter the habit name",
       "load_followers": "Failed to load followers",
       "unfollow": "Failed to unfollow user",
-      "ping": "Failed to send reminder"
+      "ping": "Failed to send reminder",
+      "max_length": "Maximum {max} characters"
     },
     "modals": {
       "delete_title": "Delete Habit",
