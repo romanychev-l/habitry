@@ -1140,32 +1140,51 @@
   /* Стили для переключателя режимов */
   .mode-selector {
     display: flex;
-    justify-content: space-between;
-    gap: 10px;
     margin-bottom: 20px;
+    background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
+    border-radius: 16px;
+    padding: 4px;
+    overflow: hidden;
   }
   
   .mode-selector button {
     flex: 1;
-    padding: 12px;
+    padding: 10px;
     border: none;
     border-radius: 12px;
-    background-color: var(--tg-theme-button-color, #50B4F3);
-    color: var(--tg-theme-button-text-color, #ffffff);
-    font-size: 16px;
+    background-color: transparent;
+    color: var(--tg-theme-text-color, #000000);
+    font-size: 15px;
     cursor: pointer;
-    opacity: 0.7;
     transition: all 0.2s ease;
+    text-align: center;
+    font-weight: 500;
   }
   
   .mode-selector button.active {
-    opacity: 1;
-    font-weight: bold;
+    font-weight: 600;
+    background-color: var(--tg-theme-hint-color, #a0a0a0);
+    color: var(--tg-theme-text-color, #000000);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .mode-selector button:not(.active) {
+    opacity: 0.7;
   }
    
   /* Добавляем стили для темной темы для кнопок режимов */
+  :global([data-theme="dark"]) .mode-selector {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
   :global([data-theme="dark"]) .mode-selector button {
     color: #ffffff;
+  }
+
+  :global([data-theme="dark"]) .mode-selector button.active {
+    background-color: var(--tg-theme-secondary-bg-color, #333333);
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
   
   /* Добавляем стили для темной темы для кнопки действия */

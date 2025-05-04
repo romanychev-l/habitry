@@ -17,6 +17,7 @@
   import { subscribeToWalletChanges } from './utils/tonConnect';
   import type { Wallet } from '@tonconnect/ui';
   import { popup, initData, themeParams } from '@telegram-apps/sdk-svelte';
+  import plusIcon from './assets/plus.svg'; // Import the SVG
   
   // Инициализируем значение из localStorage
   $isListView = localStorage.getItem('isListView') === 'true';
@@ -514,7 +515,7 @@
           console.log('Opening buy tokens modal');
           showBuyTokens = true;
         }}>
-          +
+          <img src={plusIcon} alt="Add Balance" />
         </button>
       {/if}
     </div>
@@ -535,7 +536,7 @@
     class="add-button"
     on:click={() => showModal = true}
   >
-    +
+    <img src={plusIcon} alt="Add Habit" />
   </button>
 
   {#if showModal}
@@ -664,7 +665,6 @@
     border: none;
     background: var(--tg-theme-button-color);;
     color: white;
-    font-size: 24px;
     mask: url('/src/assets/streak.svg') no-repeat center / contain;
     -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
     display: flex;
@@ -672,7 +672,6 @@
     justify-content: center;
     cursor: pointer;
     z-index: 2;
-    /* padding-bottom: 4px; */
   }
 
   .user-info {
@@ -735,32 +734,20 @@
     border: none;
     background: var(--tg-theme-hint-color);
     color: white;
-    font-size: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     mask: url('/src/assets/streak.svg') no-repeat center / contain;
     -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
-    /* padding-bottom: 4px; */
   }
 
-  /* :global([data-theme="dark"]) .balance {
-    color: white;
-  } */
-
-  /* .payment-button {
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    padding: 12px 24px;
-    border-radius: 28px;
-    border: none;
-    background: var(--tg-theme-button-color);
-    color: var(--tg-theme-button-text-color);
-    font-size: 16px;
-    font-weight: 500;
-  } */
+  .add-button img,
+  .add-balance-button img {
+    width: 80%;
+    height: 80%;
+    filter: brightness(0) invert(1);
+  }
 
   :global(body) {
     margin: 0;
