@@ -390,18 +390,17 @@
   .days-selector button {
     aspect-ratio: 1;
     border-radius: 12px;
-    border: 2px solid var(--tg-theme-button-color);
-    background: var(--tg-theme-bg-color);
+    border: none;
+    background: var(--tg-theme-secondary-bg-color);
     font-weight: 500;
     font-size: 14px;
     padding: 0;
     width: 100%;
     height: 48px;
-    color: var(--tg-theme-text-color);
+    color: var(--tg-theme-hint-color);
   }
 
   .days-selector button.selected {
-    border-color: var(--tg-theme-button-color);
     background: var(--tg-theme-button-color);
     color: white;
   }
@@ -537,12 +536,13 @@
   }
 
   :global([data-theme="dark"]) .days-selector button:not(.selected) {
-    color: white !important;
+    color: var(--tg-theme-hint-color) !important;
+    background-color: var(--tg-theme-secondary-bg-color);
   }
 
-  :global([data-theme="dark"]) .days-selector button {
+  :global([data-theme="dark"]) .days-selector button.selected {
     color: white !important;
-    background-color: var(--tg-theme-secondary-bg-color);
+    background-color: var(--tg-theme-button-color);
   }
 
   :global([data-theme="dark"]) h2 {
