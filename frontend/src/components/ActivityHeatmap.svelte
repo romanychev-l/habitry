@@ -40,12 +40,42 @@
   }
   
   function showTooltip(event: MouseEvent, text: string) {
-    const rect = (event.target as HTMLElement).getBoundingClientRect();
+    const target = event.target as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight; // Добавим высоту окна
+  
+    // Предполагаемые размеры tooltip (можно уточнить по CSS)
+    const tooltipHeight = 30; 
+    const tooltipWidth = 150; // Примерная ширина, можно адаптировать
+    const tooltipOffset = 10; // Отступ от элемента
+  
+    // Попробуем расположить над элементом по центру
+    let newY = rect.top - tooltipHeight - tooltipOffset;
+    let newX = rect.left + rect.width / 2 - tooltipWidth / 2;
+  
+    // Корректировка по вертикали: если уходит вверх, ставим вниз
+    if (newY < 0) {
+      newY = rect.bottom + tooltipOffset;
+    }
+    // Дополнительная проверка: если уходит вниз (маловероятно с текущей логикой, но на всякий случай)
+    if (newY + tooltipHeight > vh) {
+        newY = vh - tooltipHeight - tooltipOffset; 
+    }
+  
+    // Корректировка по горизонтали
+    if (newX < 0) { // Если уходит влево
+      newX = tooltipOffset;
+    }
+    if (newX + tooltipWidth > vw) { // Если уходит вправо
+      newX = vw - tooltipWidth - tooltipOffset;
+    }
+  
     tooltip = {
       text,
       visible: true,
-      x: rect.left,
-      y: rect.top - 30
+      x: newX,
+      y: newY
     };
     
     setTimeout(() => {
@@ -157,12 +187,13 @@
         
         <div class="squares">
           {#each calendarData as day}
+            {@const tooltipText = `${day.date}: ${day.count} ${$_('heatmap.contributions')}`}
             <button 
               class="square" 
               style={getStyleForCount(day.count)}
-              on:click={(e) => showTooltip(e, `${day.date}: ${day.count} contributions`)}
+              on:click={(e) => showTooltip(e, tooltipText)}
               type="button"
-              aria-label="{day.date}: {day.count} contributions"
+              aria-label={tooltipText}
             ></button>
           {/each}
         </div>

@@ -255,5 +255,8 @@
   },
   "creator": {
     "by": "Created by Leonid Romanychev"
+  },
+  "heatmap": {
+    "contributions": "completions"
   }
 } 

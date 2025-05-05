@@ -893,16 +893,10 @@ func (h *Handler) HandleUndo(c *gin.Context) {
 
 		// Обновляем историю
 		update := bson.M{
-			"$set": bson.M{
-				"habits.$[habit].done": false,
+			"$pull": bson.M{
+				"habits": bson.M{"habit_id": habit.ID},
 			},
 		}
-		arrayFilters := options.ArrayFilters{
-			Filters: []interface{}{
-				bson.M{"habit.habit_id": habit.ID},
-			},
-		}
-		opts := options.Update().SetArrayFilters(arrayFilters)
 
 		_, err = h.historyCollection.UpdateOne(
 			context.Background(),
@@ -911,7 +905,6 @@ func (h *Handler) HandleUndo(c *gin.Context) {
 				"date":        today,
 			},
 			update,
-			opts,
 		)
 
 		if err != nil {

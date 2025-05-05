@@ -107,9 +107,13 @@
     async function loadActivityData() {
         console.log("Loading activity data for habit:", habit);
         try {
-            const data = await api.getHabitActivity(habit._id);
-            console.log("Activity data response:", data);
-            activityData = Array.isArray(data) ? data : [];
+            const rawActivityData = await api.getHabitActivity(habit._id);
+
+            activityData = rawActivityData.map((item: { date: string; done: boolean }) => ({
+                date: item.date,
+                count: item.done ? 1 : 0
+            }));
+            console.log("Activity data response:", activityData);
         } catch (err) {
             console.error('Error loading activity data:', err);
             activityData = [];
