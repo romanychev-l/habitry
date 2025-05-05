@@ -48,6 +48,23 @@
     }
   }
 
+  // Action для отслеживания кликов вне элемента
+  function clickOutside(node: HTMLElement, handler: () => void) {
+      const handleClick = (event: MouseEvent) => {
+          if (node && !node.contains(event.target as Node) && !event.defaultPrevented) {
+              handler();
+          }
+      };
+
+      document.addEventListener('click', handleClick, true);
+
+      return {
+          destroy() {
+              document.removeEventListener('click', handleClick, true);
+          }
+      };
+  }
+
   onMount(() => {
     titleInput?.focus();
     if (habit?.stake) {
@@ -106,6 +123,15 @@
 
   function handleOverlayClick(event: MouseEvent) {
     // Закрываем только если клик был именно по оверлею
+    // Also check if any tooltip is open, if so, close it instead of closing the modal
+    if (showTooltip || showWantToBecomeTooltip || showStakeTooltip || showDaysTooltip) {
+       showTooltip = false;
+       showWantToBecomeTooltip = false;
+       showStakeTooltip = false;
+       showDaysTooltip = false;
+       return; // Prevent modal close if a tooltip was closed
+    }
+
     if (event.target === event.currentTarget) {
       dispatch('close');
     }
@@ -150,7 +176,7 @@
     class="overlay" 
     role="button"
     tabindex="0"
-    on:click={() => dispatch('close')}
+    on:click={handleOverlayClick}
     on:keydown={e => e.key === 'Enter' && dispatch('close')}
   ></div>
   <div class="modal-container">
@@ -183,9 +209,8 @@
               <span class="label-text">{$_('habits.want_to_become')}</span>
               <button class="info-button" on:click|stopPropagation={toggleWantToBecomeTooltip}>?</button>
               {#if showWantToBecomeTooltip}
-                <div class="tooltip" transition:fade>
+                <div class="tooltip" use:clickOutside={() => showWantToBecomeTooltip = false} transition:fade>
                   {$_('habits.want_to_become_tooltip')}
-                  <button class="tooltip-close" on:click|stopPropagation={toggleWantToBecomeTooltip}>×</button>
                 </div>
               {/if}
             </div>
@@ -208,9 +233,8 @@
               <span class="label-text">{$_('habits.stake')}</span>
               <button class="info-button" on:click|stopPropagation={toggleStakeTooltip}>?</button>
               {#if showStakeTooltip}
-                <div class="tooltip" transition:fade>
+                <div class="tooltip" use:clickOutside={() => showStakeTooltip = false} transition:fade>
                   {$_('habits.stake_tooltip')}
-                  <button class="tooltip-close" on:click|stopPropagation={toggleStakeTooltip}>×</button>
                 </div>
               {/if}
             </div>
@@ -231,9 +255,8 @@
               <span class="label-text">{$_('habits.auto_habit')}</span>
               <button class="info-button" on:click|stopPropagation={toggleTooltip}>?</button>
               {#if showTooltip}
-                <div class="tooltip" transition:fade>
+                <div class="tooltip" use:clickOutside={() => showTooltip = false} transition:fade>
                   {$_('habits.auto_habit_tooltip')}
-                  <button class="tooltip-close" on:click|stopPropagation={toggleTooltip}>×</button>
                 </div>
               {/if}
             </div>
@@ -249,9 +272,8 @@
               <span class="label-text">{$_('habits.days')}</span>
               <button class="info-button" on:click|stopPropagation={toggleDaysTooltip}>?</button>
               {#if showDaysTooltip}
-                <div class="tooltip" transition:fade>
+                <div class="tooltip" use:clickOutside={() => showDaysTooltip = false} transition:fade>
                   {$_('habits.days_tooltip')}
-                  <button class="tooltip-close" on:click|stopPropagation={toggleDaysTooltip}>×</button>
                 </div>
               {/if}
             </div>
@@ -501,30 +523,20 @@
 
   .tooltip {
     position: absolute;
-    left: 50px;
+    /* Adjusted positioning for better fit */
+    left: 28px; /* Move slightly to the right of the '?' button */
     top: 50%;
     transform: translateY(-50%);
-    width: 250px;
-    background: white;
+    width: 250px; /* Keep width */
+    background: var(--tg-theme-bg-color); /* Adjusted background for theme */
     border-radius: 8px;
     padding: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     z-index: 1001;
     font-size: 14px;
-    color: #333;
+    color: var(--tg-theme-text-color); /* Adjusted color for theme */
     line-height: 1.4;
-  }
-
-  .tooltip-close {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background: none;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-    color: var(--tg-theme-text-color);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--tg-theme-secondary-bg-color); /* Added border for visibility */
   }
 
   .checkbox-container {
@@ -549,22 +561,39 @@
     color: white;
   }
 
-  :global([data-theme="dark"]) .modal * {
+  /* Removed broad rule with !important to avoid potential conflicts */
+  /* :global([data-theme="dark"]) .modal * {
     color: white !important;
+  } */
+
+  /* Use more specific rules for dark theme text */
+   :global([data-theme="dark"]) .modal .label-text,
+   :global([data-theme="dark"]) .modal .input,
+   :global([data-theme="dark"]) .modal .days-selector button { /* Apply to other text elements if needed */
+      color: var(--tg-theme-text-color) !important; /* Ensure text color is set */
+   }
+
+  /* Keep important for specific overrides where necessary */
+  :global([data-theme="dark"]) .modal h2,
+  :global([data-theme="dark"]) .modal .save-btn,
+  :global([data-theme="dark"]) .info-button {
+     color: white !important;
   }
+
 
   :global([data-theme="dark"]) input::placeholder {
     color: rgba(255, 255, 255, 0.6) !important;
   }
 
   :global([data-theme="dark"]) .tooltip {
-    background: var(--tg-theme-bg-color);
+    background: var(--tg-theme-secondary-bg-color); /* Darker background for tooltip */
     color: var(--tg-theme-text-color);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border-color: var(--tg-theme-bg-color); /* Adjust border for dark theme */
   }
 
   .error-message {
-    color: var(--tg-theme-destructive-text-color);
+    color: var(--tg-theme-destructive-text-color) !important; /* Added !important back */
     font-size: 12px;
     margin-top: 4px;
     margin-bottom: 0;
