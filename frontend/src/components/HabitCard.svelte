@@ -431,7 +431,7 @@
 <style>
   .habit-wrapper {
     position: relative;
-    width: 280px;
+    width: 300px;
     aspect-ratio: 1;
     margin: 0 auto;
   }
@@ -448,8 +448,9 @@
   }
 
   .card-shadow {
-    width: 100%;
-    height: 100%;
+    width: calc(100% + 20px);
+    height: calc(100% + 20px);
+    margin: -10px;
     filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08));
   }
 
@@ -516,8 +517,8 @@
 
   .streak-shadow {
     position: absolute;
-    top: 5px;
-    right: -5px;
+    top: 15px;
+    right: 5px;
     width: 60px;
     height: 60px;
     filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08));
@@ -594,15 +595,15 @@
   .undo-button {
     position: absolute;
     color: #333;
-    bottom: 16px;
+    bottom: 25px;
     left: 50%;
     transform: translateX(-50%);
     background: none;
-    display: flex; /* Центрируем иконку */
+    display: flex;
     align-items: center;
     justify-content: center;
     border: none;
-    font-size: 28px; /* Уменьшаем размер иконки */
+    font-size: 28px;
     cursor: pointer;
     opacity: 0.8;
     z-index: 3;
@@ -670,7 +671,7 @@
 
   .more-button {
     position: absolute;
-    top: 16px;
+    top: 25px;
     left: 50%;
     transform: translateX(-50%);
     background: none;
