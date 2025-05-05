@@ -13,7 +13,8 @@
     import { api } from '../utils/api';
     import { popup, initData, hapticFeedback } from '@telegram-apps/sdk-svelte';
     import { gradients } from '../utils/gradients'; // Import gradients
-    import SolarUndoLeftRoundBoldDuotone from '../assets/SolarUndoLeftRoundBoldDuotone.svelte'; // Импортируем иконку
+    import SolarUndoLeftRoundLinear from '../assets/SolarUndoLeftRoundLinear.svelte'; // Импортируем иконку
+    import SolarMenuDotsBold from '../assets/SolarMenuDotsBold.svelte'; // Импортируем новую иконку меню
 
     export let habit: HabitType & { progress: number };
     export let telegramId: number;
@@ -356,7 +357,8 @@
           <button 
             class="undo-button" 
             on:click|stopPropagation={handleUndo}
-          ><SolarUndoLeftRoundBoldDuotone /></button>
+            style="bottom: 40px;"
+          ><SolarUndoLeftRoundLinear style="width: 0.8em; height: 0.8em;" /></button>
         {/if}
       </div>
 
@@ -364,8 +366,9 @@
         <button 
           class={!$isListView ? 'more-button' : 'more-list-view-button'}
           on:click={() => showActions = true}
+          style="top: 35px;"
         >
-          {!$isListView ? '…' : '⋮'}
+          <SolarMenuDotsBold style="width: 0.8em; height: 0.8em;" />
         </button>
       {/if}
     </div>
