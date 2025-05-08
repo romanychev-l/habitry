@@ -1,38 +1,41 @@
 Кн<script lang="ts">
     import { _ } from 'svelte-i18n';
     import type { Habit } from '../types';
-    import { habits } from '../stores/habit';
     import { createEventDispatcher, onMount, onDestroy } from 'svelte';
     import ActivityHeatmap from './ActivityHeatmap.svelte';
     import { api } from '../utils/api';
-    // import { showTelegramOrCustomAlert } from '../stores/alert';
     import { user } from '../stores/user';
-    import { popup, initData } from '@telegram-apps/sdk-svelte';
+    import { popup } from '@telegram-apps/sdk-svelte';
     
     const dispatch = createEventDispatcher();
     
     export let show = false;
     export let habit: Habit;
     export let telegramId: number;
-    export let initialFollowers: Array<{ username: string; telegram_id: number; first_name?: string; photo_url?: string; completed_today?: boolean }> | null = null;
     
-    let followers: Array<{ 
-        username: string; 
-        telegram_id: number; 
-        first_name?: string; 
+    type FollowerDetail = {
+        _id: string;
+        telegram_id: number;
+        username: string;
+        first_name?: string;
         photo_url?: string;
-        is_mutual?: boolean;
-        completed_today?: boolean;
-    }> = [];
+        title: string;
+        last_click_date: string;
+        streak: number;
+        score: number;
+        completed_today: boolean;
+        currentUserFollowsThisUser: boolean;
+        thisUserFollowsCurrentUser: boolean;
+    };
+
+    let followers: Array<FollowerDetail> = [];
     let loading = false;
     let error = '';
     let showUnfollowConfirm = false;
-    let selectedFollower: { username: string; telegram_id: number; first_name?: string; photo_url?: string } | null = null;
+    let selectedFollowerForUnfollow: FollowerDetail | null = null;
+    
     let activityData: { date: string; count: number }[] = [];
     
-    const API_URL = import.meta.env.VITE_API_URL;
-    
-    // Функция для получения текущей даты с учетом часового пояса
     function getCurrentDate() {
         const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         const date = new Date();
@@ -72,11 +75,9 @@
             loading = true;
             console.log('Loading followers for habit:', habit._id, 'telegramId:', telegramId);
             
-            // Получаем данные от API
-            const data = await api.getHabitFollowers(habit._id);
+            const data = await api.getHabitFollowers(habit._id) as Array<FollowerDetail>;
             console.log('Received followers data:', data);
             
-            // Проверяем и обрабатываем данные
             if (!Array.isArray(data)) {
                 console.warn('Setting followers to empty array because data is not an array');
                 followers = [];
@@ -85,20 +86,14 @@
                 console.log('Processed followers:', followers);
             }
             
-            // Отправляем событие обновления в родительский компонент
             dispatch('followersUpdated', { followers });
             
-            error = ''; // Сбрасываем ошибку если запрос успешен
+            error = '';
         } catch (err: unknown) {
             console.error('Error loading followers:', err);
             error = err instanceof Error ? err.message : $_('habits.errors.load_followers');
             
-            // В случае ошибки, если есть initialFollowers, используем его
-            if (initialFollowers && initialFollowers.length > 0) {
-                followers = initialFollowers.map(f => ({ ...f }));
-            } else {
-                followers = [];
-            }
+            followers = [];
         } finally {
             loading = false;
         }
@@ -121,50 +116,77 @@
     }
     
     async function unfollowHabit() {
-        if (!selectedFollower) return;
+        if (!selectedFollowerForUnfollow) return;
         
         error = '';
         
         const requestData = {
             habit_id: habit._id,
-            unfollow_id: selectedFollower.telegram_id
+            unfollow_id: selectedFollowerForUnfollow.telegram_id
         };
         
         console.log('Отправляем запрос на отписку:', requestData);
         
         try {
-            await api.unfollowHabit(requestData);
+            await api.unfollowHabit({
+                habit_id: habit._id,
+                unfollow_id: selectedFollowerForUnfollow.telegram_id
+            });
+
             console.log('Успешно отписались');
-            
-            // Обновляем список подписчиков
             await loadFollowers();
-            
-            // Закрываем модальное окно подтверждения
             showUnfollowConfirm = false;
-            selectedFollower = null;
+            selectedFollowerForUnfollow = null;
             
-            // Показываем алерт
             await popup.open({
                 title: $_('alerts.success'),
                 message: $_('habits.unfollow_success'),
                 buttons: [{ id: 'close', type: 'close' }]
             });
-        } catch (error) {
-            console.error('Error unfollowing:', error);
+        } catch (errorMsg) {
+            console.error('Error unfollowing:', errorMsg);
             error = $_('habits.errors.unfollow');
         }
     }
     
-    function handleUnfollowClick(follower: { username: string; telegram_id: number; first_name?: string; photo_url?: string }) {
-        selectedFollower = follower;
+    function handleUnfollowClick(follower: FollowerDetail) {
+        selectedFollowerForUnfollow = follower;
         showUnfollowConfirm = true;
     }
+
+    async function handleSubscribeClick(targetHabit: FollowerDetail) {
+        if (!targetHabit) return;
+        error = '';
+        loading = true;
+
+        try {
+            await api.subscribeToFollowerHabit({
+                current_user_habit_id: habit._id,
+                target_user_habit_id: targetHabit._id
+            });
+
+            await popup.open({
+                title: $_('alerts.success'),
+                message: $_('habits.follow_success', { values: { username: targetHabit.username } }),
+                buttons: [{ id: 'close', type: 'close' }]
+            });
+            await loadFollowers();
+        } catch (err) {
+            console.error('Error subscribing:', err);
+            error = $_('habits.errors.follow');
+            popup.open({
+                title: $_('alerts.error'),
+                message: error,
+                buttons: [{ id: 'close', type: 'close' }]
+            });
+        } finally {
+            loading = false;
+        }
+    }
     
-    function handlePingClick(follower: { username: string; telegram_id: number; first_name?: string; photo_url?: string }) {
-        // Проверяем, выполнил ли пользователь привычку сегодня
+    function handlePingClick(follower: FollowerDetail) {
         const today = getCurrentDate();
         if (habit.last_click_date !== today) {
-            // Показываем стандартный алерт с предупреждением
             popup.open({
                 title: $_('alerts.warning'),
                 message: $_('habits.complete_before_ping'),
@@ -173,7 +195,6 @@
             return;
         }
         
-        // Сразу отправляем запрос на создание пинга без подтверждения
         try {
             api.createPing({
                 follower_id: follower.telegram_id,
@@ -216,12 +237,9 @@
         }
     }
     
-    // Новая функция для отправки пинга всем подписчикам, которые не выполнили привычку
     function handlePingAllClick() {
-        // Проверяем, выполнил ли пользователь привычку сегодня
         const today = getCurrentDate();
         if (habit.last_click_date !== today) {
-            // Показываем стандартный алерт с предупреждением
             popup.open({
                 title: $_('alerts.warning'),
                 message: $_('habits.complete_before_ping'),
@@ -230,11 +248,13 @@
             return;
         }
         
-        // Фильтруем только взаимных подписчиков, которые не выполнили привычку сегодня
-        const followersToPing = followers.filter(f => f.is_mutual && !f.completed_today);
+        const followersToPing = followers.filter(f => 
+            f.currentUserFollowsThisUser && 
+            f.thisUserFollowsCurrentUser && 
+            !f.completed_today
+        );
         
         if (followersToPing.length === 0) {
-            // Показываем алерт, если нет подписчиков для пинга
             popup.open({
                 title: $_('alerts.info'),
                 message: $_('habits.no_followers_to_ping'),
@@ -243,7 +263,6 @@
             return;
         }
         
-        // Счетчик успешных пингов
         let successCount = 0;
         let pingPromises: Promise<any>[] = [];
         
@@ -296,18 +315,15 @@
         event.stopPropagation();
     }
     
-    // Добавляем обработчик инициализации
     onMount(() => {
-        // if (window.Telegram?.WebApp?.ready) {
-        //     // Свойство ready - это булев флаг, а не метод
-        // }
-        
-        // Устанавливаем начальное состояние из initialFollowers, если они доступны
-        if (initialFollowers && initialFollowers.length > 0 && show) {
-            followers = initialFollowers.map(f => ({ ...f }));
-            console.log('Set initial followers state:', followers);
+        if (show) {
+            loadFollowers();
+            loadActivityData();
         }
     });
+
+    $: usersIFollow = followers.filter(f => f.currentUserFollowsThisUser);
+    $: usersFollowingMeNotMutual = followers.filter(f => f.thisUserFollowsCurrentUser && !f.currentUserFollowsThisUser);
 </script>
 
 {#if show}
@@ -320,7 +336,7 @@
     >
         <div class="dialog">
             <div class="dialog-header">
-                <h2>{$_('habits.followers_list')}</h2>
+                <h2>{$_('habits.followers_management')}</h2>
             </div>
             
             <div 
@@ -332,29 +348,30 @@
                     <ActivityHeatmap {habit} data={activityData} />
                 </div>
                 
-                <!-- Кнопка "Пингануть всех" между секциями -->
                 <button 
                     class="ping-all-button" 
                     on:click={handlePingAllClick}
-                    title={$_('habits.ping_all_inactive')}
+                    title={$_('habits.ping_all_inactive_mutual')}
+                    disabled={followers.filter(f => f.currentUserFollowsThisUser && f.thisUserFollowsCurrentUser && !f.completed_today).length === 0}
                 >
-                    🔔 {$_('habits.ping_all_inactive')}
+                    🔔 {$_('habits.ping_all_inactive_mutual')}
                 </button>
                 
+                {#if error}
+                    <div class="error">{error}</div>
+                {/if}
+
+                {#if loading}
+                    <div class="loading">{$_('common.loading')}</div>
+                {/if}
+
                 <div class="followers-section">
-                    <h3>{$_('habits.followers_list')}</h3>
-                    
-                    {#if error}
-                        <div class="error">{error}</div>
-                    {/if}
-                    
-                    {#if loading}
-                        <div class="loading">{$_('common.loading')}</div>
-                    {:else if followers.length === 0}
-                        <div class="empty">{$_('habits.no_followers')}</div>
-                    {:else}
+                    <h3>{$_('habits.i_follow')}</h3>
+                    {#if !loading && usersIFollow.length === 0}
+                        <div class="empty">{$_('habits.no_one_i_follow')}</div>
+                    {:else if usersIFollow.length > 0}
                         <ul class="followers-list">
-                            {#each followers as follower}
+                            {#each usersIFollow as follower (follower._id)}
                                 <li class="follower-item">
                                     <div class="follower-info">
                                         {#if follower.photo_url}
@@ -381,7 +398,7 @@
                                         </div>
                                     </div>
                                     <div class="follower-actions">
-                                        {#if follower.is_mutual}
+                                        {#if follower.thisUserFollowsCurrentUser}
                                             {#if !follower.completed_today}
                                                 <button 
                                                     class="ping-button"
@@ -396,7 +413,7 @@
                                                 </span>
                                             {/if}
                                         {:else if follower.completed_today}
-                                            <span class="completed-icon" title={$_('habits.completed_today')}>
+                                             <span class="completed-icon" title={$_('habits.completed_today')}>
                                                 ✅
                                             </span>
                                         {:else}
@@ -417,6 +434,62 @@
                         </ul>
                     {/if}
                 </div>
+
+                <div class="followers-section section-spacing">
+                    <h3>{$_('habits.following_me')}</h3>
+                    {#if !loading && usersFollowingMeNotMutual.length === 0}
+                        <div class="empty">{$_('habits.no_one_following_me_yet')}</div>
+                    {:else if usersFollowingMeNotMutual.length > 0}
+                        <ul class="followers-list">
+                            {#each usersFollowingMeNotMutual as follower (follower._id)}
+                                <li class="follower-item">
+                                    <div class="follower-info">
+                                        {#if follower.photo_url}
+                                            <img 
+                                                src={follower.photo_url} 
+                                                alt={follower.username} 
+                                                class="follower-avatar" 
+                                            />
+                                        {:else}
+                                            <div class="follower-avatar-placeholder">
+                                                {follower.first_name?.[0] || follower.username?.[0] || '?'}
+                                            </div>
+                                        {/if}
+                                        <div class="follower-details">
+                                            <span class="follower-name">{follower.first_name || follower.username}</span>
+                                            <a 
+                                                href="https://t.me/{follower.username}" 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                class="username"
+                                            >
+                                                @{follower.username}
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="follower-actions">
+                                        {#if follower.completed_today}
+                                            <span class="completed-icon" title={$_('habits.completed_today')}>
+                                                ✅
+                                            </span>
+                                        {:else}
+                                             <span class="not-completed-icon" title={$_('habits.not_completed_today')}>
+                                                ❌
+                                            </span>
+                                        {/if}
+                                        <button 
+                                            class="subscribe-button"
+                                            on:click={() => handleSubscribeClick(follower)}
+                                            title={$_('habits.subscribe_to_follower', { values: { username: follower.username }})}
+                                        >
+                                            ➕
+                                        </button>
+                                    </div>
+                                </li>
+                            {/each}
+                        </ul>
+                    {/if}
+                </div>
             </div>
         </div>
     </div>
@@ -425,8 +498,8 @@
 {#if showUnfollowConfirm}
     <div 
         class="dialog-overlay" 
-        on:click|stopPropagation={handleOverlayClick}
-        on:keydown={(e) => e.key === 'Escape' && handleClose()}
+        on:click|stopPropagation={(e) => { if (e.target === e.currentTarget) showUnfollowConfirm = false; }}
+        on:keydown={(e) => e.key === 'Escape' && (showUnfollowConfirm = false)}
         role="button"
         tabindex="0"
     >
@@ -435,7 +508,7 @@
                 <h2>{$_('habits.confirm_unfollow')}</h2>
             </div>
             <div class="dialog-content">
-                <p class="confirm-text">{$_('habits.unfollow_user', { values: { username: selectedFollower?.username } })}</p>
+                <p class="confirm-text">{$_('habits.unfollow_user', { values: { username: selectedFollowerForUnfollow?.username } })}</p>
                 <div class="button-group">
                     <button class="dialog-button cancel" on:click={() => showUnfollowConfirm = false}>
                         {$_('common.cancel')}
@@ -634,6 +707,23 @@
         line-height: 1;
     }
 
+    .subscribe-button {
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: var(--tg-theme-button-color);
+        color: var(--tg-theme-button-text-color);
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
+
     .button-group {
         display: flex;
         flex-direction: column;
@@ -720,6 +810,10 @@
     
     .ping-all-button:active {
         opacity: 0.8;
+    }
+
+    .section-spacing {
+        margin-top: 1.5rem;
     }
 
     :global([data-theme="dark"]) .dialog {

@@ -74,6 +74,14 @@
     "ping_all_sent_title": "Reminders Sent",
     "ping_all_sent_message": "Reminders have been sent to {count} followers",
     "complete_before_ping": "Complete the habit first to send reminders",
+    "followers_management": "Followers Management",
+    "i_follow": "I Follow",
+    "no_one_i_follow": "You are not following anyone",
+    "following_me": "Following Me",
+    "no_one_following_me_yet": "No one is following you yet",
+    "subscribe_to_follower": "Follow @{username}",
+    "follow_success": "You have successfully followed @{username}",
+    "ping_all_inactive_mutual": "Remind All (Mutual)",
     "join_habit": {
       "0": "I've been doing this habit for",
       "1": "already",
@@ -95,6 +103,7 @@
       "load_followers": "Failed to load followers",
       "unfollow": "Failed to unfollow user",
       "ping": "Failed to send reminder",
+      "follow": "Failed to follow user",
       "max_length": "Maximum {max} characters"
     },
     "modals": {

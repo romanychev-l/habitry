@@ -699,60 +699,129 @@ func (h *Handler) HandleGetFollowers(c *gin.Context) {
 	}
 	today := time.Now().In(loc).Format("2006-01-02")
 
-	// Инициализируем массив с начальной емкостью равной количеству подписчиков
-	followers := make([]models.FollowerInfo, 0, len(habit.Followers))
-
 	// Получаем информацию о подписчиках
-	for _, followerID := range habit.Followers {
-		followerObjectID, err := primitive.ObjectIDFromHex(followerID)
+	followerInfosMap := make(map[string]models.FollowerInfo) // Ключ - ID привычки другого пользователя (строка)
+
+	// 1. Пользователи, на которых подписан currentUserActualHabit
+	for _, followedUserHabitIDStr := range habit.Followers {
+		followedUserHabitObjectID, err := primitive.ObjectIDFromHex(followedUserHabitIDStr)
 		if err != nil {
+			log.Printf("GetFollowers: Ошибка преобразования followedUserHabitIDStr '%s': %v", followedUserHabitIDStr, err)
 			continue
 		}
 
-		var followerHabit models.Habit
-		err = h.habitsCollection.FindOne(context.Background(), bson.M{"_id": followerObjectID}).Decode(&followerHabit)
+		var followedUserHabit models.Habit
+		err = h.habitsCollection.FindOne(context.Background(), bson.M{"_id": followedUserHabitObjectID}).Decode(&followedUserHabit)
 		if err != nil {
+			log.Printf("GetFollowers: Ошибка получения followedUserHabit с ID '%s': %v", followedUserHabitIDStr, err)
+			continue // Если привычка удалена или не найдена, пропускаем
+		}
+
+		var followedUser models.User
+		err = h.usersCollection.FindOne(context.Background(), bson.M{"telegram_id": followedUserHabit.TelegramID}).Decode(&followedUser)
+		if err != nil {
+			log.Printf("GetFollowers: Ошибка получения followedUser с TelegramID '%d': %v", followedUserHabit.TelegramID, err)
+			// Можно пропустить или использовать значения по умолчанию для информации о пользователе
 			continue
 		}
 
-		// Получаем информацию о пользователе
-		var user models.User
-		err = h.usersCollection.FindOne(context.Background(), bson.M{"telegram_id": followerHabit.TelegramID}).Decode(&user)
-		if err != nil {
-			log.Printf("Ошибка при получении информации о пользователе: %v", err)
-			continue
-		}
-
-		// Проверяем взаимную подписку
-		isMutual := false
-		for _, fFollowerID := range followerHabit.Followers {
-			if fFollowerID == habitID {
-				isMutual = true
+		isFollowingBack := false
+		for _, idInFollowedHabitFollowers := range followedUserHabit.Followers {
+			if idInFollowedHabitFollowers == habit.ID.Hex() { // habit.ID это ID текущей обрабатываемой привычки (currentUserActualHabit)
+				isFollowingBack = true
 				break
 			}
 		}
+		completedToday := followedUserHabit.LastClickDate == today
 
-		// Определяем, выполнил ли подписчик привычку сегодня
-		completedToday := followerHabit.LastClickDate == today
-
-		// Добавляем полную информацию о подписчике
-		followers = append(followers, models.FollowerInfo{
-			ID:             followerHabit.ID,
-			TelegramID:     followerHabit.TelegramID,
-			Title:          followerHabit.Title,
-			LastClickDate:  followerHabit.LastClickDate,
-			Streak:         followerHabit.Streak,
-			Score:          followerHabit.Score,
-			Username:       user.Username,
-			FirstName:      user.FirstName,
-			PhotoURL:       user.PhotoURL,
-			IsMutual:       isMutual,
-			CompletedToday: completedToday,
-		})
+		info := models.FollowerInfo{
+			ID:                         followedUserHabit.ID, // ID привычки пользователя, на которого подписаны
+			TelegramID:                 followedUserHabit.TelegramID,
+			Title:                      followedUserHabit.Title,
+			LastClickDate:              followedUserHabit.LastClickDate,
+			Streak:                     followedUserHabit.Streak,
+			Score:                      followedUserHabit.Score,
+			Username:                   followedUser.Username,
+			FirstName:                  followedUser.FirstName,
+			PhotoURL:                   followedUser.PhotoURL,
+			CompletedToday:             completedToday,
+			CurrentUserFollowsThisUser: true, // Текущий пользователь подписан на этого пользователя (по определению этого цикла)
+			ThisUserFollowsCurrentUser: isFollowingBack,
+		}
+		followerInfosMap[followedUserHabitIDStr] = info
 	}
 
-	// Всегда возвращаем массив, даже если он пустой
-	c.JSON(http.StatusOK, followers)
+	// 2. Пользователи, которые подписаны на currentUserActualHabit (обновляем или добавляем в карту)
+	followersCursor, err := h.habitsCollection.Find(context.Background(), bson.M{"followers": habit.ID.Hex()})
+	if err != nil {
+		log.Printf("GetFollowers: Ошибка поиска привычек, которые подписаны на '%s': %v", habit.ID.Hex(), err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error finding followers"})
+		return
+	}
+	defer followersCursor.Close(context.Background())
+
+	for followersCursor.Next(context.Background()) {
+		var habitThatFollowsCurrentUser models.Habit
+		if err := followersCursor.Decode(&habitThatFollowsCurrentUser); err != nil {
+			log.Printf("GetFollowers: Ошибка декодирования habitThatFollowsCurrentUser: %v", err)
+			continue
+		}
+
+		otherUserHabitIDStr := habitThatFollowsCurrentUser.ID.Hex()
+
+		// Пропускаем, если это собственная привычка пользователя (на всякий случай, хотя логика "followers" должна это исключать)
+		if habitThatFollowsCurrentUser.ID == habit.ID {
+			continue
+		}
+
+		var otherUser models.User
+		err = h.usersCollection.FindOne(context.Background(), bson.M{"telegram_id": habitThatFollowsCurrentUser.TelegramID}).Decode(&otherUser)
+		if err != nil {
+			log.Printf("GetFollowers: Ошибка получения otherUser с TelegramID '%d' для привычки '%s': %v", habitThatFollowsCurrentUser.TelegramID, otherUserHabitIDStr, err)
+			continue
+		}
+
+		completedToday := habitThatFollowsCurrentUser.LastClickDate == today
+
+		if existingInfo, ok := followerInfosMap[otherUserHabitIDStr]; ok {
+			// Этот пользователь уже в карте (т.к. currentUserActualHabit на него подписан).
+			// Просто обновляем флаг, что он также подписан на currentUserActualHabit.
+			existingInfo.ThisUserFollowsCurrentUser = true
+			// Убедимся, что CompletedToday обновлено, если вдруг привычка та же, но другой путь её получения
+			if existingInfo.ID == habitThatFollowsCurrentUser.ID { // Должно быть всегда так, если ключ ID привычки
+				existingInfo.CompletedToday = completedToday
+			}
+			followerInfosMap[otherUserHabitIDStr] = existingInfo
+		} else {
+			// Этот пользователь подписан на currentUserActualHabit, но currentUserActualHabit (пока) не подписан на него.
+			currentUserFollowsThisOtherUser := false // По определению этого блока `else`
+			// Можно дополнительно проверить, есть ли otherUserHabitIDStr в habit.Followers, но должно быть false
+
+			info := models.FollowerInfo{
+				ID:                         habitThatFollowsCurrentUser.ID,
+				TelegramID:                 habitThatFollowsCurrentUser.TelegramID,
+				Title:                      habitThatFollowsCurrentUser.Title,
+				LastClickDate:              habitThatFollowsCurrentUser.LastClickDate,
+				Streak:                     habitThatFollowsCurrentUser.Streak,
+				Score:                      habitThatFollowsCurrentUser.Score,
+				Username:                   otherUser.Username,
+				FirstName:                  otherUser.FirstName,
+				PhotoURL:                   otherUser.PhotoURL,
+				CompletedToday:             completedToday,
+				CurrentUserFollowsThisUser: currentUserFollowsThisOtherUser,
+				ThisUserFollowsCurrentUser: true, // По определению этого цикла (habitThatFollowsCurrentUser имеет habit.ID в своих followers)
+			}
+			followerInfosMap[otherUserHabitIDStr] = info
+		}
+	}
+
+	// Преобразуем карту в слайс
+	resultFollowers := make([]models.FollowerInfo, 0, len(followerInfosMap))
+	for _, info := range followerInfosMap {
+		resultFollowers = append(resultFollowers, info)
+	}
+
+	c.JSON(http.StatusOK, resultFollowers)
 }
 
 func (h *Handler) HandleGetActivity(c *gin.Context) {
@@ -943,7 +1012,7 @@ func (h *Handler) enrichHabitWithFollowers(ctx context.Context, habit models.Hab
 		if err == nil && user.Timezone != "" {
 			timezone = user.Timezone
 		} else {
-			log.Printf("Не удалось получить таймзону для пользователя %d, используется UTC", habit.TelegramID)
+			log.Printf("Не удалось получить таймзону для пользователя %d в enrichHabitWithFollowers, используется UTC", habit.TelegramID)
 		}
 	}
 
@@ -967,50 +1036,94 @@ func (h *Handler) enrichHabitWithFollowers(ctx context.Context, habit models.Hab
 		Streak:        habit.Streak,
 		Score:         habit.Score,
 		Stake:         habit.Stake,
-		Followers:     []models.FollowerInfo{},
+		Followers:     []models.FollowerInfo{}, // Это поле теперь будет заполняться отдельным запросом getHabitFollowers на фронте
 		Progress:      progress,
 	}
 
-	// Если есть подписчики, получаем их данные
-	if len(habit.Followers) > 0 {
-		// Преобразуем строковые ID в ObjectID
-		var followerObjectIDs []primitive.ObjectID
-		for _, followerID := range habit.Followers {
-			objectID, err := primitive.ObjectIDFromHex(followerID)
-			if err != nil {
-				log.Printf("Ошибка при преобразовании ID подписчика: %v", err)
-				continue
-			}
-			followerObjectIDs = append(followerObjectIDs, objectID)
-		}
-
-		// Получаем информацию о всех подписчиках одним запросом
-		cursor, err := h.habitsCollection.Find(ctx, bson.M{
-			"_id": bson.M{"$in": followerObjectIDs},
-		})
-		if err != nil {
-			return response, err
-		}
-		defer cursor.Close(ctx)
-
-		// Собираем информацию о подписчиках
-		for cursor.Next(ctx) {
-			var followerHabit models.Habit
-			if err := cursor.Decode(&followerHabit); err != nil {
-				log.Printf("Ошибка при декодировании привычки подписчика: %v", err)
-				continue
-			}
-
-			response.Followers = append(response.Followers, models.FollowerInfo{
-				ID:            followerHabit.ID,
-				TelegramID:    followerHabit.TelegramID,
-				Title:         followerHabit.Title,
-				LastClickDate: followerHabit.LastClickDate,
-				Streak:        followerHabit.Streak,
-				Score:         followerHabit.Score,
-			})
-		}
-	}
+	// Старая логика заполнения Followers здесь больше не нужна,
+	// так как HandleGetFollowers теперь отвечает за полный список связанных пользователей.
+	// Поле HabitResponse.Followers можно либо оставить пустым, либо удалить из HabitResponse,
+	// если фронтенд всегда будет получать их через /api/habit/followers.
+	// Пока оставлю пустым, чтобы не ломать структуру ответа HabitResponse кардинально.
 
 	return response, nil
+}
+
+// HandleSubscribeToFollower обрабатывает подписку текущего пользователя на привычку другого пользователя
+func (h *Handler) HandleSubscribeToFollower(c *gin.Context) {
+	initData, exists := middleware.CtxInitData(c.Request.Context())
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: no user data in context"})
+		return
+	}
+	currentUserTelegramID := initData.User.ID
+
+	var req struct {
+		CurrentUserHabitID string `json:"current_user_habit_id" binding:"required"`
+		TargetUserHabitID  string `json:"target_user_habit_id" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("HandleSubscribeToFollower: Ошибка при декодировании JSON: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат JSON"})
+		return
+	}
+
+	currentUserHabitObjectID, err := primitive.ObjectIDFromHex(req.CurrentUserHabitID)
+	if err != nil {
+		log.Printf("HandleSubscribeToFollower: Ошибка преобразования CurrentUserHabitID '%s': %v", req.CurrentUserHabitID, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат ID текущей привычки"})
+		return
+	}
+
+	targetUserHabitObjectID, err := primitive.ObjectIDFromHex(req.TargetUserHabitID)
+	if err != nil {
+		log.Printf("HandleSubscribeToFollower: Ошибка преобразования TargetUserHabitID '%s': %v", req.TargetUserHabitID, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат ID целевой привычки"})
+		return
+	}
+
+	// Проверяем, что CurrentUserHabitID принадлежит текущему пользователю
+	var currentUserHabit models.Habit
+	err = h.habitsCollection.FindOne(context.Background(), bson.M{
+		"_id":         currentUserHabitObjectID,
+		"telegram_id": currentUserTelegramID,
+	}).Decode(&currentUserHabit)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Привычка текущего пользователя не найдена или не принадлежит ему"})
+			return
+		}
+		log.Printf("HandleSubscribeToFollower: Ошибка получения currentUserHabit: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка сервера при проверке привычки"})
+		return
+	}
+
+	// Проверяем, существует ли TargetUserHabitID (целевая привычка)
+	var targetUserHabit models.Habit
+	err = h.habitsCollection.FindOne(context.Background(), bson.M{"_id": targetUserHabitObjectID}).Decode(&targetUserHabit)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Целевая привычка для подписки не найдена"})
+			return
+		}
+		log.Printf("HandleSubscribeToFollower: Ошибка получения targetUserHabit: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка сервера при проверке целевой привычки"})
+		return
+	}
+
+	// Добавляем TargetUserHabitID (строку) в массив followers текущей привычки пользователя
+	// Используем $addToSet для предотвращения дубликатов
+	_, err = h.habitsCollection.UpdateOne(
+		context.Background(),
+		bson.M{"_id": currentUserHabitObjectID},
+		bson.M{"$addToSet": bson.M{"followers": req.TargetUserHabitID}},
+	)
+	if err != nil {
+		log.Printf("HandleSubscribeToFollower: Ошибка обновления привычки: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при подписке на привычку"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Успешно подписан на привычку"})
 }

@@ -297,4 +297,13 @@ export const api = {
         throw error;
       }
     },
+    subscribeToFollowerHabit: async (data: {
+      current_user_habit_id: string;
+      target_user_habit_id: string;
+    }) => {
+      return request('/api/habit/subscribe', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+    },
 }; 

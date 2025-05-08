@@ -56,6 +56,7 @@ func setupGinRouter(
 			habitGroup.GET("/followers", habitHandler.HandleGetFollowers)
 			habitGroup.GET("/activity", habitHandler.HandleGetActivity)
 			habitGroup.POST("/unfollow", followerHandler.HandleUnfollow)
+			habitGroup.POST("/subscribe", habitHandler.HandleSubscribeToFollower)
 		}
 
 		// Маршруты TON
