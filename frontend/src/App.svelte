@@ -16,7 +16,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { subscribeToWalletChanges } from './utils/tonConnect';
   import type { Wallet } from '@tonconnect/ui';
-  import { popup, initData, themeParams } from '@telegram-apps/sdk-svelte';
+  import { popup, initData, themeParams, swipeBehavior, viewport } from '@telegram-apps/sdk-svelte';
   import plusIcon from './assets/plus.svg'; // Import the SVG
   
   // Инициализируем значение из localStorage
@@ -109,6 +109,34 @@
 
       // Проверяем параметры запуска после инициализации
       handleStartParam();
+
+      // Управление поведением свайпа
+      console.log('Проверка доступности swipeBehavior.mount:', swipeBehavior.mount.isAvailable());
+      if (swipeBehavior.mount.isAvailable()) {
+        try {
+          console.log('Попытка монтирования swipeBehavior...');
+          await swipeBehavior.mount();
+          console.log('swipeBehavior успешно смонтирован');
+
+          console.log('Проверка доступности swipeBehavior.disableVertical:', swipeBehavior.disableVertical.isAvailable());
+          if (swipeBehavior.disableVertical.isAvailable()) {
+            swipeBehavior.disableVertical();
+            console.log('Вертикальный свайп отключен');
+          } else {
+            console.warn('swipeBehavior.disableVertical недоступен');
+          }
+        } catch (err) {
+          console.error('Ошибка при настройке swipeBehavior:', err);
+        }
+      } else {
+        console.warn('swipeBehavior.mount недоступен');
+      }
+
+      // Управление viewport
+      console.log('Проверка доступности viewport.mount:', viewport.mount.isAvailable());
+      if (viewport.expand.isAvailable()) {
+        viewport.expand();
+      }
     } catch (error) {
       console.error('Ошибка при инициализации Telegram WebApp:', error);
     }

@@ -425,7 +425,6 @@
     show={showFollowersModal}
     habit={habit}
     telegramId={telegramId}
-    initialFollowers={preloadedFollowers}
     on:close={() => showFollowersModal = false}
     on:followersUpdated={handleFollowersUpdated}
   />
