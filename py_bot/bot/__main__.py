@@ -11,6 +11,10 @@ from bot.config_data.config import config_settings
 from bot.dialogs.start.dialogs import start_dialog
 from bot.handlers.commands import commands_router
 from bot.handlers.other import other_router
+from bot.handlers.ai import ai_router
+from bot.handlers.quotes import quotes_router
+from bot.handlers.f2f import f2f_router
+from bot.handlers.service import service_router
 from bot.middlewares.i18n import TranslatorRunnerMiddleware
 from bot.middlewares.recieve import RecieveWillCallbackMiddleware
 from bot.utils.i18n import create_translator_hub
@@ -52,6 +56,10 @@ async def main() -> None:
 
     dp.include_router(commands_router)
     dp.include_router(other_router)
+    dp.include_router(ai_router)
+    dp.include_router(quotes_router)
+    dp.include_router(f2f_router)
+    dp.include_router(service_router)
     dp.include_router(start_dialog)
 
     dp.update.middleware(TranslatorRunnerMiddleware())
