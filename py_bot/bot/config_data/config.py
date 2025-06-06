@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     MONGO_PORT: int
     MONGO_DB_NAME: str
     BOT_USERNAME: str
+    DEEPSEEK_API_KEY: SecretStr
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
