@@ -1,5 +1,3 @@
-button-ex_one = Example of a button
-
 message-start = Hello! 👋
 
     I'm your personal assistant on the path to a healthy and happy life.
@@ -36,13 +34,26 @@ notification-reminder = ⏰ Reminder! Don't forget about your habit '{ $habitTit
 
 # --- Send Command ---
 send-usage = Usage: /send @username <amount>
-send-invalid-amount = Please enter a valid positive amount.
-send-sender-not-found = Error: Could not find your user account.
-send-insufficient-funds = Insufficient funds. Your balance is { $balance } WILL.
-send-recipient-not-found = Error: User @{ $username } not found.
-send-send-to-self = You cannot send WILL to yourself.
-send-success-sender = Successfully sent { $amount } WILL to @{ $username }
-send-success-recipient = You have received { $amount } WILL from @{ $username }
+send-invalid_amount = Please enter a valid positive amount.
+send-invalid_number = Amount must be a number
+send-sender_not_found = Error: Could not find your user account.
+send-insufficient_funds = Insufficient funds. Your balance is { $balance } WILL.
+send-insufficient_funds_short = Insufficient funds
+send-user_not_found = User @{ $username } not found
+send-send_to_self = You cannot send WILL to yourself.
+send-success_transfer = Successfully sent { $amount } WILL to @{ $username }
+send-success_received = You have received { $amount } WILL from @{ $username }
+send-button_received = Received
+send-inline_specify_amount = Please specify WILL amount
+send-inline_specify_recipient = You want to send { $amount } WILL
+    Please specify recipient username
+send-inline_send_confirmation = You want to send { $amount } WILL
+    Recipient: { $username }
+send-inline_invalid_input = Invalid input
+send-inline_title_send = Send { $amount } WILL
+send-inline_title_default = Send 
+send-inline_button_receive = Receive
+send-inline_message_template = You want to send { $balance } WILL
 
 # --- Generic Errors ---
 error-generic = An unexpected error occurred. Please try again later.

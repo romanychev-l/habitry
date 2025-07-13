@@ -476,6 +476,8 @@
     -webkit-mask: url('/src/assets/squircley.svg') no-repeat center / contain;
     background: white;
     font-family: 'Manrope', sans-serif;
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
 
   .habit-card::before {

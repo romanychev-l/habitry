@@ -126,7 +126,7 @@
     flex: 1;
     padding: 24px 0;
     overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    /* -webkit-overflow-scrolling: touch; */ /* Temporarily disabled to test iOS rendering */
   }
   
   .profile-header {
