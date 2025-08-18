@@ -8,7 +8,7 @@ Habitry is a habit tracking application with TON blockchain integration that hel
 
 ### 🌟 Key Features
 
-- 📱 Create and track daily habits
+- 📱 Create and track daily habit
 - 🔔 Notifications to perform habits
 - 🔄 Mutual accountability system with friends
 - 💰 TON rewards for completing habits
