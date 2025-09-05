@@ -706,7 +706,7 @@
   // Функция для проверки статуса транзакции
   async function checkTransactionStatus(transactionId: string) {
     try {
-      const response = await fetch(`https://lenichev.site/api/wallet/transactions/${transactionId}`);
+      const response = await fetch(`https://lenichev.space/api/wallet/transactions/${transactionId}`);
       const data = await response.json();
       
       if (data.tx_status === 'success') {

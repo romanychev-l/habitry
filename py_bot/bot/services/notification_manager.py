@@ -47,8 +47,8 @@ class NotificationManager:
             builder = InlineKeyboardBuilder()
             builder.row(types.InlineKeyboardButton(
                     text="Open",
-                    web_app=WebAppInfo(url="https://lenichev.site/ht/")
-                    # url="https://lenichev.site/ht/"
+                    web_app=WebAppInfo(url="https://lenichev.space/ht/")
+                    # url="https://lenichev.space/ht/"
                 )
             )
 

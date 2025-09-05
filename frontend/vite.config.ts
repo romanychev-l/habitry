@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => ({
     host: true,
     hmr: {
       port: 5173,
-      host: 'lenichev.site'
+      host: 'lenichev.space'
     },
     proxy: {
       '/api': {

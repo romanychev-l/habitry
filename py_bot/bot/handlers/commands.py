@@ -32,9 +32,9 @@ async def start(msg: types.Message, i18n: TranslatorRunner):
     builder.row(
         types.InlineKeyboardButton(
             text=i18n.message.open(),
-            # url="https://lenichev.site/ht_front_dev/",
+            # url="https://lenichev.space/ht_front_dev/",
             url="https://t.me/" + config_settings.BOT_USERNAME + "/app",
-            # web_app=WebAppInfo(url="https://lenichev.site/ht_front_dev/"),
+            # web_app=WebAppInfo(url="https://lenichev.space/ht_front_dev/"),
         )
     )
     # kb = [[KeyboardButton(text=Открыть)]]
