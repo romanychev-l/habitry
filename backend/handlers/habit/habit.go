@@ -517,7 +517,7 @@ func (h *Handler) HandleDelete(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Привычка успешно удалена",
+		"message": "habits.delete.success",
 	})
 }
 
@@ -547,6 +547,51 @@ func (h *Handler) HandleJoin(c *gin.Context) {
 
 	// Если HabitID равен SharedByHabitID, создаем новую привычку
 	if request.HabitID == request.SharedByHabitID {
+		// Не позволяем повторно присоединяться к одному и тому же шару:
+		// проверяем, есть ли у пользователя уже привычка, которая следует за SharedByHabitID
+		existsCount, err := h.habitsCollection.CountDocuments(
+			context.Background(),
+			bson.M{
+				"telegram_id": request.TelegramID,
+				"followers":   request.SharedByHabitID,
+			},
+		)
+		if err == nil && existsCount > 0 {
+			// Уже присоединился ранее — возвращаем актуальный список привычек без дубликатов
+			cursor, err := h.habitsCollection.Find(
+				context.Background(),
+				bson.M{"telegram_id": request.TelegramID},
+			)
+			if err != nil {
+				log.Printf("Ошибка при получении привычек после проверки повторного join: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при получении привычек"})
+				return
+			}
+			defer cursor.Close(context.Background())
+
+			var habits []models.Habit
+			if err = cursor.All(context.Background(), &habits); err != nil {
+				log.Printf("Ошибка при декодировании привычек после проверки повторного join: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при обработке привычек"})
+				return
+			}
+
+			var habitResponses []models.HabitResponse
+			for _, hbt := range habits {
+				hResp, err := h.enrichHabitWithFollowers(c.Request.Context(), hbt)
+				if err != nil {
+					log.Printf("Ошибка при обогащении данных привычки: %v", err)
+					continue
+				}
+				habitResponses = append(habitResponses, hResp)
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"message": "habits.join.already_joined",
+				"habits":  habitResponses,
+			})
+			return
+		}
 		// Получаем оригинальную привычку
 		originalHabitID, err := primitive.ObjectIDFromHex(request.SharedByHabitID)
 		if err != nil {
@@ -646,7 +691,7 @@ func (h *Handler) HandleJoin(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Успешно присоединился к привычке",
+		"message": "habits.join.success",
 		"habits":  habitResponses,
 	})
 }
@@ -700,7 +745,7 @@ func (h *Handler) HandleGetFollowers(c *gin.Context) {
 	today := time.Now().In(loc).Format("2006-01-02")
 
 	// Получаем информацию о подписчиках
-	followerInfosMap := make(map[string]models.FollowerInfo) // Ключ - ID привычки другого пользователя (строка)
+	followerInfosMap := make(map[int64]models.FollowerInfo) // Ключ - TelegramID пользователя (агрегируем по пользователю)
 
 	// 1. Пользователи, на которых подписан currentUserActualHabit
 	for _, followedUserHabitIDStr := range habit.Followers {
@@ -734,21 +779,34 @@ func (h *Handler) HandleGetFollowers(c *gin.Context) {
 		}
 		completedToday := followedUserHabit.LastClickDate == today
 
-		info := models.FollowerInfo{
-			ID:                         followedUserHabit.ID, // ID привычки пользователя, на которого подписаны
-			TelegramID:                 followedUserHabit.TelegramID,
-			Title:                      followedUserHabit.Title,
-			LastClickDate:              followedUserHabit.LastClickDate,
-			Streak:                     followedUserHabit.Streak,
-			Score:                      followedUserHabit.Score,
-			Username:                   followedUser.Username,
-			FirstName:                  followedUser.FirstName,
-			PhotoURL:                   followedUser.PhotoURL,
-			CompletedToday:             completedToday,
-			CurrentUserFollowsThisUser: true, // Текущий пользователь подписан на этого пользователя (по определению этого цикла)
-			ThisUserFollowsCurrentUser: isFollowingBack,
+		// Агрегируем по пользователю (если у пользователя несколько привычек, показываем один раз)
+		prev, exists := followerInfosMap[followedUser.TelegramID]
+		if !exists {
+			followerInfosMap[followedUser.TelegramID] = models.FollowerInfo{
+				ID:                         followedUserHabit.ID, // показываем любую его привычку как представителя
+				TelegramID:                 followedUser.TelegramID,
+				Title:                      followedUserHabit.Title,
+				LastClickDate:              followedUserHabit.LastClickDate,
+				Streak:                     followedUserHabit.Streak,
+				Score:                      followedUserHabit.Score,
+				Username:                   followedUser.Username,
+				FirstName:                  followedUser.FirstName,
+				PhotoURL:                   followedUser.PhotoURL,
+				CompletedToday:             completedToday,
+				CurrentUserFollowsThisUser: true,
+				ThisUserFollowsCurrentUser: isFollowingBack,
+			}
+		} else {
+			// Обновляем флаги взаимности/выполнения
+			prev.CurrentUserFollowsThisUser = true
+			if isFollowingBack {
+				prev.ThisUserFollowsCurrentUser = true
+			}
+			if completedToday {
+				prev.CompletedToday = true
+			}
+			followerInfosMap[followedUser.TelegramID] = prev
 		}
-		followerInfosMap[followedUserHabitIDStr] = info
 	}
 
 	// 2. Пользователи, которые подписаны на currentUserActualHabit (обновляем или добавляем в карту)
@@ -783,20 +841,14 @@ func (h *Handler) HandleGetFollowers(c *gin.Context) {
 
 		completedToday := habitThatFollowsCurrentUser.LastClickDate == today
 
-		if existingInfo, ok := followerInfosMap[otherUserHabitIDStr]; ok {
-			// Этот пользователь уже в карте (т.к. currentUserActualHabit на него подписан).
-			// Просто обновляем флаг, что он также подписан на currentUserActualHabit.
+		// Ключ по пользователю
+		if existingInfo, ok := followerInfosMap[otherUser.TelegramID]; ok {
 			existingInfo.ThisUserFollowsCurrentUser = true
-			// Убедимся, что CompletedToday обновлено, если вдруг привычка та же, но другой путь её получения
-			if existingInfo.ID == habitThatFollowsCurrentUser.ID { // Должно быть всегда так, если ключ ID привычки
-				existingInfo.CompletedToday = completedToday
+			if completedToday {
+				existingInfo.CompletedToday = true
 			}
-			followerInfosMap[otherUserHabitIDStr] = existingInfo
+			followerInfosMap[otherUser.TelegramID] = existingInfo
 		} else {
-			// Этот пользователь подписан на currentUserActualHabit, но currentUserActualHabit (пока) не подписан на него.
-			currentUserFollowsThisOtherUser := false // По определению этого блока `else`
-			// Можно дополнительно проверить, есть ли otherUserHabitIDStr в habit.Followers, но должно быть false
-
 			info := models.FollowerInfo{
 				ID:                         habitThatFollowsCurrentUser.ID,
 				TelegramID:                 habitThatFollowsCurrentUser.TelegramID,
@@ -808,10 +860,10 @@ func (h *Handler) HandleGetFollowers(c *gin.Context) {
 				FirstName:                  otherUser.FirstName,
 				PhotoURL:                   otherUser.PhotoURL,
 				CompletedToday:             completedToday,
-				CurrentUserFollowsThisUser: currentUserFollowsThisOtherUser,
-				ThisUserFollowsCurrentUser: true, // По определению этого цикла (habitThatFollowsCurrentUser имеет habit.ID в своих followers)
+				CurrentUserFollowsThisUser: false,
+				ThisUserFollowsCurrentUser: true,
 			}
-			followerInfosMap[otherUserHabitIDStr] = info
+			followerInfosMap[otherUser.TelegramID] = info
 		}
 	}
 
@@ -1125,5 +1177,5 @@ func (h *Handler) HandleSubscribeToFollower(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Успешно подписан на привычку"})
+	c.JSON(http.StatusOK, gin.H{"message": "habits.subscribe.success"})
 }

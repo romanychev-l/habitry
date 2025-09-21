@@ -76,7 +76,7 @@ func (h *Handler) HandleCreatePing(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"message": "ping created successfully",
+		"message": "pings.create.success",
 		"ping":    ping,
 	})
 }
