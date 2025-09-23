@@ -268,6 +268,42 @@ func (h *Handler) HandleUpdate(c *gin.Context) {
 		return
 	}
 
+	// --- Начало: Начисление токенов WILL ---
+	// Находим текущего пользователя
+	var currentUser models.User
+	err = h.usersCollection.FindOne(context.Background(), bson.M{"telegram_id": initData.User.ID}).Decode(&currentUser)
+	if err != nil {
+		log.Printf("HandleUpdate: Не удалось найти пользователя %d для начисления токенов: %v", initData.User.ID, err)
+		// Не блокируем основной функционал, просто логируем
+	} else {
+		// 1. Начисляем токен самому пользователю
+		_, err := h.usersCollection.UpdateOne(
+			context.Background(),
+			bson.M{"_id": currentUser.ID},
+			bson.M{"$inc": bson.M{"balance": 1}},
+		)
+		if err != nil {
+			log.Printf("HandleUpdate: Ошибка при начислении токена пользователю %d: %v", currentUser.TelegramID, err)
+		} else {
+			log.Printf("Пользователю %d начислен 1 WILL", currentUser.TelegramID)
+		}
+
+		// 2. Если есть реферер, начисляем токен и ему
+		if currentUser.ReferrerID != 0 {
+			_, err := h.usersCollection.UpdateOne(
+				context.Background(),
+				bson.M{"telegram_id": currentUser.ReferrerID},
+				bson.M{"$inc": bson.M{"balance": 1}},
+			)
+			if err != nil {
+				log.Printf("HandleUpdate: Ошибка при начислении токена рефереру %d: %v", currentUser.ReferrerID, err)
+			} else {
+				log.Printf("Рефереру %d начислен 1 WILL", currentUser.ReferrerID)
+			}
+		}
+	}
+	// --- Конец: Начисление токенов WILL ---
+
 	// Обновляем привычку
 	update := bson.M{
 		"$set": bson.M{
@@ -1163,6 +1199,33 @@ func (h *Handler) HandleSubscribeToFollower(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка сервера при проверке целевой привычки"})
 		return
 	}
+
+	// --- Начало: Логика установки реферера ---
+	var currentUser models.User
+	err = h.usersCollection.FindOne(context.Background(), bson.M{"telegram_id": currentUserTelegramID}).Decode(&currentUser)
+	if err != nil {
+		log.Printf("HandleSubscribeToFollower: Не удалось найти текущего пользователя %d: %v", currentUserTelegramID, err)
+		// Не блокируем основной функционал, просто логируем ошибку
+	} else {
+		// Устанавливаем реферера, только если он еще не установлен
+		if currentUser.ReferrerID == 0 {
+			// Убеждаемся, что пользователь не подписывается сам на себя
+			if currentUser.TelegramID != targetUserHabit.TelegramID {
+				_, err := h.usersCollection.UpdateOne(
+					context.Background(),
+					bson.M{"_id": currentUser.ID},
+					bson.M{"$set": bson.M{"referrer_id": targetUserHabit.TelegramID}},
+				)
+				if err != nil {
+					log.Printf("HandleSubscribeToFollower: Ошибка при установке реферера для пользователя %d: %v", currentUserTelegramID, err)
+					// Не блокируем основной функционал, просто логируем ошибку
+				} else {
+					log.Printf("Пользователю %d установлен реферер %d", currentUserTelegramID, targetUserHabit.TelegramID)
+				}
+			}
+		}
+	}
+	// --- Конец: Логика установки реферера ---
 
 	// Добавляем TargetUserHabitID (строку) в массив followers текущей привычки пользователя
 	// Используем $addToSet для предотвращения дубликатов

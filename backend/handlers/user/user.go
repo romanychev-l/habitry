@@ -5,6 +5,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"backend/middleware"
@@ -71,6 +72,57 @@ func (h *Handler) HandleUser(c *gin.Context) {
 		return
 	}
 
+	// --- Начало: Обработка реферальной ссылки из start_param ---
+	startParam := initData.StartParam
+	var referrerUsername string
+
+	if strings.HasPrefix(startParam, "ref_") {
+		referrerUsername = strings.TrimPrefix(startParam, "ref_")
+	} else if strings.HasPrefix(startParam, "profile_") {
+		referrerUsername = strings.TrimPrefix(startParam, "profile_")
+	}
+
+	if referrerUsername != "" {
+		// Пытаемся найти пользователя-реферера
+		var referrerUser models.User
+		err := h.usersCollection.FindOne(context.Background(), bson.M{"username": referrerUsername}).Decode(&referrerUser)
+		if err != nil {
+			log.Printf("Referrer user with username '%s' not found: %v", referrerUsername, err)
+		} else {
+			// Реферер найден, теперь работаем с текущим пользователем
+			// Устанавливаем реферера только если текущий пользователь - не тот же самый человек
+			if referrerUser.TelegramID != initData.User.ID {
+				// Пытаемся найти существующего пользователя, чтобы проверить, есть ли у него уже реферер
+				var currentUser models.User
+				err := h.usersCollection.FindOne(context.Background(), bson.M{"telegram_id": initData.User.ID}).Decode(&currentUser)
+
+				if err == nil {
+					// Пользователь существует, проверяем referrer_id
+					if currentUser.ReferrerID == 0 {
+						// Реферер еще не установлен, устанавливаем
+						_, updateErr := h.usersCollection.UpdateOne(
+							context.Background(),
+							bson.M{"_id": currentUser.ID},
+							bson.M{"$set": bson.M{"referrer_id": referrerUser.TelegramID}},
+						)
+						if updateErr != nil {
+							log.Printf("Failed to set referrer for existing user %d: %v", currentUser.TelegramID, updateErr)
+						} else {
+							log.Printf("Referrer %d set for existing user %d", referrerUser.TelegramID, currentUser.TelegramID)
+						}
+					}
+				} else if err == mongo.ErrNoDocuments {
+					// Пользователь новый. Реферер будет добавлен при создании.
+					// Мы не можем здесь просто создать пользователя, так как остальная часть функции HandleUser это делает.
+					// Вместо этого, передадим ID реферера дальше.
+					// Однако, текущая структура кода создает пользователя ниже. Мы можем просто добавить referrer_id в объект user.
+					// Важно: эта логика сработает до блока "if err == mongo.ErrNoDocuments"
+				}
+			}
+		}
+	}
+	// --- Конец: Обработка реферальной ссылки ---
+
 	// Получаем timezone из контекста
 	timezone, exists := middleware.CtxTimezone(c.Request.Context())
 	if !exists {
@@ -131,6 +183,17 @@ func (h *Handler) HandleUser(c *gin.Context) {
 		user.LastVisit = today
 		user.NotificationsEnabled = false
 		user.NotificationTime = "09:00"
+		user.Balance = 100 // Начисляем 100 WILL за регистрацию
+
+		// Добавляем реферера, если он был определен выше
+		if referrerUsername != "" {
+			var referrerUser models.User
+			err := h.usersCollection.FindOne(context.Background(), bson.M{"username": referrerUsername}).Decode(&referrerUser)
+			if err == nil && referrerUser.TelegramID != user.TelegramID {
+				user.ReferrerID = referrerUser.TelegramID
+				log.Printf("Referrer %d set for new user %d", referrerUser.TelegramID, user.TelegramID)
+			}
+		}
 
 		_, err = h.usersCollection.InsertOne(context.Background(), user)
 		if err != nil {

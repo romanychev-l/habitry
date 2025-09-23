@@ -100,6 +100,7 @@ type History struct {
 type User struct {
 	ID                   primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
 	TelegramID           int64              `bson:"telegram_id" json:"telegram_id"`
+	ReferrerID           int64              `bson:"referrer_id,omitempty" json:"referrer_id,omitempty"`
 	FirstName            string             `bson:"first_name" json:"first_name"`
 	Username             string             `bson:"username" json:"username"`
 	LanguageCode         string             `bson:"language_code" json:"language_code"`
@@ -115,6 +116,7 @@ type User struct {
 type UserResponseWithHabits struct {
 	ID                   primitive.ObjectID `json:"_id,omitempty"`
 	TelegramID           int64              `json:"telegram_id"`
+	ReferrerID           int64              `json:"referrer_id,omitempty"`
 	Username             string             `json:"username"`
 	FirstName            string             `json:"first_name"`
 	LanguageCode         string             `json:"language_code"`
@@ -132,6 +134,7 @@ func (u *User) ToResponseWithHabits(habitResponses []HabitResponse) UserResponse
 	return UserResponseWithHabits{
 		ID:                   u.ID,
 		TelegramID:           u.TelegramID,
+		ReferrerID:           u.ReferrerID,
 		Username:             u.Username,
 		FirstName:            u.FirstName,
 		LanguageCode:         u.LanguageCode,

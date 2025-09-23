@@ -5,7 +5,7 @@
   import SettingsPage from './components/SettingsPage.svelte';
   import OnboardingModal from './components/OnboardingModal.svelte';
   import UserProfilePage from './components/UserProfilePage.svelte';
-  import BuyTokensModal from './components/BuyTokensModal.svelte';
+  // import BuyTokensModal from './components/BuyTokensModal.svelte';
   import { user, balance } from './stores/user';
   import { isListView } from './stores/view';
   import { openTelegramInvoice } from './utils/telegram';
@@ -539,12 +539,14 @@
             0 WILL
           {/if}
         </div>
+        <!--
         <button class="add-balance-button" on:click={() => {
           console.log('Opening buy tokens modal');
           showBuyTokens = true;
         }}>
           <img src={plusIcon} alt="Add Balance" />
         </button>
+        -->
       {/if}
     </div>
   </header>
@@ -603,7 +605,7 @@
     {/if}
   {/if}
 
-  {#if showBuyTokens}
+  <!-- {#if showBuyTokens}
     <BuyTokensModal 
       show={showBuyTokens}
       telegramId={$user?.id || 0}
@@ -618,7 +620,7 @@
       on:ton-transaction-sent={handleTonTransactionSent}
       on:usdt-transaction-sent={handleUsdtTransactionSent}
     />
-  {/if}
+  {/if} -->
 
   <div class="creator-container">
     <a href="https://t.me/romanychev" target="_blank" class="creator-link">

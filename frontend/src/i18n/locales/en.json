@@ -154,6 +154,12 @@
     "error": "Error saving settings",
     "share_profile": "Share profile",
     "share_profile_description": "Share profile link",
+    "share_profile_text": "Check out my profile on Habitry!",
+    "share_referral_text": "Join me on Habitry and let's build habits together!",
+    "referral_program": "Referral Program",
+    "share_profile_and_referral": "Share profile & referral link",
+    "share_referral_only": "Share only referral link",
+    "referral_info_text": "For every habit your referral completes, you'll receive 1 WILL token.",
     "share": "Share",
     "username_required": "Telegram username is required to share profile",
     "display_score": "Show score instead of streak"

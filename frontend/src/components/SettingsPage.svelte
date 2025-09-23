@@ -4,6 +4,7 @@
   import { user } from '../stores/user';
   import { isListView, displayScore } from '../stores/view';
   import { api } from '../utils/api';
+  import { fade } from 'svelte/transition';
 
   const dispatch = createEventDispatcher();
   const API_URL = import.meta.env.VITE_API_URL;
@@ -14,7 +15,25 @@
   let isSaving = false;
   let saveMessage = "";
   let saveTimeout: ReturnType<typeof setTimeout>;
+  let showReferralInfo = false;
 
+  // Action для отслеживания кликов вне элемента
+  function clickOutside(node: HTMLElement, handler: () => void) {
+      const handleClick = (event: MouseEvent) => {
+          if (node && !node.contains(event.target as Node) && !event.defaultPrevented) {
+              handler();
+          }
+      };
+
+      document.addEventListener('click', handleClick, true);
+
+      return {
+          destroy() {
+              document.removeEventListener('click', handleClick, true);
+          }
+      };
+  }
+  
   // Загружаем настройки при инициализации
   async function loadSettings() {
     try {
@@ -72,12 +91,24 @@
     dispatch('back');
   }
 
-  function handleShare() {
+  function handleShareProfile() {
     if ($user?.username) {
       const baseUrl = `https://t.me/${BOT_USERNAME}/app`;
       const startAppParam = `startapp=profile_${$user.username}`;
       const appUrl = `${baseUrl}?${startAppParam}`;
-      const shareText = $_('settings.share_profile_description');
+      const shareText = $_('settings.share_profile_text');
+      
+      const url = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(shareText)}`;
+      window.open(url, '_blank');
+    }
+  }
+
+  function handleShareReferral() {
+    if ($user?.username) {
+      const baseUrl = `https://t.me/${BOT_USERNAME}/app`;
+      const startAppParam = `startapp=ref_${$user.username}`;
+      const appUrl = `${baseUrl}?${startAppParam}`;
+      const shareText = $_('settings.share_referral_text');
       
       const url = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(shareText)}`;
       window.open(url, '_blank');
@@ -153,15 +184,37 @@
     </section>
 
     <section class="settings-section">
-      <h2>{$_('settings.share_profile')}</h2>
+      <div class="section-header">
+        <h2>{$_('settings.referral_program')}</h2>
+        <div class="info-container">
+          <button class="info-button" on:click|stopPropagation={() => showReferralInfo = !showReferralInfo}>?</button>
+          {#if showReferralInfo}
+            <div class="tooltip" use:clickOutside={() => showReferralInfo = false} transition:fade>
+              {$_('settings.referral_info_text')}
+            </div>
+          {/if}
+        </div>
+      </div>
       <div class="settings-group">
         <div class="setting-item">
           <div class="setting-label">
-            <span>{$_('settings.share_profile_description')}</span>
+            <span>{$_('settings.share_profile_and_referral')}</span>
           </div>
           <button 
             class="share-button" 
-            on:click={handleShare}
+            on:click={handleShareProfile}
+            disabled={!$user?.username}
+          >
+            {$_('settings.share')}
+          </button>
+        </div>
+        <div class="setting-item">
+          <div class="setting-label">
+            <span>{$_('settings.share_referral_only')}</span>
+          </div>
+          <button 
+            class="share-button" 
+            on:click={handleShareReferral}
             disabled={!$user?.username}
           >
             {$_('settings.share')}
@@ -236,6 +289,55 @@
 
   .settings-section {
     margin-bottom: 32px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .section-header h2 {
+    margin: 0;
+  }
+
+  .info-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .info-button {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--tg-theme-hint-color);
+    color: var(--tg-theme-bg-color);
+    font-size: 12px;
+    font-weight: bold;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .tooltip {
+    position: absolute;
+    right: 28px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 250px;
+    background: var(--tg-theme-secondary-bg-color);
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1001;
+    font-size: 14px;
+    color: var(--tg-theme-text-color);
+    line-height: 1.4;
+    border: 1px solid var(--tg-theme-bg-color);
   }
 
   .settings-group {

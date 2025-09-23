@@ -154,6 +154,12 @@
     "error": "Ошибка при сохранении",
     "share_profile": "Поделиться профилем",
     "share_profile_description": "Отправить ссылку на профиль",
+    "share_profile_text": "Зацени мой профиль в Habitry!",
+    "share_referral_text": "Присоединяйся ко мне в Habitry и давай создавать привычки вместе!",
+    "referral_program": "Реферальная программа",
+    "share_profile_and_referral": "Поделиться профилем и реф. ссылкой",
+    "share_referral_only": "Поделиться только реф. ссылкой",
+    "referral_info_text": "За каждую выполненную привычку вашего реферала вы будете получать 1 токен WILL.",
     "share": "Поделиться",
     "username_required": "Для шаринга профиля нужен username в Telegram",
     "display_score": "Показывать очки вместо серии"
