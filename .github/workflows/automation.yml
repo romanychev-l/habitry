@@ -164,10 +164,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            sudo mkdir -p /var/www/html/habitry
-            sudo rm -rf /var/www/html/habitry/*
-            sudo cp -r /tmp/frontend-new/* /var/www/html/habitry/
-            sudo chown -R www-data:www-data /var/www/html/habitry
-            sudo chmod -R 755 /var/www/html/habitry
-            sudo find /var/www/html/habitry -type f -exec chmod 644 {} \;
+            mkdir -p /var/www/html/habitry
+            rm -rf /var/www/html/habitry/*
+            cp -r /tmp/frontend-new/* /var/www/html/habitry/
   
