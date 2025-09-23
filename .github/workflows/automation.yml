@@ -89,8 +89,16 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           envs: GITHUB_TOKEN,BOT_TOKEN,MONGO_HOST,MONGO_PORT,MONGO_DB_NAME,BOT_USERNAME,BACKEND_PORT,TON_WALLET_ADDRESS,TON_CENTER_API_KEY,WALLET_SEED_PHRASE,USDT_MASTER_ADDRESS,DEEPSEEK_API_KEY,GIN_MODE
           script: |
-            cd prod/habitry
-            git fetch --all && git reset --hard origin/main
+            export GIT_DIR_PATH="prod/habitry"
+            if [ ! -d "$GIT_DIR_PATH" ]; then
+              echo "Cloning repository..."
+              git clone https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git "$GIT_DIR_PATH"
+            fi
+            
+            cd "$GIT_DIR_PATH"
+            echo "Fetching latest changes..."
+            git fetch --all
+            git reset --hard origin/main
             
             cat > .env << EOL
             BOT_TOKEN=${BOT_TOKEN}
