@@ -160,7 +160,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          script: rm -rf /tmp/frontend-new
+          script: sudo rm -rf /tmp/frontend-new
 
       - name: Deploy to server
         uses: appleboy/scp-action@master
