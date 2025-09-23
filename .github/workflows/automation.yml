@@ -153,6 +153,15 @@ jobs:
           VITE_USDT_MASTER_ADDRESS: ${{ secrets.USDT_MASTER_ADDRESS }}
           VITE_TON_WALLET_ADDRESS: ${{ secrets.TON_WALLET_ADDRESS }}
 
+      - name: Clean previous temp directory on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: rm -rf /tmp/frontend-new
+
       - name: Deploy to server
         uses: appleboy/scp-action@master
         with:
