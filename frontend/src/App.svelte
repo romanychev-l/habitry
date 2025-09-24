@@ -5,6 +5,7 @@
   import SettingsPage from './components/SettingsPage.svelte';
   import OnboardingModal from './components/OnboardingModal.svelte';
   import UserProfilePage from './components/UserProfilePage.svelte';
+  import LeaderboardModal from './components/LeaderboardModal.svelte';
   // import BuyTokensModal from './components/BuyTokensModal.svelte';
   import { user, balance } from './stores/user';
   import { isListView } from './stores/view';
@@ -18,6 +19,7 @@
   import type { Wallet } from '@tonconnect/ui';
   import { popup, initData, themeParams, swipeBehavior, viewport } from '@telegram-apps/sdk-svelte';
   import plusIcon from './assets/plus.svg'; // Import the SVG
+  import trophyIcon from './assets/trophy.svg';
   
   // Инициализируем значение из localStorage
   $isListView = localStorage.getItem('isListView') === 'true';
@@ -26,12 +28,16 @@
   let showSettings = false;
   let showOnboarding = false;
   let showBuyTokens = false;
+  let showLeaderboard = false;
   let sharedHabitId = '';
   let sharedByTelegramId = '';
   let showUserProfile = false;
   let profileUsername = '';
   let isDarkTheme = false;
   let isInitialized = false;
+  let isHabitCardModalOpen = false;
+
+  $: isAnyModalOpen = showModal || showHabitLinkModal || showSettings || showOnboarding || showUserProfile || showLeaderboard || isHabitCardModalOpen;
   
   // Переменные для TON Connect
   let walletConnected = false;
@@ -557,17 +563,35 @@
         <HabitCard 
           {habit}
           telegramId={$user.id} 
+          on:modalOpened={() => isHabitCardModalOpen = true}
+          on:modalClosed={() => isHabitCardModalOpen = false}
         />
       {/each}
     {/if}
   </div>
 
   <button 
+    class="leaderboard-button"
+    class:behind-modal={isAnyModalOpen}
+    on:click={() => showLeaderboard = true}
+  >
+    <img src={trophyIcon} alt="Leaderboard" />
+  </button>
+
+  <button 
     class="add-button"
+    class:behind-modal={isAnyModalOpen}
     on:click={() => showModal = true}
   >
     <img src={plusIcon} alt="Add Habit" />
   </button>
+
+  {#if showLeaderboard}
+    <LeaderboardModal 
+      show={showLeaderboard}
+      on:close={() => showLeaderboard = false}
+    />
+  {/if}
 
   {#if showModal}
     <NewHabitModal 
@@ -686,6 +710,36 @@
     box-sizing: border-box;
   }
 
+  .leaderboard-button {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background-color: var(--tg-theme-button-color);
+    color: var(--button-text-color);
+    border: none;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: background-color 0.2s;
+    z-index: 1000;
+    mask: url('/src/assets/streak.svg') no-repeat center / contain;
+    -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
+  }
+
+  .leaderboard-button.behind-modal {
+    z-index: 1;
+  }
+
+  .leaderboard-button img {
+    width: 24px;
+    height: 24px;
+    filter: brightness(0) invert(1);
+  }
+
   .add-button {
     position: fixed;
     bottom: 20px;
@@ -702,6 +756,10 @@
     justify-content: center;
     cursor: pointer;
     z-index: 2;
+  }
+
+  .add-button.behind-modal {
+    z-index: 1;
   }
 
   .user-info {

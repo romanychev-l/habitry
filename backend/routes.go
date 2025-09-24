@@ -34,6 +34,7 @@ func setupGinRouter(
 	// Группа API
 	api := r.Group("/api")
 	{
+		api.GET("/leaderboard", userHandler.GetLeaderboard)
 		// Маршруты пользователя
 		userGroup := api.Group("/user")
 		{

@@ -3,6 +3,7 @@
     import { isListView, displayScore } from '../stores/view';
     import { habits } from '../stores/habit';
     import { user } from '../stores/user';
+    import { createEventDispatcher } from 'svelte';
     import HabitActionsModal from './HabitActionsModal.svelte';
     import DeleteConfirmModal from './DeleteConfirmModal.svelte';
     import NewHabitModal from './NewHabitModal.svelte';
@@ -16,6 +17,8 @@
     import SolarUndoLeftRoundLinear from '../assets/SolarUndoLeftRoundLinear.svelte'; // Импортируем иконку
     import SolarMenuDotsBold from '../assets/SolarMenuDotsBold.svelte'; // Импортируем новую иконку меню
 
+    const dispatch = createEventDispatcher();
+
     export let habit: HabitType & { progress: number };
     export let telegramId: number;
     export let readonly: boolean = false;
@@ -23,8 +26,23 @@
     let isPressed = false;
     let isPressTimeout: ReturnType<typeof setTimeout>;
     let clickTimeout: ReturnType<typeof setTimeout> | undefined;
+
     let showFollowersModal = false;
     let showLinkModal = false;
+    let showActions = false;
+    let showDeleteConfirm = false;
+    let showEditModal = false;
+
+    $: isAnyModalOpen = showFollowersModal || showLinkModal || showActions || showDeleteConfirm || showEditModal;
+
+    $: {
+        if (isAnyModalOpen) {
+            dispatch('modalOpened');
+        } else {
+            dispatch('modalClosed');
+        }
+    }
+
     let pressStartTime: number;
     let startY: number;
     let isSwiping = false;
@@ -230,10 +248,6 @@
     // Select a gradient based on the habit ID hash
     $: gradientIndex = simpleHash(habit._id) % gradients.length;
     $: gradientStyle = gradients[gradientIndex];
-
-    let showActions = false;
-    let showDeleteConfirm = false;
-    let showEditModal = false;
 
     async function handleEdit(event: CustomEvent) {
         try {

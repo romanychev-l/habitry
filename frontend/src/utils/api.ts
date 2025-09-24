@@ -262,6 +262,9 @@ export const api = {
     
     unfollowHabit: (data: any) =>
         request('/api/habit/unfollow', { method: 'POST', body: JSON.stringify(data) }),
+
+    getLeaderboard: () => 
+        request('/api/leaderboard'),
     
     // TON-транзакции
     registerTonDeposit,

@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const ObjectIDHexRegex = "^[0-9a-fA-F]{24}$"
@@ -552,6 +553,51 @@ func (h *Handler) HandleUserProfile(c *gin.Context) {
 		"photo_url":   user.PhotoURL,
 		"habits":      habits,
 	})
+}
+
+// GetLeaderboard возвращает список лидеров по балансу
+func (h *Handler) GetLeaderboard(c *gin.Context) {
+	// Устанавливаем параметры для поиска и сортировки
+	findOptions := options.Find()
+	findOptions.SetSort(bson.D{{Key: "balance", Value: -1}}) // Сортировка по убыванию баланса
+	findOptions.SetLimit(50)                                 // Ограничиваем до 50 результатов
+
+	// Выполняем поиск
+	cursor, err := h.usersCollection.Find(context.Background(), bson.D{}, findOptions)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch leaderboard"})
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	// Декодируем результаты
+	var users []models.User
+	if err = cursor.All(context.Background(), &users); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode users"})
+		return
+	}
+
+	// Формируем ответ
+	type LeaderboardUser struct {
+		Rank      int    `json:"rank"`
+		Username  string `json:"username"`
+		FirstName string `json:"first_name"`
+		PhotoURL  string `json:"photo_url"`
+		Balance   int    `json:"balance"`
+	}
+
+	leaderboard := make([]LeaderboardUser, 0, len(users))
+	for i, user := range users {
+		leaderboard = append(leaderboard, LeaderboardUser{
+			Rank:      i + 1,
+			Username:  user.Username,
+			FirstName: user.FirstName,
+			PhotoURL:  user.PhotoURL,
+			Balance:   user.Balance,
+		})
+	}
+
+	c.JSON(http.StatusOK, leaderboard)
 }
 
 func (h *Handler) upsertHistory(telegramID int64, date string, history models.History) error {
