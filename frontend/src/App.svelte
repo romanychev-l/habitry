@@ -33,6 +33,7 @@
   let sharedByTelegramId = '';
   let showUserProfile = false;
   let profileUsername = '';
+  let cameFromLeaderboard = false;
   let isDarkTheme = false;
   let isInitialized = false;
   let isHabitCardModalOpen = false;
@@ -326,6 +327,7 @@
           
           profileUsername = username;
           showUserProfile = true;
+          cameFromLeaderboard = false;
         }
       }
     } catch (error) {
@@ -361,6 +363,22 @@
         message: $_('alerts.habit_join_error'),
         buttons: [{ id: 'close', type: 'close' }]
       });
+    }
+  }
+
+  function handleUserSelectFromLeaderboard(event: CustomEvent) {
+    profileUsername = event.detail.username;
+    showUserProfile = true;
+    showLeaderboard = false;
+    cameFromLeaderboard = true;
+  }
+
+  function handleUserProfileBack() {
+    showUserProfile = false;
+    profileUsername = '';
+    if (cameFromLeaderboard) {
+      showLeaderboard = true;
+      cameFromLeaderboard = false;
     }
   }
 
@@ -590,6 +608,7 @@
     <LeaderboardModal 
       show={showLeaderboard}
       on:close={() => showLeaderboard = false}
+      on:userselect={handleUserSelectFromLeaderboard}
     />
   {/if}
 
@@ -615,7 +634,7 @@
   {#if showUserProfile && profileUsername}
     <UserProfilePage 
       username={profileUsername} 
-      on:back={() => showUserProfile = false} 
+      on:back={handleUserProfileBack} 
     />
   {:else if showSettings}
     <SettingsPage on:back={() => showSettings = false} />

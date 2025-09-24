@@ -55,6 +55,10 @@
   function closeModal() {
     dispatch('close');
   }
+
+  function selectLeader(leader: Leader) {
+    dispatch('userselect', { username: leader.username });
+  }
 </script>
 
 {#if show}
@@ -69,7 +73,13 @@
       {:else}
         <div class="leaderboard-list">
           {#each leaders as leader}
-            <div class="leader-item">
+            <div 
+              class="leader-item" 
+              on:click={() => selectLeader(leader)} 
+              on:keydown={(e) => e.key === 'Enter' && selectLeader(leader)}
+              role="button" 
+              tabindex="0"
+            >
               <div class="leader-rank">{leader.rank}</div>
               <div class="leader-info">
                 {#if leader.photo_url}
@@ -136,8 +146,14 @@
     padding: 8px 12px;
     background-color: var(--tg-theme-secondary-bg-color);
     border-radius: 12px;
+    transition: background-color 0.2s ease;
+    cursor: pointer;
   }
   
+  .leader-item:hover {
+    background-color: var(--tg-theme-hint-color);
+  }
+
   .leader-rank {
     font-weight: 600;
     font-size: 16px;
