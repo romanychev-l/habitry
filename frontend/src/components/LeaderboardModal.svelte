@@ -135,9 +135,13 @@
     border-radius: 16px;
     width: 90%;
     max-width: 400px;
+    max-height: 80vh;
     box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     animation: slide-up 0.3s ease-out;
     color: var(--tg-theme-text-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   .modal-title {
@@ -151,6 +155,27 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    overflow-y: auto;
+    flex-grow: 1;
+    padding-right: 4px;
+  }
+
+  /* Стилизация скроллбара */
+  .leaderboard-list::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .leaderboard-list::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .leaderboard-list::-webkit-scrollbar-thumb {
+    background: var(--tg-theme-hint-color);
+    border-radius: 2px;
+  }
+
+  .leaderboard-list::-webkit-scrollbar-thumb:hover {
+    background: var(--tg-theme-link-color);
   }
 
   .leader-item {
@@ -185,6 +210,7 @@
     flex-shrink: 1;
     /* Hide overflow */
     overflow: hidden;
+    margin-left: 16px;
   }
   
   .leader-photo {
