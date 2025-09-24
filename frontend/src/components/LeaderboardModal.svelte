@@ -56,14 +56,28 @@
     dispatch('close');
   }
 
+  function handleOverlayClick(event: MouseEvent) {
+    if (event.currentTarget === event.target) {
+      closeModal();
+    }
+  }
+
   function selectLeader(leader: Leader) {
     dispatch('userselect', { username: leader.username });
   }
 </script>
 
 {#if show}
-  <div class="modal-overlay" on:click={closeModal} role="presentation">
-    <div class="modal-content" on:click|stopPropagation role="dialog" aria-modal="true">
+  <div 
+    class="modal-overlay" 
+    on:click={handleOverlayClick} 
+    role="button" 
+    tabindex="0" 
+    on:keydown={(e) => {
+      if (e.key === 'Escape') closeModal();
+    }}
+  >
+    <div class="modal-content">
       <h2 class="modal-title">{$_('leaderboard.title', { default: 'Leaderboard' })}</h2>
       
       {#if isLoading}
