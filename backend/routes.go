@@ -34,7 +34,6 @@ func setupGinRouter(
 	// Группа API
 	api := r.Group("/api")
 	{
-		api.GET("/leaderboard", userHandler.GetLeaderboard)
 		// Маршруты пользователя
 		userGroup := api.Group("/user")
 		{
@@ -43,6 +42,12 @@ func setupGinRouter(
 			userGroup.GET("/settings", userHandler.HandleSettings)
 			userGroup.PUT("/settings", userHandler.HandleSettings)
 			userGroup.GET("/profile", userHandler.HandleUserProfile)
+		}
+
+		// Маршруты лидерборда
+		leaderboardGroup := api.Group("/leaderboard")
+		{
+			leaderboardGroup.GET("", userHandler.GetLeaderboard)
 		}
 
 		// Маршруты привычек
