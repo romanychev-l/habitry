@@ -46,6 +46,7 @@
     },
     "add": "Add habit",
     "share": "Share",
+    "archive": "Archive",
     "compact_view": "Compact view",
     "every_day": "Do every day",
     "create_new": "Create new",
@@ -110,7 +111,18 @@
       "delete_title": "Delete Habit",
       "delete_message": "Are you sure you want to delete this habit?",
       "delete_confirm": "Yes, delete",
-      "delete_cancel": "No, keep it"
+      "delete_cancel": "No, keep it",
+      "archive_title": "Archive Habit",
+      "archive_confirm": "Yes, archive",
+      "archive_cancel": "Cancel",
+      "unarchive_title": "Restore Habit",
+      "unarchive_confirm": "Restore",
+      "unarchive_cancel": "Cancel"
+    },
+    "archived": {
+      "title": "Archive",
+      "empty": "Archive is empty",
+      "restore": "Restore"
     },
     "ping_blocked_title": "Reminder Blocked"
   },

@@ -49,6 +49,15 @@
         {$_('habits.edit')}
       </button>
       <button 
+        class="dialog-button archive"
+        on:click={() => {
+          dispatch('close');
+          dispatch('showArchiveConfirm');
+        }}
+      >
+        {$_('habits.archive') || 'Архивировать'}
+      </button>
+      <button 
         class="dialog-button delete"
         on:click={() => {
           dispatch('close');
@@ -121,6 +130,12 @@
   .dialog-button.delete {
     background: #ff3b30;
     color: white;
+  }
+
+  .dialog-button.archive {
+    background: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+    margin-bottom: 12px;
   }
 
   :global([data-theme="dark"]) .dialog {

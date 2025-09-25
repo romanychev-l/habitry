@@ -6,6 +6,7 @@
     import { createEventDispatcher } from 'svelte';
     import HabitActionsModal from './HabitActionsModal.svelte';
     import DeleteConfirmModal from './DeleteConfirmModal.svelte';
+    import ArchiveConfirmModal from './ArchiveConfirmModal.svelte';
     import NewHabitModal from './NewHabitModal.svelte';
     import HabitFollowersModal from './HabitFollowersModal.svelte';
     import HabitLinkModal from './HabitLinkModal.svelte';
@@ -32,8 +33,9 @@
     let showActions = false;
     let showDeleteConfirm = false;
     let showEditModal = false;
+    let showArchiveConfirm = false;
 
-    $: isAnyModalOpen = showFollowersModal || showLinkModal || showActions || showDeleteConfirm || showEditModal;
+    $: isAnyModalOpen = showFollowersModal || showLinkModal || showActions || showDeleteConfirm || showEditModal || showArchiveConfirm;
 
     $: {
         if (isAnyModalOpen) {
@@ -416,6 +418,10 @@
       showActions = false;
       showEditModal = true;
     }}
+    on:showArchiveConfirm={() => {
+      showActions = false;
+      showArchiveConfirm = true;
+    }}
   />
 {/if}
 
@@ -423,6 +429,22 @@
   <DeleteConfirmModal 
     on:close={() => showDeleteConfirm = false}
     on:delete={handleDelete}
+  />
+{/if}
+
+{#if showArchiveConfirm && !readonly}
+  <ArchiveConfirmModal 
+    on:close={() => showArchiveConfirm = false}
+    on:archive={async () => {
+      try {
+        const updatedHabit = await api.archiveHabit({ _id: habit._id });
+        // Удаляем из текущего списка (архивные не должны показываться)
+        habits.update(current => current.filter(h => h._id !== habit._id));
+        showArchiveConfirm = false;
+      } catch (e) {
+        console.error('Error archiving habit', e);
+      }
+    }}
   />
 {/if}
 

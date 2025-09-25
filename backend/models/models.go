@@ -42,6 +42,7 @@ type Habit struct {
 	Streak        int                `bson:"streak" json:"streak"`
 	Score         int                `bson:"score" json:"score"`
 	Stake         int                `bson:"stake" json:"stake"`
+	Archived      bool               `bson:"archived,omitempty" json:"archived"`
 	Followers     []string           `bson:"followers" json:"followers,omitempty"` // ID других привычек
 }
 
@@ -59,6 +60,7 @@ type HabitResponse struct {
 	Streak        int                `json:"streak"`
 	Score         int                `json:"score"`
 	Stake         int                `json:"stake"`
+	Archived      bool               `json:"archived"`
 	Followers     []FollowerInfo     `json:"followers"` // Обогащенная информация о подписчиках
 	Progress      float64            `json:"progress"`
 }

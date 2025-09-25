@@ -263,6 +263,14 @@ export const api = {
     unfollowHabit: (data: any) =>
         request('/api/habit/unfollow', { method: 'POST', body: JSON.stringify(data) }),
 
+    // Архив
+    archiveHabit: (data: { _id: string }) =>
+        request('/api/habit/archive', { method: 'PUT', body: JSON.stringify(data) }),
+    unarchiveHabit: (data: { _id: string }) =>
+        request('/api/habit/unarchive', { method: 'PUT', body: JSON.stringify(data) }),
+    getArchivedHabits: () =>
+        request('/api/habit/archived'),
+
     getLeaderboard: () => 
         request('/api/leaderboard'),
     

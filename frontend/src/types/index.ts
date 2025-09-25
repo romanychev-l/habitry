@@ -20,6 +20,7 @@ export interface Habit {
     streak: number;
     score: number;
     stake: number;
+    archived?: boolean;
     followers: FollowerInfo[];
     progress: number;
 }

@@ -88,6 +88,7 @@ func (h *Handler) HandleCreate(c *gin.Context) {
 	habit.Streak = 0
 	habit.Score = 0
 	habit.Followers = []string{} // пустой массив подписчиков
+	habit.Archived = false
 
 	// Сначала сохраняем привычку
 	result, err := h.habitsCollection.InsertOne(context.Background(), habit)
@@ -1124,6 +1125,7 @@ func (h *Handler) enrichHabitWithFollowers(ctx context.Context, habit models.Hab
 		Streak:        habit.Streak,
 		Score:         habit.Score,
 		Stake:         habit.Stake,
+		Archived:      habit.Archived,
 		Followers:     []models.FollowerInfo{}, // Это поле теперь будет заполняться отдельным запросом getHabitFollowers на фронте
 		Progress:      progress,
 	}
@@ -1135,6 +1137,167 @@ func (h *Handler) enrichHabitWithFollowers(ctx context.Context, habit models.Hab
 	// Пока оставлю пустым, чтобы не ломать структуру ответа HabitResponse кардинально.
 
 	return response, nil
+}
+
+// HandleArchive помечает привычку как архивированную
+func (h *Handler) HandleArchive(c *gin.Context) {
+	initData, exists := middleware.CtxInitData(c.Request.Context())
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: no user data in context"})
+		return
+	}
+
+	var req struct {
+		ID string `json:"_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request format"})
+		return
+	}
+
+	habitID, err := primitive.ObjectIDFromHex(req.ID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid habit_id format"})
+		return
+	}
+
+	// Проверяем, что привычка принадлежит пользователю
+	var habit models.Habit
+	err = h.habitsCollection.FindOne(context.Background(), bson.M{"_id": habitID}).Decode(&habit)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "habit not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get habit"})
+		return
+	}
+	if habit.TelegramID != initData.User.ID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+		return
+	}
+
+	_, err = h.habitsCollection.UpdateOne(
+		context.Background(),
+		bson.M{"_id": habitID},
+		bson.M{"$set": bson.M{"archived": true}},
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to archive habit"})
+		return
+	}
+
+	// Возвращаем обновленную привычку
+	err = h.habitsCollection.FindOne(context.Background(), bson.M{"_id": habitID}).Decode(&habit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get updated habit"})
+		return
+	}
+	resp, err := h.enrichHabitWithFollowers(c.Request.Context(), habit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to enrich habit"})
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+// HandleUnarchive снимает флаг архива
+func (h *Handler) HandleUnarchive(c *gin.Context) {
+	initData, exists := middleware.CtxInitData(c.Request.Context())
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: no user data in context"})
+		return
+	}
+
+	var req struct {
+		ID string `json:"_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request format"})
+		return
+	}
+
+	habitID, err := primitive.ObjectIDFromHex(req.ID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid habit_id format"})
+		return
+	}
+
+	// Проверяем владельца
+	var habit models.Habit
+	err = h.habitsCollection.FindOne(context.Background(), bson.M{"_id": habitID}).Decode(&habit)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "habit not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get habit"})
+		return
+	}
+	if habit.TelegramID != initData.User.ID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+		return
+	}
+
+	_, err = h.habitsCollection.UpdateOne(
+		context.Background(),
+		bson.M{"_id": habitID},
+		bson.M{"$set": bson.M{"archived": false}},
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to unarchive habit"})
+		return
+	}
+
+	// Возвращаем обновленную привычку
+	err = h.habitsCollection.FindOne(context.Background(), bson.M{"_id": habitID}).Decode(&habit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get updated habit"})
+		return
+	}
+	resp, err := h.enrichHabitWithFollowers(c.Request.Context(), habit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to enrich habit"})
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+// HandleListArchived возвращает список архивных привычек пользователя
+func (h *Handler) HandleListArchived(c *gin.Context) {
+	initData, exists := middleware.CtxInitData(c.Request.Context())
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: no user data in context"})
+		return
+	}
+
+	cursor, err := h.habitsCollection.Find(
+		context.Background(),
+		bson.M{"telegram_id": initData.User.ID, "archived": true},
+		options.Find().SetSort(bson.D{{Key: "created_at", Value: -1}}),
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to query archived habits"})
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var habits []models.Habit
+	if err := cursor.All(context.Background(), &habits); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to decode archived habits"})
+		return
+	}
+
+	resp := make([]models.HabitResponse, 0, len(habits))
+	for _, hbt := range habits {
+		hResp, err := h.enrichHabitWithFollowers(c.Request.Context(), hbt)
+		if err != nil {
+			continue
+		}
+		resp = append(resp, hResp)
+	}
+
+	c.JSON(http.StatusOK, resp)
 }
 
 // HandleSubscribeToFollower обрабатывает подписку текущего пользователя на привычку другого пользователя

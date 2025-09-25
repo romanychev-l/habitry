@@ -252,7 +252,7 @@ func (h *Handler) HandleUser(c *gin.Context) {
 	// Загружаем привычки пользователя
 	cursor, err := h.habitsCollection.Find(
 		context.Background(),
-		bson.M{"telegram_id": user.TelegramID},
+		bson.M{"telegram_id": user.TelegramID, "archived": bson.M{"$ne": true}},
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load habits"})

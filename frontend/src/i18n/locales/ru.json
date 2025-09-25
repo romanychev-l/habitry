@@ -46,6 +46,7 @@
     },
     "add": "Добавить привычку",
     "share": "Поделиться",
+    "archive": "Архивировать",
     "compact_view": "Компактный вид",
     "every_day": "Выполнять каждый день",
     "create_new": "Создать новую",
@@ -110,7 +111,18 @@
       "delete_title": "Удаление привычки",
       "delete_message": "Вы уверены, что хотите удалить эту привычку?",
       "delete_confirm": "Да, удалить",
-      "delete_cancel": "Нет, оставить"
+      "delete_cancel": "Нет, оставить",
+      "archive_title": "Архивировать привычку",
+      "archive_confirm": "Да, архивировать",
+      "archive_cancel": "Отмена",
+      "unarchive_title": "Вернуть привычку",
+      "unarchive_confirm": "Вернуть",
+      "unarchive_cancel": "Отмена"
+    },
+    "archived": {
+      "title": "Архив",
+      "empty": "Архив пуст",
+      "restore": "Вернуть"
     },
     "ping_blocked_title": "Напоминание заблокировано"
   },

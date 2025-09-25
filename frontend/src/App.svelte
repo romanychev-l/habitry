@@ -6,6 +6,7 @@
   import OnboardingModal from './components/OnboardingModal.svelte';
   import UserProfilePage from './components/UserProfilePage.svelte';
   import LeaderboardModal from './components/LeaderboardModal.svelte';
+  import ArchivedHabitsModal from './components/ArchivedHabitsModal.svelte';
   // import BuyTokensModal from './components/BuyTokensModal.svelte';
   import { user, balance } from './stores/user';
   import { isListView } from './stores/view';
@@ -29,6 +30,7 @@
   let showOnboarding = false;
   let showBuyTokens = false;
   let showLeaderboard = false;
+  let showArchived = false;
   let sharedHabitId = '';
   let sharedByTelegramId = '';
   let showUserProfile = false;
@@ -38,7 +40,7 @@
   let isInitialized = false;
   let isHabitCardModalOpen = false;
 
-  $: isAnyModalOpen = showModal || showHabitLinkModal || showSettings || showOnboarding || showUserProfile || showLeaderboard || isHabitCardModalOpen;
+  $: isAnyModalOpen = showModal || showHabitLinkModal || showSettings || showOnboarding || showUserProfile || showLeaderboard || showArchived || isHabitCardModalOpen;
   
   // Переменные для TON Connect
   let walletConnected = false;
@@ -484,7 +486,7 @@
     }
   }
 
-  $: habitsList = $habits as Habit[];
+  $: habitsList = ($habits as Habit[]).filter(h => !h.archived);
   // ($habits as Habit[]).sort((a, b) => {
   //   // Сначала проверяем выполненность за сегодня
   //   const today = new Date().toISOString().split('T')[0];
@@ -585,6 +587,18 @@
           on:modalClosed={() => isHabitCardModalOpen = false}
         />
       {/each}
+      <div class="archive-entry">
+        <div 
+          class="archive-entry-inner"
+          role="button"
+          tabindex="0"
+          on:click={() => showArchived = true}
+          on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && (showArchived = true)}
+        >
+          <span class="archive-emoji">📦</span>
+          <span class="archive-title">{$_('habits.archived.title')}</span>
+        </div>
+      </div>
     {/if}
   </div>
 
@@ -595,6 +609,7 @@
   >
     <img src={trophyIcon} alt="Leaderboard" />
   </button>
+
 
   <button 
     class="add-button"
@@ -609,6 +624,21 @@
       show={showLeaderboard}
       on:close={() => showLeaderboard = false}
       on:userselect={handleUserSelectFromLeaderboard}
+    />
+  {/if}
+
+  {#if showArchived}
+    <ArchivedHabitsModal
+      show={showArchived}
+      on:close={() => showArchived = false}
+      on:unarchived={(e) => {
+        // Добавляем восстановленную привычку в основной список
+        const restored = e.detail.habit as Habit;
+        habits.update(current => {
+          const exists = current.some(h => h._id === restored._id);
+          return exists ? current.map(h => h._id === restored._id ? restored : h) : [...current, restored];
+        });
+      }}
     />
   {/if}
 
@@ -748,6 +778,30 @@
     mask: url('/src/assets/streak.svg') no-repeat center / contain;
     -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
   }
+
+  .archive-entry {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+  }
+  .archive-entry-inner {
+    width: auto;
+    min-width: 140px;
+    max-width: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 16px;
+    background: var(--tg-theme-secondary-bg-color);
+    color: var(--tg-theme-text-color);
+    cursor: pointer;
+    user-select: none;
+  }
+  .archive-emoji { font-size: 18px; }
+  .archive-title { font-weight: 600; }
 
   .leaderboard-button.behind-modal {
     z-index: 1;
