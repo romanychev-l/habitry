@@ -77,6 +77,7 @@ jobs:
           BOT_USERNAME: ${{ secrets.BOT_USERNAME }}
           BACKEND_PORT: ${{ secrets.BACKEND_PORT }}
           TON_WALLET_ADDRESS: ${{ secrets.TON_WALLET_ADDRESS }}
+          IMGBB_API_KEY: ${{ secrets.IMGBB_API_KEY }}
           TON_CENTER_API_KEY: ${{ secrets.TON_CENTER_API_KEY }}
           WALLET_SEED_PHRASE: ${{ secrets.WALLET_SEED_PHRASE }}
           USDT_MASTER_ADDRESS: ${{ secrets.USDT_MASTER_ADDRESS }}
@@ -87,7 +88,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          envs: GITHUB_TOKEN,BOT_TOKEN,MONGO_HOST,MONGO_PORT,MONGO_DB_NAME,BOT_USERNAME,BACKEND_PORT,TON_WALLET_ADDRESS,TON_CENTER_API_KEY,WALLET_SEED_PHRASE,USDT_MASTER_ADDRESS,DEEPSEEK_API_KEY,GIN_MODE
+          envs: GITHUB_TOKEN,BOT_TOKEN,MONGO_HOST,MONGO_PORT,MONGO_DB_NAME,BOT_USERNAME,BACKEND_PORT,TON_WALLET_ADDRESS,TON_CENTER_API_KEY,WALLET_SEED_PHRASE,USDT_MASTER_ADDRESS,DEEPSEEK_API_KEY,GIN_MODE,IMGBB_API_KEY
           script: |
             export GIT_DIR_PATH="prod/habitry"
             if [ ! -d "$GIT_DIR_PATH" ]; then
@@ -108,6 +109,7 @@ jobs:
             BOT_USERNAME=${BOT_USERNAME}
             BACKEND_PORT=${BACKEND_PORT}
             TON_WALLET_ADDRESS=${TON_WALLET_ADDRESS}
+            IMGBB_API_KEY=${IMGBB_API_KEY}
             TON_CENTER_API_KEY=${TON_CENTER_API_KEY}
             WALLET_SEED_PHRASE=${WALLET_SEED_PHRASE}
             USDT_MASTER_ADDRESS=${USDT_MASTER_ADDRESS}
@@ -152,6 +154,7 @@ jobs:
           VITE_BOT_USERNAME: ${{ secrets.BOT_USERNAME }}
           VITE_USDT_MASTER_ADDRESS: ${{ secrets.USDT_MASTER_ADDRESS }}
           VITE_TON_WALLET_ADDRESS: ${{ secrets.TON_WALLET_ADDRESS }}
+          VITE_IMGBB_API_KEY: ${{ secrets.IMGBB_API_KEY }}
 
       - name: Clean previous temp directory on server
         uses: appleboy/ssh-action@v1.0.3
