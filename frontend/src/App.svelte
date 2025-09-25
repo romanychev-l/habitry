@@ -630,6 +630,7 @@
   {#if showArchived}
     <ArchivedHabitsModal
       show={showArchived}
+      telegramId={$user?.id}
       on:close={() => showArchived = false}
       on:unarchived={(e) => {
         // Добавляем восстановленную привычку в основной список

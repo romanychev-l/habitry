@@ -3,15 +3,20 @@
   import { createEventDispatcher, onMount } from 'svelte';
   import type { Habit } from '../types';
   import { api } from '../utils/api';
+  import { initData } from '@telegram-apps/sdk-svelte';
+  import DeleteConfirmModal from './DeleteConfirmModal.svelte';
   import UnarchiveConfirmModal from './UnarchiveConfirmModal.svelte';
 
   const dispatch = createEventDispatcher();
 
   export let show: boolean = false;
+  export let telegramId: number | undefined = undefined;
   let archivedHabits: Habit[] = [];
   let isLoading = false;
   let showUnarchiveConfirm = false;
   let habitToUnarchive: Habit | null = null;
+  let showDeleteConfirm = false;
+  let habitToDelete: Habit | null = null;
 
   onMount(loadArchived);
 
@@ -40,6 +45,25 @@
   function openUnarchive(h: Habit) {
     habitToUnarchive = h;
     showUnarchiveConfirm = true;
+  }
+
+  function openDelete(h: Habit) {
+    habitToDelete = h;
+    showDeleteConfirm = true;
+  }
+
+  async function handleDeleteConfirmed() {
+    if (!habitToDelete) return;
+    try {
+      const idToDelete = habitToDelete._id; // сохраняем до await, чтобы избежать гонки
+      const ownerId = telegramId ?? initData.user()?.id ?? 0;
+      await api.deleteHabit({ telegram_id: ownerId, habit_id: idToDelete });
+      archivedHabits = archivedHabits.filter(h => h._id !== idToDelete);
+      habitToDelete = null;
+      showDeleteConfirm = false;
+    } catch (e) {
+      console.error('Failed to delete archived habit', e);
+    }
   }
 </script>
 
@@ -70,9 +94,14 @@
                   <div class="subtitle">{h.want_to_become}</div>
                 {/if}
               </div>
-              <button class="restore" type="button" on:click={() => openUnarchive(h)} on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && openUnarchive(h)}>
-                {$_('habits.archived.restore') || 'Вернуть'}
-              </button>
+              <div class="actions">
+                <button class="restore" type="button" on:click={() => openUnarchive(h)} on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && openUnarchive(h)}>
+                  {$_('habits.archived.restore') || 'Вернуть'}
+                </button>
+                <button class="delete" type="button" on:click={() => openDelete(h)} on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && openDelete(h)}>
+                  {$_('habits.delete')}
+                </button>
+              </div>
             </li>
           {/each}
         </ul>
@@ -89,6 +118,12 @@
       showUnarchiveConfirm = false;
       habitToUnarchive = null;
     }}
+  />
+{/if}
+{#if showDeleteConfirm && habitToDelete}
+  <DeleteConfirmModal
+    on:close={() => { showDeleteConfirm = false; habitToDelete = null; }}
+    on:delete={handleDeleteConfirmed}
   />
 {/if}
 {/if}
@@ -131,7 +166,9 @@
   .archived-item .info { display: flex; flex-direction: column; gap: 4px; }
   .archived-item .title { font-weight: 600; }
   .archived-item .subtitle { opacity: 0.7; font-size: 13px; }
+  .actions { display: flex; align-items: center; gap: 8px; }
   .restore { background: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color); border: none; border-radius: 10px; padding: 8px 12px; cursor: pointer; }
+  .delete { background: #ff3b30; color: #fff; border: none; border-radius: 10px; padding: 8px 12px; cursor: pointer; }
 
   :global([data-theme="dark"]) .dialog { background: var(--tg-theme-bg-color); }
   :global([data-theme="dark"]) .dialog * { color: white !important; }
