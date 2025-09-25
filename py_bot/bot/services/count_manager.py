@@ -49,6 +49,10 @@ class CountManager:
                             follower_habit = db.habits.find_one({"_id": follower_id})
                             # logger.info(f"follower_habit: {follower_habit}") # Слишком многословно
 
+                            # Пропускаем архивированные или отсутствующие привычки подписчиков
+                            if not follower_habit or follower_habit.get('archived') is True:
+                                continue
+
                             # Получаем данные пользователя-фолловера для проверки баланса
                             follower_user = db.users.find_one({"telegram_id": follower_habit['telegram_id']})
 
@@ -93,6 +97,10 @@ class CountManager:
                 habit_title = habit.get('title', 'Без названия')
                 logger.info(f"Processing habit '{habit_title}' ({habit_id}) owned by {habit_owner_id}")
                 try: # Обработка ошибок для одной привычки
+                    # Пропускаем архивированные привычки владельца на всякий случай
+                    if habit.get('archived') is True:
+                        logger.info(f"Skipping archived habit '{habit_title}' ({habit_id}).")
+                        continue
                     sum_stakes_of_followers = sum(stake for _, _, stake, _ in habit['followers'])
                     user = db.users.find_one({"telegram_id": habit_owner_id})
                     if not user:
@@ -335,7 +343,9 @@ def get_unfulfilled_habits_with_stake(check_date):
     logger.info(f"Checking for unfulfilled habits on weekday: {check_weekday}, date: {check_date}")
     habits = list(db.habits.find({
         "stake": {"$gt": 0},
-        "days": check_weekday
+        "days": check_weekday,
+        # Исключаем архивированные привычки владельцев
+        "archived": {"$ne": True}
     }))
     
     # Фильтруем привычки, оставляя только невыполненные
