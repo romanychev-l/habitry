@@ -46,6 +46,8 @@
     },
     "add": "Add habit",
     "share": "Share",
+    "share_in_chat": "Share in chat",
+    "share_in_story": "Share to story",
     "archive": "Archive",
     "compact_view": "Compact view",
     "every_day": "Do every day",
@@ -126,6 +128,10 @@
     },
     "ping_blocked_title": "Reminder Blocked"
   },
+    "habits_story": {
+      "story_invite": "Join my habit on Habitry",
+      "days_in_row": "days in a row"
+    },
   "days": {
     "monday": "Mon",
     "tuesday": "Tue",

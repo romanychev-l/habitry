@@ -3,6 +3,8 @@
   import { createEventDispatcher } from 'svelte';
   import type { Habit } from '../types';
   import { initData } from '@telegram-apps/sdk-svelte';
+  import { shareStory } from '@telegram-apps/sdk';
+  import { generateHabitStoryImage, uploadBase64ToImgbb, getGradientForHabitId } from '../utils/storyShare';
 
   const dispatch = createEventDispatcher();
   const BOT_USERNAME = import.meta.env.VITE_BOT_USERNAME;
@@ -18,6 +20,49 @@
     const url = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(shareText)}`;
     window.open(url, '_blank');
     dispatch('close');
+  }
+
+  async function handleShareStory() {
+    const userId = initData.user()?.id || '';
+    const baseUrl = `https://t.me/${BOT_USERNAME}/app`;
+    const startAppParam = `startapp=habit_${habit._id}_${userId}`;
+    const appUrl = `${baseUrl}?${startAppParam}`;
+    const botHandle = `@${BOT_USERNAME}`;
+    const statsLine = `${$_('habits.join_habit.0')} ${$_('habits.join_habit.1')} ${habit.streak} ${$_('habits.join_habit.2')}`;
+    const text = `🔥 ${habit.title}\n📅 ${statsLine}\n🤖 ${botHandle}\n${appUrl}`;
+
+    try {
+      const dataUrl = await generateHabitStoryImage({
+        habitTitle: habit.title,
+        streakDays: habit.streak || 0,
+        wantToBecomeText: habit.want_to_become,
+        wantLabelText: $_('habits.want_to_become'),
+        gradientCss: getGradientForHabitId(habit._id),
+      });
+
+      const IMGBB_KEY = import.meta.env.VITE_IMGBB_API_KEY;
+      if (!IMGBB_KEY) {
+        throw new Error('VITE_IMGBB_API_KEY is not set');
+      }
+      const uploaded = await uploadBase64ToImgbb(dataUrl, IMGBB_KEY, {
+        name: `habit_${habit._id}_${Date.now()}`,
+        expirationSeconds: 60 * 60,
+      });
+
+      if (shareStory.isAvailable()) {
+        shareStory(uploaded.url, {
+          // caption убираем, только widgetLink
+          widgetLink: {
+            url: appUrl,
+            name: botHandle
+          }
+        });
+      } 
+    } catch (e) {
+      console.error('Error sharing story', e);
+    } finally {
+      dispatch('close');
+    }
   }
 </script>
 
@@ -37,7 +82,13 @@
         class="dialog-button share"
         on:click={handleShare}
       >
-        {$_('habits.share')}
+        {$_('habits.share_in_chat')}
+      </button>
+      <button 
+        class="dialog-button share"
+        on:click={handleShareStory}
+      >
+        {$_('habits.share_in_story')}
       </button>
       <button 
         class="dialog-button edit"
