@@ -180,7 +180,12 @@
     "referral_info_text": "За каждую выполненную привычку вашего реферала вы будете получать 1 токен WILL.",
     "share": "Поделиться",
     "username_required": "Для шаринга профиля нужен username в Telegram",
-    "display_score": "Показывать очки вместо серии"
+    "display_score": "Показывать очки вместо серии",
+    "preferences": "Настройки",
+    "community": "Сообщество",
+    "telegram_channel": "Telegram канал",
+    "community_chat": "Комьюнити чат",
+    "join": "Вступить"
   },
   "profile": {
     "title": "Профиль пользователя",

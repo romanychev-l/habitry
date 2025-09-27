@@ -180,7 +180,12 @@
     "referral_info_text": "For every habit your referral completes, you'll receive 1 WILL token.",
     "share": "Share",
     "username_required": "Telegram username is required to share profile",
-    "display_score": "Show score instead of streak"
+    "display_score": "Show score instead of streak",
+    "preferences": "Settings",
+    "community": "Community",
+    "telegram_channel": "Telegram Channel",
+    "community_chat": "Community Chat",
+    "join": "Join"
   },
   "profile": {
     "title": "User Profile",

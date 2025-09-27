@@ -115,6 +115,14 @@
     }
   }
 
+  function handleJoinChannel() {
+    window.open('https://t.me/habitry_channel', '_blank');
+  }
+
+  function handleJoinCommunity() {
+    window.open('https://t.me/+xxqVvxQiFyYzNjgy', '_blank');
+  }
+
   // Загружаем настройки при монтировании компонента
   loadSettings();
 </script>
@@ -129,7 +137,7 @@
 
   <div class="settings-content">
     <section class="settings-section">
-      <h2>{$_('settings.notifications')}</h2>
+      <h2>{$_('settings.preferences')}</h2>
       
       <div class="settings-group">
         <div class="setting-item">
@@ -224,6 +232,36 @@
       {#if !$user?.username}
         <p class="warning">{$_('settings.username_required')}</p>
       {/if}
+    </section>
+
+    <section class="settings-section">
+      <h2>{$_('settings.community')}</h2>
+      <div class="settings-group">
+        <div class="setting-item">
+          <div class="setting-label">
+            <span>{$_('settings.telegram_channel')}</span>
+            <small>t.me/habitry_channel</small>
+          </div>
+          <button 
+            class="join-button" 
+            on:click={handleJoinChannel}
+          >
+            {$_('settings.join')}
+          </button>
+        </div>
+        <div class="setting-item">
+          <div class="setting-label">
+            <span>{$_('settings.community_chat')}</span>
+            <small>t.me/+xxqVvxQiFyYzNjgy</small>
+          </div>
+          <button 
+            class="join-button" 
+            on:click={handleJoinCommunity}
+          >
+            {$_('settings.join')}
+          </button>
+        </div>
+      </div>
     </section>
 
     {#if saveMessage}
@@ -445,5 +483,22 @@
     color: #e53935;
     font-size: 12px;
     margin-top: 4px;
+  }
+
+  .join-button {
+    background-color: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .setting-label small {
+    display: block;
+    color: var(--tg-theme-hint-color);
+    font-size: 12px;
+    margin-top: 2px;
   }
 </style> 
