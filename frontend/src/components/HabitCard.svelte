@@ -571,10 +571,11 @@ import { user, balance } from '../stores/user';
   }
 
   :global(.list-view) .streak-shadow {
-    left: 20px;
+    left: 14px;
+    top: 3px;
     right: auto;
-    top: 50%;
-    transform: translateY(-50%);
+    /* top: 50%; */
+    /* transform: translateY(-50%); */
     filter: none;
   }
 
@@ -657,7 +658,7 @@ import { user, balance } from '../stores/user';
   :global(.list-view) .undo-button {
     position: absolute;
     top: 50%;
-    right: 30px;
+    right: 50px;
     left: auto;
     transform: translateY(-50%);
     font-size: 22px; 
@@ -733,7 +734,8 @@ import { user, balance } from '../stores/user';
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    right: 8px;
+    margin-top: 8px; /* Коррекция для визуального центрирования */
+    right: 16px;
     background: none;
     border: none;
     font-size: 24px;

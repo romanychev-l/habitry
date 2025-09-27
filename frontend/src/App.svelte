@@ -736,8 +736,10 @@
   }
 
   .habit-container.list-view {
-    gap: 0;
-    padding: 0;
+    /* Добавляем вертикальные отступы между карточками */
+    gap: 8px;
+    /* И увеличиваем горизонтальные поля, чтобы карточки не прилипали к краям */
+    padding: 0 12px;
   }
 
   .habit-container :global(.habit-card) {
@@ -756,6 +758,7 @@
     aspect-ratio: auto;
     height: 60px;
     border-radius: 12px;
+    /* Убираем полное прилегание, оставляя пространство, заданное контейнером */
     margin: 0;
     box-sizing: border-box;
   }
