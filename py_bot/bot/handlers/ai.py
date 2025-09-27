@@ -111,6 +111,9 @@ async def collect_week_habits_data(user_id: int, habits: list, i18n) -> dict:
         "days_data": []
     }
     
+    # Подготовим множество активных ID привычек для фильтрации историй
+    active_habit_ids = {habit["_id"] for habit in habits}
+
     # Информация о привычках
     for habit in habits:
         week_data["habits_info"].append({
@@ -144,7 +147,7 @@ async def collect_week_habits_data(user_id: int, habits: list, i18n) -> dict:
                     "done": h.get("done", True)
                 }
                 for h in history["habits"]
-                if h.get("done", True)
+                if h.get("done", True) and h.get("habit_id") in active_habit_ids
             ]
         
         # Определяем какие привычки должны были быть выполнены в этот день
@@ -246,8 +249,11 @@ async def cmd_analyze_habits(msg: Message, i18n: TranslatorRunner):
             
         await msg.answer(i18n.ai.collecting_data())
         
-        # Получаем привычки пользователя
-        habits = list(db.habits.find({"telegram_id": user_id}))
+        # Получаем только неархивированные привычки пользователя
+        habits = list(db.habits.find({
+            "telegram_id": user_id,
+            "archived": {"$ne": True}
+        }))
         if not habits:
             await msg.answer(i18n.ai.no_habits())
             return
