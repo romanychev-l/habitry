@@ -10,6 +10,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+//go run cmd/migrate/main.go
+
 func main() {
 	// Подключаемся к MongoDB
 	ctx := context.Background()
@@ -26,8 +28,8 @@ func main() {
 	}
 
 	// Запускаем миграцию credit -> balance
-	if err := migrations.MigrateCreditToBalance(client, "ht_db"); err != nil {
-		log.Printf("Ошибка при выполнении миграции credit -> balance: %v", err)
+	if err := migrations.MigrateUsersBonusAndReferer(client, "ht_db"); err != nil {
+		log.Printf("Ошибка при выполнении миграции users_bonus and referer: %v", err)
 		os.Exit(1)
 	}
 
