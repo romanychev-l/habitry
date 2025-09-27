@@ -1070,6 +1070,40 @@ func (h *Handler) HandleUndo(c *gin.Context) {
 			return
 		}
 
+		// --- Списание токенов WILL за отмену выполнения привычки (включая автопривычки) ---
+		var currentUser models.User
+		err = h.usersCollection.FindOne(context.Background(), bson.M{"telegram_id": initData.User.ID}).Decode(&currentUser)
+		if err != nil {
+			log.Printf("HandleUndo: Не удалось найти пользователя %d для списания токенов: %v", initData.User.ID, err)
+		} else {
+			// 1) Списываем 1 WILL у пользователя
+			_, err := h.usersCollection.UpdateOne(
+				context.Background(),
+				bson.M{"_id": currentUser.ID},
+				bson.M{"$inc": bson.M{"balance": -1}},
+			)
+			if err != nil {
+				log.Printf("HandleUndo: Ошибка при списании токена у пользователя %d: %v", currentUser.TelegramID, err)
+			} else {
+				log.Printf("У пользователя %d списан 1 WILL за отмену выполнения", currentUser.TelegramID)
+			}
+
+			// 2) Если есть реферер — списываем 1 WILL и у него
+			if currentUser.ReferrerID != 0 {
+				_, err := h.usersCollection.UpdateOne(
+					context.Background(),
+					bson.M{"telegram_id": currentUser.ReferrerID},
+					bson.M{"$inc": bson.M{"balance": -1}},
+				)
+				if err != nil {
+					log.Printf("HandleUndo: Ошибка при списании токена у реферера %d: %v", currentUser.ReferrerID, err)
+				} else {
+					log.Printf("У реферера %d списан 1 WILL за отмену у реферала %d", currentUser.ReferrerID, currentUser.TelegramID)
+				}
+			}
+		}
+		// --- Конец списания ---
+
 		// Получаем обновленную версию привычки
 		err = h.habitsCollection.FindOne(context.Background(), bson.M{"_id": habitID}).Decode(&habit)
 		if err != nil {

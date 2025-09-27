@@ -2,7 +2,7 @@
     import { _ } from 'svelte-i18n';
     import { isListView, displayScore } from '../stores/view';
     import { habits } from '../stores/habit';
-    import { user } from '../stores/user';
+import { user, balance } from '../stores/user';
     import { createEventDispatcher } from 'svelte';
     import HabitActionsModal from './HabitActionsModal.svelte';
     import DeleteConfirmModal from './DeleteConfirmModal.svelte';
@@ -158,6 +158,8 @@
             });
             
             console.log('Получен ответ от сервера:', updatedHabit);
+            // Оптимистично обновляем баланс пользователя (+1 WILL)
+            balance.update(b => (b ?? 0) + 1);
             
             isAnimating = true;
             // Сбрасываем флаг анимации после её завершения
@@ -195,6 +197,9 @@
             }, 800);
 
             completed = false;
+
+            // Оптимистично обновляем баланс пользователя (-1 WILL)
+            balance.update(b => Math.max(0, (b ?? 0) - 1));
 
             console.log('handleUndo in HabitCard.svelte', updatedHabit);
 
