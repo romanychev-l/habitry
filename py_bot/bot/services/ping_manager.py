@@ -17,7 +17,6 @@ class PingManager:
 
     def start(self):
         """Запускает планировщик для обработки пингов."""
-        # Добавляем задачу проверки пингов каждые 5 минут
         self.scheduler.add_job(
             self._process_pending_pings,
             'interval',
@@ -51,20 +50,34 @@ class PingManager:
         """Отправляет один пинг."""
         try:
             # Готовим сообщение для отправки
-            habit_title = ping.get("habit_title", "привычка")
+            sender_habit_id = ping.get("habit_id")
             sender_username = ping.get("sender_username", "пользователь")
             follower_id = ping.get("follower_id")
             
-            if not follower_id:
-                logger.error(f"В пинге отсутствует follower_id: {ping}")
+            if not follower_id or not sender_habit_id:
+                logger.error(f"В пинге отсутствуют необходимые поля: {ping}")
                 await self._update_ping_status(ping, "error")
                 return
+            
+            # Находим привычку получателя, которая подписана на привычку отправителя
+            follower_habit = self.db.habits.find_one({
+                "telegram_id": follower_id,
+                "followers": sender_habit_id
+            })
+            
+            if not follower_habit:
+                logger.error(f"Не найдена привычка получателя {follower_id}, подписанная на привычку отправителя {sender_habit_id}")
+                await self._update_ping_status(ping, "error")
+                return
+            
+            # Получаем название привычки получателя
+            follower_habit_title = follower_habit.get("title", "привычка")
             
             # Формируем текст сообщения
             message_text = (
                 f"💡 <b>Напоминание о привычке</b>\n\n"
                 f"Пользователь @{sender_username} напоминает вам о необходимости выполнить привычку:\n"
-                f"<b>{habit_title}</b>\n\n"
+                f"<b>{follower_habit_title}</b>\n\n"
                 f"Не забудьте отметить выполнение сегодня!"
             )
             
@@ -77,7 +90,7 @@ class PingManager:
             
             # Обновляем статус пинга
             await self._update_ping_status(ping, "sent")
-            logger.info(f"Пинг успешно отправлен пользователю {follower_id}")
+            logger.info(f"Пинг успешно отправлен пользователю {follower_id} для привычки '{follower_habit_title}'")
             
         except Exception as e:
             logger.error(f"Ошибка при отправке пинга {ping.get('_id')}: {e}")
