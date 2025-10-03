@@ -19,6 +19,8 @@
   import { subscribeToWalletChanges } from './utils/tonConnect';
   import type { Wallet } from '@tonconnect/ui';
   import { popup, initData, themeParams, swipeBehavior, viewport } from '@telegram-apps/sdk-svelte';
+  import { initGoogleAnalytics } from './utils/analytics';
+  import TelegramAnalytics from '@telegram-apps/analytics';
   import plusIcon from './assets/plus.svg'; // Import the SVG
   import trophyIcon from './assets/trophy.svg';
   
@@ -116,6 +118,9 @@
       
       console.log('Telegram WebApp успешно инициализирован');
 
+      // Инициализируем аналитику после инициализации темы
+      initializeAnalytics();
+
       // Проверяем параметры запуска после инициализации
       handleStartParam();
 
@@ -148,6 +153,29 @@
       }
     } catch (error) {
       console.error('Ошибка при инициализации Telegram WebApp:', error);
+    }
+  }
+  
+  // Функция для инициализации аналитики
+  function initializeAnalytics() {
+    // Инициализируем Telegram Analytics
+    const analyticsToken = import.meta.env.VITE_ANALYTICS_TOKEN;
+    if (analyticsToken) {
+      TelegramAnalytics.init({
+        token: analyticsToken, 
+        appName: 'habitry', 
+      });
+      console.log('📊 Telegram Analytics initialized');
+    } else {
+      console.warn('⚠️ Analytics token not found, skipping Telegram Analytics');
+    }
+
+    // Инициализируем Google Analytics с Telegram User ID
+    const userData = initData.user();
+    if (userData?.id) {
+      initGoogleAnalytics('G-K6D736VS2T', userData.id);
+    } else {
+      console.warn('⚠️ Telegram user data not available, skipping GA initialization');
     }
   }
   

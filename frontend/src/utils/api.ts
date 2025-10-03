@@ -22,7 +22,7 @@ async function request(endpoint: string, options: RequestOptions = {}) {
     
     // Добавляем timezone в заголовки
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    console.log('timezone', timezone);
+    //console.log('timezone', timezone);
     headers.set('X-Timezone', timezone);
     
     // Используем правильный формат авторизации для Telegram Mini Apps
@@ -33,7 +33,7 @@ async function request(endpoint: string, options: RequestOptions = {}) {
     }
     headers.set('Content-Type', 'application/json');
 
-    console.log(`Выполняем запрос: ${url.toString()}, метод: ${fetchOptions.method || 'GET'}`);
+    // console.log(`Выполняем запрос: ${url.toString()}, метод: ${fetchOptions.method || 'GET'}`);
     if (fetchOptions.body) {
         console.log('Тело запроса:', fetchOptions.body);
     }
