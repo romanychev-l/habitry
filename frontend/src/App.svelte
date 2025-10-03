@@ -51,14 +51,22 @@
 
   initData.restore();
   
-  onMount(() => {
+  onMount(async () => {
+    await initializeApp();
+  });
+
+  async function initializeApp() {
     // Инициализируем Telegram WebApp
-    initTelegramWebApp();
+    await initTelegramWebApp();
     
     // Инициализируем TON Connect
     initTonConnect();
     checkPendingTonTransactions();
-  });
+
+    // Инициализируем данные пользователя (привычки, баланс и т.д.)
+    // Этот вызов был перенесен сюда для строгой последовательности
+    await initializeUser();
+  }
   
   // Функция для инициализации Telegram WebApp
   async function initTelegramWebApp() {
@@ -89,7 +97,14 @@
       if (themeParams.mount.isAvailable()) {
         try {
           console.log('Попытка монтирования темы...');
-          await themeParams.mount();
+          // Добавляем таймаут, чтобы избежать зависания на десктопных клиентах
+          const themeMountPromise = themeParams.mount();
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Theme mount timed out')), 500)
+          );
+          
+          await Promise.race([themeMountPromise, timeoutPromise]);
+          
           console.log('Тема успешно смонтирована');
           
           console.log('Привязка CSS переменных...');
@@ -110,7 +125,10 @@
             secondaryBgColor: getComputedStyle(document.documentElement).getPropertyValue('--tg-theme-secondary-bg-color')
           });
         } catch (err) {
-          console.error('Ошибка при инициализации темы:', err);
+          console.error('Ошибка при инициализации темы (или таймаут):', err);
+          // Устанавливаем светлую тему по умолчанию в случае ошибки
+          isDarkTheme = false; 
+          console.log('Установлена светлая тема по умолчанию');
         }
       } else {
         console.warn('themeParams.mount недоступен');
@@ -461,7 +479,7 @@
   }
 
   $: if ($user) {
-    initializeUser();
+    // initializeUser(); // Этот вызов остается закомментированным
   }
 
   async function handleNewHabit(event: { detail: any }) {
