@@ -155,6 +155,7 @@ jobs:
           VITE_USDT_MASTER_ADDRESS: ${{ secrets.USDT_MASTER_ADDRESS }}
           VITE_TON_WALLET_ADDRESS: ${{ secrets.TON_WALLET_ADDRESS }}
           VITE_IMGBB_API_KEY: ${{ secrets.IMGBB_API_KEY }}
+          VITE_ANALYTICS_TOKEN: ${{ secrets.ANALYTICS_TOKEN }}
 
       - name: Clean previous temp directory on server
         uses: appleboy/ssh-action@v1.0.3
