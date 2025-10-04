@@ -87,10 +87,6 @@
     }
   }
 
-  function handleBack() {
-    dispatch('back');
-  }
-
   function handleShareProfile() {
     if ($user?.username) {
       const baseUrl = `https://t.me/${BOT_USERNAME}/app`;
@@ -128,13 +124,6 @@
 </script>
 
 <div class="settings-page">
-  <header>
-    <button class="back-button" on:click={handleBack}>
-      ←
-    </button>
-    <h1>{$_('settings.title')}</h1>
-  </header>
-
   <div class="settings-content">
     <section class="settings-section">
       <h2>{$_('settings.preferences')}</h2>
@@ -294,35 +283,11 @@
     font-size: 14px;
   }
 
-  h1 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--tg-theme-text-color);
-  }
-
   h2 {
     font-size: 18px;
     font-weight: 600;
     margin: 0 0 16px 0;
     color: var(--tg-theme-text-color);
-  }
-
-  .back-button {
-    background: none;
-    border: none;
-    font-size: 24px;
-    padding: 8px 16px;
-    margin-right: 8px;
-    cursor: pointer;
-    color: var(--tg-theme-text-color);
-  }
-
-  header {
-    display: flex;
-    align-items: center;
-    padding: 12px;
-    border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
   }
 
   .settings-section {

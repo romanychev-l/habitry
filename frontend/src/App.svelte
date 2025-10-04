@@ -18,9 +18,9 @@
   import { onMount, onDestroy } from 'svelte';
   import { subscribeToWalletChanges } from './utils/tonConnect';
   import type { Wallet } from '@tonconnect/ui';
-  import { popup, initData, themeParams, swipeBehavior, viewport } from '@telegram-apps/sdk-svelte';
+  import { popup, initData, themeParams, swipeBehavior, viewport, backButton } from '@telegram-apps/sdk-svelte';
   import { initGoogleAnalytics } from './utils/analytics';
-  import TelegramAnalytics from '@telegram-apps/analytics';
+  // import TelegramAnalytics from '@telegram-apps/analytics';
   import plusIcon from './assets/plus.svg'; // Import the SVG
   import trophyIcon from './assets/trophy.svg';
   
@@ -41,8 +41,49 @@
   let isDarkTheme = false;
   let isInitialized = false;
   let isHabitCardModalOpen = false;
+  let closeModalsSignal = 0;
+  let backButtonBound = false;
 
-  $: isAnyModalOpen = showModal || showHabitLinkModal || showSettings || showOnboarding || showUserProfile || showLeaderboard || showArchived || isHabitCardModalOpen;
+  $: isAnyModalOpen = showModal || showHabitLinkModal || showSettings || showOnboarding || showUserProfile || showLeaderboard || showArchived || showBuyTokens || isHabitCardModalOpen;
+
+  function goToMainScreen() {
+    // Просим дочерние карточки закрыть свои модальные окна
+    closeModalsSignal += 1;
+    showModal = false;
+    showHabitLinkModal = false;
+    showSettings = false;
+    showOnboarding = false;
+    showUserProfile = false;
+    showLeaderboard = false;
+    showArchived = false;
+    showBuyTokens = false;
+  }
+
+  $: {
+    if (isAnyModalOpen) {
+      if (backButton.mount.isAvailable()) {
+        backButton.mount();
+        if (backButton.show.isAvailable()) {
+          backButton.show();
+        }
+        if (!backButtonBound && backButton.onClick.isAvailable()) {
+          backButton.onClick(goToMainScreen);
+          backButtonBound = true;
+        }
+      }
+    } else {
+      if (backButton.isMounted()) {
+        if (backButtonBound && backButton.offClick.isAvailable()) {
+          backButton.offClick(goToMainScreen);
+          backButtonBound = false;
+        }
+        if (backButton.hide.isAvailable()) {
+          backButton.hide();
+        }
+        // backButton.unmount(); // Unmounting can sometimes cause issues if quickly re-mounted
+      }
+    }
+  }
   
   // Переменные для TON Connect
   let walletConnected = false;
@@ -137,7 +178,7 @@
       console.log('Telegram WebApp успешно инициализирован');
 
       // Инициализируем аналитику после инициализации темы
-      initializeAnalytics();
+      // initializeAnalytics();
 
       // Проверяем параметры запуска после инициализации
       handleStartParam();
@@ -177,16 +218,16 @@
   // Функция для инициализации аналитики
   function initializeAnalytics() {
     // Инициализируем Telegram Analytics
-    const analyticsToken = import.meta.env.VITE_ANALYTICS_TOKEN;
-    if (analyticsToken) {
-      TelegramAnalytics.init({
-        token: analyticsToken, 
-        appName: 'habitry', 
-      });
-      console.log('📊 Telegram Analytics initialized');
-    } else {
-      console.warn('⚠️ Analytics token not found, skipping Telegram Analytics');
-    }
+    // const analyticsToken = import.meta.env.VITE_ANALYTICS_TOKEN;
+    // if (analyticsToken) {
+    //   TelegramAnalytics.init({
+    //     token: analyticsToken, 
+    //     appName: 'habitry', 
+    //   });
+    //   console.log('📊 Telegram Analytics initialized');
+    // } else {
+    //   console.warn('⚠️ Analytics token not found, skipping Telegram Analytics');
+    // }
 
     // Инициализируем Google Analytics с Telegram User ID
     const userData = initData.user();
@@ -421,15 +462,6 @@
     cameFromLeaderboard = true;
   }
 
-  function handleUserProfileBack() {
-    showUserProfile = false;
-    profileUsername = '';
-    if (cameFromLeaderboard) {
-      showLeaderboard = true;
-      cameFromLeaderboard = false;
-    }
-  }
-
   async function initializeUser() {
     if (isInitialized) return;
     
@@ -629,6 +661,7 @@
         <HabitCard 
           {habit}
           telegramId={$user.id} 
+          closeModalsSignal={closeModalsSignal}
           on:modalOpened={() => isHabitCardModalOpen = true}
           on:modalClosed={() => isHabitCardModalOpen = false}
         />
@@ -711,10 +744,9 @@
   {#if showUserProfile && profileUsername}
     <UserProfilePage 
       username={profileUsername} 
-      on:back={handleUserProfileBack} 
     />
   {:else if showSettings}
-    <SettingsPage on:back={() => showSettings = false} />
+    <SettingsPage />
   {:else}
     {#if showOnboarding}
       <OnboardingModal 
@@ -939,7 +971,7 @@
     gap: 4px;
   }
 
-  .add-balance-button {
+  /* .add-balance-button {
     width: 40px;
     height: 40px;
     border: none;
@@ -951,7 +983,7 @@
     cursor: pointer;
     mask: url('/src/assets/streak.svg') no-repeat center / contain;
     -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
-  }
+  } */
 
   .add-button img,
   .add-balance-button img {
@@ -967,9 +999,9 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  :global([data-theme="dark"]) .add-balance-button {
+  /* :global([data-theme="dark"]) .add-balance-button {
     background: var(--tg-theme-hint-color);
-  }
+  } */
 
   .ton-connect-wrapper {
     display: flex;

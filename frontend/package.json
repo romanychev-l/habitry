@@ -10,25 +10,27 @@
     "check": "svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.node.json"
   },
   "devDependencies": {
-    "@tsconfig/svelte": "^5.0.4",
-    "@types/node": "^22.13.12",
-    "svelte-check": "^4.1.5",
+    "@tsconfig/svelte": "^5.0.5",
+    "@types/node": "^22.18.8",
+    "svelte-check": "^4.3.2",
     "tslib": "^2.8.1",
-    "typescript": "^5.8.2",
-    "vite-plugin-node-polyfills": "^0.23.0"
+    "typescript": "^5.9.3",
+    "vite-plugin-node-polyfills": "^0.24.0"
   },
   "dependencies": {
-    "@sveltejs/vite-plugin-svelte": "^5.0.3",
-    "@telegram-apps/analytics": "^1.4.4",
-    "@telegram-apps/sdk-svelte": "^2.0.15",
-    "@ton/core": "^0.60.1",
+    "@sveltejs/vite-plugin-svelte": "^5.1.1",
+    "@telegram-apps/sdk-svelte": "^2.0.31",
+    "@ton/core": "^0.62.0",
     "@ton/crypto": "^3.3.0",
-    "@ton/ton": "^15.2.1",
-    "@tonconnect/sdk": "^3.0.7",
-    "@tonconnect/ui": "^2.0.12",
+    "@ton/ton": "^15.4.0",
+    "@tonconnect/sdk": "^3.3.1",
+    "@tonconnect/ui": "^2.3.1",
     "buffer": "^6.0.3",
-    "svelte": "^5.25.3",
+    "svelte": "^5.39.8",
     "svelte-i18n": "^4.0.1",
-    "vite": "^6.2.2"
+    "vite": "^6.3.6"
+  },
+  "overrides": {
+    "esbuild": "^0.25.10"
   }
 }

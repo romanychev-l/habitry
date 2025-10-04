@@ -34,23 +34,12 @@
     }
   }
   
-  function handleBack() {
-    dispatch('back');
-  }
-  
   $: if (username) {
     loadUserProfile();
   }
 </script>
 
 <div class="profile-page">
-  <header>
-    <button class="back-button" on:click={handleBack}>
-      ←
-    </button>
-    <h1>{$_('profile.title')}</h1>
-  </header>
-
   {#if error}
     <div class="error">{error}</div>
   {:else if userProfile}
@@ -96,30 +85,6 @@
     z-index: 1000;
     display: flex;
     flex-direction: column;
-  }
-  
-  header {
-    display: flex;
-    align-items: center;
-    padding: 12px;
-    border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
-  }
-  
-  .back-button {
-    background: none;
-    border: none;
-    font-size: 24px;
-    padding: 8px 16px;
-    margin-right: 8px;
-    cursor: pointer;
-    color: var(--tg-theme-text-color);
-  }
-  
-  h1 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--tg-theme-text-color);
   }
   
   .profile-content {
@@ -236,10 +201,8 @@
     color: #ff453a;
   }
 
-  :global([data-theme="dark"]) h1,
   :global([data-theme="dark"]) h2,
-  :global([data-theme="dark"]) h3,
-  :global([data-theme="dark"]) .back-button {
+  :global([data-theme="dark"]) h3 {
     color: white;
   }
 

@@ -23,6 +23,7 @@ import { user, balance } from '../stores/user';
     export let habit: HabitType & { progress: number };
     export let telegramId: number;
     export let readonly: boolean = false;
+    export let closeModalsSignal: number = 0;
     
     let isPressed = false;
     let isPressTimeout: ReturnType<typeof setTimeout>;
@@ -43,6 +44,16 @@ import { user, balance } from '../stores/user';
         } else {
             dispatch('modalClosed');
         }
+    }
+
+    // Закрытие всех модалок по внешнему сигналу (например, по нативной кнопке Назад)
+    $: if (closeModalsSignal) {
+        showFollowersModal = false;
+        showLinkModal = false;
+        showActions = false;
+        showDeleteConfirm = false;
+        showEditModal = false;
+        showArchiveConfirm = false;
     }
 
     let pressStartTime: number;
@@ -416,15 +427,12 @@ import { user, balance } from '../stores/user';
     habit={habit}
     on:close={() => showActions = false}
     on:showDeleteConfirm={() => {
-      showActions = false;
       showDeleteConfirm = true;
     }}
     on:showEditModal={() => {
-      showActions = false;
       showEditModal = true;
     }}
     on:showArchiveConfirm={() => {
-      showActions = false;
       showArchiveConfirm = true;
     }}
   />
@@ -432,20 +440,27 @@ import { user, balance } from '../stores/user';
 
 {#if showDeleteConfirm && !readonly}
   <DeleteConfirmModal 
-    on:close={() => showDeleteConfirm = false}
+    on:close={() => {
+      showDeleteConfirm = false;
+      showActions = false;
+    }}
     on:delete={handleDelete}
   />
 {/if}
 
 {#if showArchiveConfirm && !readonly}
   <ArchiveConfirmModal 
-    on:close={() => showArchiveConfirm = false}
+    on:close={() => {
+      showArchiveConfirm = false;
+      showActions = false;
+    }}
     on:archive={async () => {
       try {
         const updatedHabit = await api.archiveHabit({ _id: habit._id });
         // Удаляем из текущего списка (архивные не должны показываться)
         habits.update(current => current.filter(h => h._id !== habit._id));
         showArchiveConfirm = false;
+        showActions = false;
       } catch (e) {
         console.error('Error archiving habit', e);
       }
@@ -456,7 +471,10 @@ import { user, balance } from '../stores/user';
 {#if showEditModal && !readonly}
   <NewHabitModal
     habit={habit}
-    on:close={() => showEditModal = false}
+    on:close={() => {
+      showEditModal = false;
+      showActions = false;
+    }}
     on:save={handleEdit}
   />
 {/if}
