@@ -70,6 +70,14 @@ import { user, balance } from '../stores/user';
         }
 
         if (readonly) {
+            if (telegramId === initData.user()?.id) {
+                popup.open({
+                    title: $_('alerts.warning'),
+                    message: $_('habits.errors.follow_self'),
+                    buttons: [{ id: 'close', type: 'close' }]
+                });
+                return;
+            }
             showLinkModal = true;
         } else {
             showFollowersModal = true;

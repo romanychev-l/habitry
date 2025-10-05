@@ -107,6 +107,7 @@
       "unfollow": "Failed to unfollow user",
       "ping": "Failed to send reminder",
       "follow": "Failed to follow user",
+      "follow_self": "You cannot follow your own habit",
       "max_length": "Maximum {max} characters"
     },
     "modals": {
