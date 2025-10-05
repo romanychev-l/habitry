@@ -1,6 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import { createEventDispatcher } from 'svelte';
+  import { fade, fly } from 'svelte/transition';
 
   const dispatch = createEventDispatcher();
 </script>
@@ -11,8 +12,9 @@
   on:keydown={(e) => e.key === 'Escape' && dispatch('close')}
   role="button"
   tabindex="0"
+  transition:fade={{ duration: 200 }}
 >
-  <div class="dialog">
+  <div class="dialog" transition:fly={{ y: 500, duration: 300, opacity: 1 }}>
     <div class="dialog-header">
       <h2>{$_('habits.modals.unarchive_title') || 'Вернуть привычку?'}</h2>
     </div>

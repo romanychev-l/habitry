@@ -1,6 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import { createEventDispatcher } from 'svelte';
+  import { fade, fly } from 'svelte/transition';
   import type { Habit } from '../types';
   import { initData } from '@telegram-apps/sdk-svelte';
   import { shareStory } from '@telegram-apps/sdk';
@@ -72,8 +73,9 @@
   on:keydown={(e) => e.key === 'Escape' && dispatch('close')}
   role="button"
   tabindex="0"
+  transition:fade={{ duration: 200 }}
 >
-  <div class="dialog">
+  <div class="dialog" transition:fly={{ y: 500, duration: 300, opacity: 1 }}>
     <div class="dialog-header">
       <h2>{habit.title}</h2>
     </div>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { _ } from 'svelte-i18n';
+  import { fade, fly } from 'svelte/transition';
 
   export let show = false;
 
@@ -15,16 +16,18 @@
   }
 </script>
 
-<div class="wrapper" class:show>
+{#if show}
+<div class="wrapper">
   <div 
     class="overlay" 
     role="button"
     tabindex="0"
     on:click={() => dispatch('close')}
     on:keydown={e => e.key === 'Enter' && dispatch('close')}
+    transition:fade={{ duration: 200 }}
   ></div>
   
-  <div class="modal-container">
+  <div class="modal-container" transition:fly={{ y: 500, duration: 300, opacity: 1 }}>
     <div class="modal">
       <div class="header">
         <h2>{$_('payment.instructions_title')}</h2>
@@ -64,20 +67,17 @@
     </div>
   </div>
 </div>
+{/if}
 
 <style>
   .wrapper {
     position: fixed;
     inset: 0;
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
     height: 100dvh;
     z-index: 1000;
-  }
-
-  .wrapper.show {
-    display: flex;
   }
 
   .overlay {

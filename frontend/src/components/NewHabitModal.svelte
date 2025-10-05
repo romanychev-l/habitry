@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
-  import { fade } from 'svelte/transition';
+  import { fade, fly } from 'svelte/transition';
   import type { Habit } from '../types';
   import { themeParams, popup } from '@telegram-apps/sdk-svelte';
   import { habits } from '../stores/habit';
@@ -178,8 +178,9 @@
     tabindex="0"
     on:click={handleOverlayClick}
     on:keydown={e => e.key === 'Enter' && dispatch('close')}
+    transition:fade={{ duration: 200 }}
   ></div>
-  <div class="modal-container">
+  <div class="modal-container" transition:fly={{ y: 500, duration: 300, opacity: 1 }}>
     <div class="modal">
       <div class="header">
         <h2>{habit ? $_('habits.edit') : $_('habits.add')}</h2>

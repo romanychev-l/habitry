@@ -1,6 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import { createEventDispatcher, onMount } from 'svelte';
+  import { fade, fly } from 'svelte/transition';
   import type { Habit } from '../types';
   import { api } from '../utils/api';
   import { initData } from '@telegram-apps/sdk-svelte';
@@ -74,8 +75,9 @@
   on:keydown={(e) => e.key === 'Escape' && dispatch('close')}
   role="button"
   tabindex="0"
+  transition:fade={{ duration: 200 }}
 >
-  <div class="dialog" role="dialog" aria-modal="true" tabindex="-1" on:click|stopPropagation on:keydown|stopPropagation>
+  <div class="dialog" role="dialog" aria-modal="true" tabindex="-1" on:click|stopPropagation on:keydown|stopPropagation transition:fly={{ y: 500, duration: 300, opacity: 1 }}>
     <div class="dialog-header">
       <h2>{$_('habits.archived.title') || 'Архив'}</h2>
     </div>

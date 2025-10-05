@@ -1,7 +1,8 @@
-Кн<script lang="ts">
+<script lang="ts">
     import { _ } from 'svelte-i18n';
     import type { Habit } from '../types';
     import { createEventDispatcher, onMount, onDestroy } from 'svelte';
+    import { fade, fly } from 'svelte/transition';
     import ActivityHeatmap from './ActivityHeatmap.svelte';
     import { api } from '../utils/api';
     import { user } from '../stores/user';
@@ -333,8 +334,9 @@
         on:keydown={(e) => e.key === 'Escape' && handleClose()}
         role="button"
         tabindex="0"
+        transition:fade={{ duration: 200 }}
     >
-        <div class="dialog">
+        <div class="dialog" transition:fly={{ y: 500, duration: 300, opacity: 1 }}>
             <div class="dialog-header">
                 <h2>{$_('habits.followers_management')}</h2>
             </div>
@@ -361,13 +363,21 @@
                     <div class="error">{error}</div>
                 {/if}
 
-                {#if loading}
-                    <div class="loading">{$_('common.loading')}</div>
-                {/if}
-
                 <div class="followers-section">
                     <h3>{$_('habits.i_follow')}</h3>
-                    {#if !loading && usersIFollow.length === 0}
+                    {#if loading}
+                        <div class="skeleton-list">
+                            {#each [1, 2, 3] as _}
+                                <div class="skeleton-item">
+                                    <div class="skeleton-avatar"></div>
+                                    <div class="skeleton-text">
+                                        <div class="skeleton-line"></div>
+                                        <div class="skeleton-line short"></div>
+                                    </div>
+                                </div>
+                            {/each}
+                        </div>
+                    {:else if usersIFollow.length === 0}
                         <div class="empty">{$_('habits.no_one_i_follow')}</div>
                     {:else if usersIFollow.length > 0}
                         <ul class="followers-list">
@@ -437,7 +447,19 @@
 
                 <div class="followers-section section-spacing">
                     <h3>{$_('habits.following_me')}</h3>
-                    {#if !loading && usersFollowingMeNotMutual.length === 0}
+                    {#if loading}
+                        <div class="skeleton-list">
+                            {#each [1, 2] as _}
+                                <div class="skeleton-item">
+                                    <div class="skeleton-avatar"></div>
+                                    <div class="skeleton-text">
+                                        <div class="skeleton-line"></div>
+                                        <div class="skeleton-line short"></div>
+                                    </div>
+                                </div>
+                            {/each}
+                        </div>
+                    {:else if usersFollowingMeNotMutual.length === 0}
                         <div class="empty">{$_('habits.no_one_following_me_yet')}</div>
                     {:else if usersFollowingMeNotMutual.length > 0}
                         <ul class="followers-list">
@@ -502,8 +524,9 @@
         on:keydown={(e) => e.key === 'Escape' && (showUnfollowConfirm = false)}
         role="button"
         tabindex="0"
+        transition:fade={{ duration: 200 }}
     >
-        <div class="dialog">
+        <div class="dialog" transition:fly={{ y: 500, duration: 300, opacity: 1 }}>
             <div class="dialog-header">
                 <h2>{$_('habits.confirm_unfollow')}</h2>
             </div>
@@ -540,6 +563,7 @@
         border-radius: 24px 24px 0 0;
         box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
         max-height: 90vh;
+        min-height: 400px;
         display: flex;
         flex-direction: column;
     }
@@ -758,9 +782,13 @@
         font-size: 16px;
     }
     
-    .loading, .error, .empty {
+    .empty {
         text-align: center;
-        padding: 20px;
+        padding: 60px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 120px;
     }
     
     .error {
@@ -816,11 +844,83 @@
         margin-top: 1.5rem;
     }
 
+    /* Skeleton loaders */
+    .skeleton-list {
+        padding: 0 1rem;
+    }
+
+    .skeleton-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
+    }
+
+    .skeleton-item:last-child {
+        border-bottom: none;
+    }
+
+    .skeleton-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: linear-gradient(90deg, 
+            var(--tg-theme-secondary-bg-color) 0%, 
+            var(--tg-theme-hint-color, rgba(0,0,0,0.1)) 50%, 
+            var(--tg-theme-secondary-bg-color) 100%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s ease-in-out infinite;
+        flex-shrink: 0;
+    }
+
+    .skeleton-text {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .skeleton-line {
+        height: 14px;
+        background: linear-gradient(90deg, 
+            var(--tg-theme-secondary-bg-color) 0%, 
+            var(--tg-theme-hint-color, rgba(0,0,0,0.1)) 50%, 
+            var(--tg-theme-secondary-bg-color) 100%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s ease-in-out infinite;
+        border-radius: 4px;
+        width: 60%;
+    }
+
+    .skeleton-line.short {
+        width: 40%;
+        height: 12px;
+    }
+
+    @keyframes skeleton-loading {
+        0% {
+            background-position: 200% 0;
+        }
+        100% {
+            background-position: -200% 0;
+        }
+    }
+
     :global([data-theme="dark"]) .dialog {
         background: var(--tg-theme-bg-color);
     }
 
     :global([data-theme="dark"]) .dialog * {
         color: white !important;
+    }
+
+    :global([data-theme="dark"]) .skeleton-avatar,
+    :global([data-theme="dark"]) .skeleton-line {
+        background: linear-gradient(90deg, 
+            rgba(255,255,255,0.05) 0%, 
+            rgba(255,255,255,0.1) 50%, 
+            rgba(255,255,255,0.05) 100%);
+        background-size: 200% 100%;
     }
 </style> 

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
+  import { fade, fly } from 'svelte/transition';
   import { api } from '../utils/api';
 
   export let show: boolean;
@@ -76,8 +77,9 @@
     on:keydown={(e) => {
       if (e.key === 'Escape') closeModal();
     }}
+    transition:fade={{ duration: 200 }}
   >
-    <div class="modal-content">
+    <div class="modal-content" transition:fly={{ y: 500, duration: 300, opacity: 1 }}>
       <h2 class="modal-title">{$_('leaderboard.title', { default: 'Leaderboard' })}</h2>
       
       {#if isLoading}

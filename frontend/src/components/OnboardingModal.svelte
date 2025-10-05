@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { _ } from 'svelte-i18n';
+  import { fade, scale } from 'svelte/transition';
 
   const dispatch = createEventDispatcher();
   
@@ -23,8 +24,8 @@
 </script>
 
 <div class="wrapper">
-  <div class="overlay" on:click={skipOnboarding}></div>
-  <div class="modal-container">
+  <div class="overlay" on:click={skipOnboarding} transition:fade={{ duration: 200 }}></div>
+  <div class="modal-container" transition:scale={{ duration: 300, start: 0.95 }}>
     <div class="modal">
       <div class="content">
         {#if currentStep === 0}

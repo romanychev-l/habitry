@@ -1,6 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
+  import { fade, fly } from 'svelte/transition';
   import type { Habit } from '../types';
   import { popup } from '@telegram-apps/sdk-svelte';
 
@@ -56,10 +57,12 @@
   on:keydown={(e) => e.key === 'Escape' && handleClose()}
   role="button"
   tabindex="0"
+  transition:fade={{ duration: 200 }}
 >
   <section 
     class="modal" 
     role="dialog"
+    transition:fly={{ y: 500, duration: 300, opacity: 1 }}
   >
     <div class="header">
       <h2>{$_('habits.link.title')}</h2>

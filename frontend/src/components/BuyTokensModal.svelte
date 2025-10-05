@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
+  import { fade, fly } from 'svelte/transition';
   import { getTonConnect, subscribeToWalletChanges, sendTonTransaction } from '../utils/tonConnect';
   import { api } from '../utils/api';
   import type { Wallet } from '@tonconnect/ui';
@@ -751,8 +752,9 @@
     tabindex="0"
     on:click={() => dispatch('close')}
     on:keydown={e => e.key === 'Enter' && dispatch('close')}
+    transition:fade={{ duration: 200 }}
   ></div>
-  <div class="modal-container">
+  <div class="modal-container" transition:fly={{ y: 500, duration: 300, opacity: 1 }}>
     <div class="modal">
       <div class="content">
         <div class="mode-selector">
