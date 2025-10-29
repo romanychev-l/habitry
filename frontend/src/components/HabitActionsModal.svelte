@@ -3,8 +3,7 @@
   import { createEventDispatcher } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import type { Habit } from '../types';
-  import { initData } from '@telegram-apps/sdk-svelte';
-  import { shareStory } from '@telegram-apps/sdk';
+  import { initData, shareStory } from '@tma.js/sdk-svelte';
   import { generateHabitStoryImage, uploadBase64ToImgbb, getGradientForHabitId } from '../utils/storyShare';
 
   const dispatch = createEventDispatcher();

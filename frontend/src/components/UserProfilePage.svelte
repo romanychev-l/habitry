@@ -4,7 +4,7 @@
   import HabitCard from './HabitCard.svelte';
   import type { Habit } from '../types';
   import { api } from '../utils/api';
-  import { initData } from '@telegram-apps/sdk-svelte';
+  import { initData } from '@tma.js/sdk-svelte';
   
   const dispatch = createEventDispatcher();
   export let username: string;

@@ -3,7 +3,7 @@
   import { _ } from 'svelte-i18n';
   import { fade, fly } from 'svelte/transition';
   import type { Habit } from '../types';
-  import { themeParams, popup } from '@telegram-apps/sdk-svelte';
+  import { themeParams, popup } from '@tma.js/sdk-svelte';
   import { habits } from '../stores/habit';
   import { user } from '../stores/user';
   // import { showTelegramOrCustomAlert } from '../stores/alert';
@@ -102,7 +102,7 @@
 
   function handleSave() {
     if (!title.trim()) {
-        popup.open({
+        popup.show({
           title: $_('alerts.error'),
           message: $_('habits.errors.title_required'),
           buttons: [{ id: 'close', type: 'close' }]

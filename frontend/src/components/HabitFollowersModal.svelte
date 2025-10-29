@@ -6,7 +6,7 @@
     import ActivityHeatmap from './ActivityHeatmap.svelte';
     import { api } from '../utils/api';
     import { user } from '../stores/user';
-    import { popup } from '@telegram-apps/sdk-svelte';
+    import { popup } from '@tma.js/sdk-svelte';
     
     const dispatch = createEventDispatcher();
     
@@ -139,7 +139,7 @@
             showUnfollowConfirm = false;
             selectedFollowerForUnfollow = null;
             
-            await popup.open({
+            await popup.show({
                 title: $_('alerts.success'),
                 message: $_('habits.unfollow_success'),
                 buttons: [{ id: 'close', type: 'close' }]
@@ -166,7 +166,7 @@
                 target_user_habit_id: targetHabit._id
             });
 
-            await popup.open({
+            await popup.show({
                 title: $_('alerts.success'),
                 message: $_('habits.follow_success', { values: { username: targetHabit.username } }),
                 buttons: [{ id: 'close', type: 'close' }]
@@ -175,7 +175,7 @@
         } catch (err) {
             console.error('Error subscribing:', err);
             error = $_('habits.errors.follow');
-            popup.open({
+            popup.show({
                 title: $_('alerts.error'),
                 message: error,
                 buttons: [{ id: 'close', type: 'close' }]
@@ -188,7 +188,7 @@
     function handlePingClick(follower: FollowerDetail) {
         const today = getCurrentDate();
         if (habit.last_click_date !== today) {
-            popup.open({
+            popup.show({
                 title: $_('alerts.warning'),
                 message: $_('habits.complete_before_ping'),
                 buttons: [{ id: 'close', type: 'close' }]
@@ -207,7 +207,7 @@
             })
             .then(async () => {
                 // Показываем стандартный алерт
-                await popup.open({
+                await popup.show({
                     title: $_('alerts.success'),
                     message: $_('habits.ping_sent_message', { values: { username: follower.username } }),
                     buttons: [{ id: 'close', type: 'close' }]
@@ -222,7 +222,7 @@
             })
             .catch(async (error: Error) => {
                 console.error('Error creating ping:', error);
-                await popup.open({
+                await popup.show({
                     title: $_('alerts.error'),
                     message: $_('habits.errors.ping'),
                     buttons: [{ id: 'close', type: 'close' }]
@@ -230,7 +230,7 @@
             });
         } catch (error) {
             console.error('Error sending ping:', error);
-            popup.open({
+            popup.show({
                 title: $_('alerts.error'),
                 message: $_('habits.errors.ping'),
                 buttons: [{ id: 'close', type: 'close' }]
@@ -241,7 +241,7 @@
     function handlePingAllClick() {
         const today = getCurrentDate();
         if (habit.last_click_date !== today) {
-            popup.open({
+            popup.show({
                 title: $_('alerts.warning'),
                 message: $_('habits.complete_before_ping'),
                 buttons: [{ id: 'close', type: 'close' }]
@@ -256,7 +256,7 @@
         );
         
         if (followersToPing.length === 0) {
-            popup.open({
+            popup.show({
                 title: $_('alerts.info'),
                 message: $_('habits.no_followers_to_ping'),
                 buttons: [{ id: 'close', type: 'close' }]
@@ -292,7 +292,7 @@
             .then(async () => {
                 // Если были успешные пинги, показываем сообщение об успехе
                 if (successCount > 0) {
-                    await popup.open({
+                    await popup.show({
                         title: $_('alerts.success'),
                         message: $_('habits.ping_all_sent_message', { values: { count: successCount } }),
                         buttons: [{ id: 'close', type: 'close' }]

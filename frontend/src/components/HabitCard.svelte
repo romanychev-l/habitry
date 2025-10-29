@@ -13,7 +13,7 @@ import { user, balance } from '../stores/user';
     import type { Habit as HabitType } from '../types';
     import { onMount } from 'svelte';
     import { api } from '../utils/api';
-    import { popup, initData, hapticFeedback } from '@telegram-apps/sdk-svelte';
+    import { popup, initData, hapticFeedback } from '@tma.js/sdk-svelte';
     import { gradients } from '../utils/gradients'; // Import gradients
     import SolarUndoLeftRoundLinear from '../assets/SolarUndoLeftRoundLinear.svelte'; // Импортируем иконку
     import SolarMenuDotsBold from '../assets/SolarMenuDotsBold.svelte'; // Импортируем новую иконку меню
@@ -71,7 +71,7 @@ import { user, balance } from '../stores/user';
 
         if (readonly) {
             if (telegramId === initData.user()?.id) {
-                popup.open({
+                popup.show({
                     title: $_('alerts.warning'),
                     message: $_('habits.errors.follow_self'),
                     buttons: [{ id: 'close', type: 'close' }]
@@ -230,7 +230,7 @@ import { user, balance } from '../stores/user';
             });
         } catch (error) {
             console.error('Error undoing habit click:', error);
-            await popup.open({
+            await popup.show({
                 title: 'Ошибка',
                 message: $_('habits.errors.undo'),
                 buttons: [{ id: 'close', type: 'close' }]
@@ -252,7 +252,7 @@ import { user, balance } from '../stores/user';
             showDeleteConfirm = false;
         } catch (error) {
             console.error('Error deleting habit:', error);
-            await popup.open({
+            await popup.show({
                 title: 'Ошибка',
                 message: $_('habits.errors.delete'),
                 buttons: [{ id: 'close', type: 'close' }]
@@ -345,14 +345,14 @@ import { user, balance } from '../stores/user';
             habits.update(currentHabits => data.habits || []);
 
             showLinkModal = false;
-            await popup.open({
+            await popup.show({
                 title: 'Успех',
                 message: $_('habits.link_success'),
                 buttons: [{ id: 'close', type: 'close' }]
             });
         } catch (error) {
             console.error('Error:', error);
-            await popup.open({
+            await popup.show({
                 title: 'Ошибка',
                 message: $_('habits.errors.link'),
                 buttons: [{ id: 'close', type: 'close' }]

@@ -18,7 +18,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { subscribeToWalletChanges } from './utils/tonConnect';
   import type { Wallet } from '@tonconnect/ui';
-  import { popup, initData, themeParams, swipeBehavior, viewport, backButton } from '@telegram-apps/sdk-svelte';
+  import { popup, initData, themeParams, swipeBehavior, viewport, backButton } from '@tma.js/sdk-svelte';
   import { initGoogleAnalytics } from './utils/analytics';
   // import TelegramAnalytics from '@telegram-apps/analytics';
   import plusIcon from './assets/plus.svg'; // Import the SVG
@@ -90,6 +90,7 @@
   let walletAddress = '';
   let unsubscribeTonConnect: (() => void) | null = null;
 
+  // Восстанавливаем initData
   initData.restore();
   
   onMount(async () => {
@@ -138,21 +139,15 @@
       if (themeParams.mount.isAvailable()) {
         try {
           console.log('Попытка монтирования темы...');
-          // Добавляем таймаут, чтобы избежать зависания на десктопных клиентах
-          const themeMountPromise = themeParams.mount();
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Theme mount timed out')), 500)
-          );
-          
-          await Promise.race([themeMountPromise, timeoutPromise]);
-          
+          // Монтирование темы теперь синхронное в @tma.js
+          themeParams.mount();
           console.log('Тема успешно смонтирована');
           
           console.log('Привязка CSS переменных...');
           themeParams.bindCssVars();
           console.log('CSS переменные привязаны');
           
-          const bgColor = themeParams.backgroundColor();
+          const bgColor = themeParams.bgColor();
           console.log('Цвет фона темы:', bgColor);
           isDarkTheme = bgColor === '#000000';
           console.log('Тема установлена:', isDarkTheme ? 'dark' : 'light');
@@ -188,7 +183,8 @@
       if (swipeBehavior.mount.isAvailable()) {
         try {
           console.log('Попытка монтирования swipeBehavior...');
-          await swipeBehavior.mount();
+          // Монтирование swipeBehavior теперь синхронное в @tma.js
+          swipeBehavior.mount();
           console.log('swipeBehavior успешно смонтирован');
 
           console.log('Проверка доступности swipeBehavior.disableVertical:', swipeBehavior.disableVertical.isAvailable());
@@ -315,7 +311,7 @@
       if (data.tx_status === 'completed') {
         // Транзакция успешно обработана
         try {
-          await popup.open({
+          await popup.show({
             title: $_('alerts.transaction_confirmed'),
             message: $_('alerts.transaction_confirmed_message', { values: { amount: data.will_amount } }),
             buttons: [{ id: 'close', type: 'close' }]
@@ -334,7 +330,7 @@
       } else if (data.tx_status === 'failed') {
         // Транзакция не удалась
         try {
-          await popup.open({
+          await popup.show({
             title: $_('alerts.transaction_failed'),
             message: $_('alerts.transaction_failed_message'),
             buttons: [{ id: 'close', type: 'close' }]
@@ -360,7 +356,7 @@
       if (data.status === 'completed') {
         // Транзакция успешно обработана
         try {
-          await popup.open({
+          await popup.show({
             title: $_('alerts.transaction_confirmed'),
             message: $_('alerts.transaction_confirmed_message', { values: { amount: data.will_amount } }),
             buttons: [{ id: 'close', type: 'close' }]
@@ -379,7 +375,7 @@
       } else if (data.status === 'failed') {
         // Транзакция не удалась
         try {
-          await popup.open({
+          await popup.show({
             title: $_('alerts.transaction_failed'),
             message: $_('alerts.usdt_transaction_failed_message'),
             buttons: [{ id: 'close', type: 'close' }]
@@ -447,7 +443,7 @@
       showHabitLinkModal = false;
     } catch (error) {
       console.error('Ошибка при присоединении к привычке:', error);
-      popup.open({
+      popup.show({
         title: $_('alerts.error'),
         message: $_('alerts.habit_join_error'),
         buttons: [{ id: 'close', type: 'close' }]
@@ -541,7 +537,7 @@
       showModal = false;
     } catch (error) {
       console.error('Ошибка при создании привычки:', error);
-      popup.open({
+      popup.show({
         title: $_('alerts.error'),
         message: $_('alerts.habit_create_error'),
         buttons: [{ id: 'close', type: 'close' }]

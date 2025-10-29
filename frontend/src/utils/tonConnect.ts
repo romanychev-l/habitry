@@ -1,5 +1,5 @@
 import { TonConnectUI, THEME, type Wallet } from '@tonconnect/ui';
-import { themeParams } from '@telegram-apps/sdk-svelte';
+import { themeParams } from '@tma.js/sdk-svelte';
 
 // Манифест для подключения к TON
 const manifestUrl = 'https://romanychev-l.github.io/habitry_public/manifest.json';
@@ -25,8 +25,8 @@ export function getTonConnect(): TonConnectUI {
         document.body.appendChild(tempElement);
       }
       
-      // Определяем тему на основе backgroundColor
-      const isDarkTheme = themeParams.backgroundColor() === '#000000';
+      // Определяем тему на основе bgColor
+      const isDarkTheme = themeParams.bgColor() === '#000000';
       
       // Создаем экземпляр с базовыми настройками
       tonConnectInstance = new TonConnectUI({

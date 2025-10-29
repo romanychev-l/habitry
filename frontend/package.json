@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.1.1",
-    "@telegram-apps/sdk-svelte": "^2.0.31",
+    "@tma.js/sdk-svelte": "^1.0.8",
     "@ton/core": "^0.62.0",
     "@ton/crypto": "^3.3.0",
     "@ton/ton": "^15.4.0",

@@ -1,6 +1,6 @@
 import { user } from '../stores/user';
 import { api } from './api';
-import { invoice } from '@telegram-apps/sdk-svelte';
+import { invoice } from '@tma.js/sdk-svelte';
 import { balance } from '../stores/user';
 
 export async function openTelegramInvoice(starsAmount: number) {
@@ -18,7 +18,7 @@ export async function openTelegramInvoice(starsAmount: number) {
             return;
         }
 
-        const status = await invoice.open(data.url, 'url');
+        const status = await invoice.openUrl(data.url);
         console.log('Payment status:', status);
         
         switch (status) {

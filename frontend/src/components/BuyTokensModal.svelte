@@ -7,7 +7,7 @@
   import type { Wallet } from '@tonconnect/ui';
   import { beginCell, Address, toNano } from '@ton/core'
   import { TonClient, JettonMaster } from '@ton/ton';
-  import { popup } from '@telegram-apps/sdk-svelte';
+  import { popup } from '@tma.js/sdk-svelte';
   import InstructionsModal from './InstructionsModal.svelte';
 
   // Константы с ссылками на инструкции
@@ -136,7 +136,7 @@
     if (!walletConnected) {
       console.error('Кошелек не подключен');
       transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
-      await popup.open({
+      await popup.show({
         title: $_('alerts.error'),
         message: $_('alerts.wallet_not_connected'),
         buttons: [{ id: 'close', type: 'close' }]
@@ -148,7 +148,7 @@
     if (withdrawAmount < MIN_WITHDRAW_AMOUNT) {
       console.error('Сумма меньше минимальной для вывода');
       transactionError = $_('payment.min_withdraw_amount', { values: { amount: MIN_WITHDRAW_AMOUNT } });
-      await popup.open({
+      await popup.show({
         title: $_('alerts.error'),
         message: $_('payment.min_withdraw_amount', { values: { amount: MIN_WITHDRAW_AMOUNT } }),
         buttons: [{ id: 'close', type: 'close' }]
@@ -160,7 +160,7 @@
     if (withdrawAmount > userBalance) {
       console.error('Недостаточно средств для вывода');
       transactionError = $_('alerts.insufficient_funds', { values: { balance: userBalance } });
-      await popup.open({
+      await popup.show({
         title: $_('alerts.error'),
         message: $_('alerts.insufficient_funds', { values: { balance: userBalance } }),
         buttons: [{ id: 'close', type: 'close' }]
@@ -190,7 +190,7 @@
         console.log('Ответ сервера:', response);
         
         // Показываем уведомление об успешной обработке запроса
-        await popup.open({
+        await popup.show({
           title: $_('alerts.withdrawal_request_sent'),
           message: $_('payment.withdrawal_request_message', { values: { will_amount: withdrawAmount, usdt_amount: usdtAmount } }),
           buttons: [{ id: 'close', type: 'close' }]
@@ -204,7 +204,7 @@
       } catch (apiError: any) {
         console.error('Ошибка при регистрации запроса на вывод:', apiError);
         transactionError = apiError.message || 'Ошибка при регистрации запроса на вывод';
-        await popup.open({
+        await popup.show({
           title: $_('alerts.error'),
           message: $_('payment.withdrawal_error'),
           buttons: [{ id: 'close', type: 'close' }]
@@ -213,7 +213,7 @@
     } catch (error: any) {
       console.error('Ошибка при обработке запроса на вывод:', error);
       transactionError = $_('payment.unknown_error');
-      await popup.open({
+      await popup.show({
         title: $_('alerts.error'),
         message: $_('payment.unknown_error'),
         buttons: [{ id: 'close', type: 'close' }]
@@ -249,7 +249,7 @@
     if (!walletConnected) {
       console.error('Кошелек не подключен');
       transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
-      await popup.open({
+      await popup.show({
         title: $_('alerts.error'),
         message: $_('alerts.wallet_not_connected'),
         buttons: [{ id: 'close', type: 'close' }]
@@ -275,7 +275,7 @@
         console.error('Ошибка при преобразовании адреса мастер-контракта USDT:', addrError);
         transactionError = $_('payment.invalid_usdt_master_address');
         isProcessing = false;
-        await popup.open({
+        await popup.show({
           title: $_('alerts.error'),
           message: $_('payment.invalid_usdt_master_address'),
           buttons: [{ id: 'close', type: 'close' }]
@@ -295,7 +295,7 @@
         console.error('Ошибка при преобразовании адреса приложения:', addrError);
         transactionError = $_('payment.invalid_app_wallet_address');
         isProcessing = false;
-        await popup.open({
+        await popup.show({
           title: $_('alerts.error'),
           message: $_('payment.invalid_app_wallet_address'),
           buttons: [{ id: 'close', type: 'close' }]
@@ -382,7 +382,7 @@
         if (!tonConnect.wallet) {
           console.error('Кошелек не подключен');
           transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
-          await popup.open({
+          await popup.show({
             title: $_('alerts.error'),
             message: $_('payment.wallet_not_connected'),
             buttons: [{ id: 'close', type: 'close' }]
@@ -395,7 +395,7 @@
         if (!usdtMasterAddress.toString().startsWith('EQ')) {
           console.error('Некорректный адрес мастер-контракта USDT');
           transactionError = $_('payment.invalid_usdt_master_address');
-          await popup.open({
+          await popup.show({
             title: $_('alerts.error'),
             message: $_('payment.invalid_usdt_master_address'),
             buttons: [{ id: 'close', type: 'close' }]
@@ -408,7 +408,7 @@
         if (!appWalletAddress.toString().startsWith('EQ')) {
           console.error('Некорректный адрес кошелька приложения');
           transactionError = $_('payment.invalid_app_wallet_address');
-          await popup.open({
+          await popup.show({
             title: $_('alerts.error'),
             message: $_('payment.invalid_app_wallet_address'),
             buttons: [{ id: 'close', type: 'close' }]
@@ -476,7 +476,7 @@
           transactionError = $_('payment.withdrawal_error');
           
           // Показываем уведомление об ошибке
-          await popup.open({
+          await popup.show({
             title: $_('alerts.error'),
             message: $_('payment.withdrawal_error'),
             buttons: [{ id: 'close', type: 'close' }]
@@ -485,7 +485,7 @@
       } catch (error) {
         console.error('Ошибка при отправке USDT транзакции:', error);
         transactionError = $_('payment.transaction_send_error');
-        await popup.open({
+        await popup.show({
           title: $_('alerts.error'),
           message: $_('payment.transaction_send_error'),
           buttons: [{ id: 'close', type: 'close' }]
@@ -494,7 +494,7 @@
     } catch (error) {
       console.error('Ошибка при обработке платежа USDT:', error);
       transactionError = error instanceof Error ? error.message : 'Неизвестная ошибка';
-      await popup.open({
+      await popup.show({
         title: $_('alerts.error'),
         message: transactionError,
         buttons: [{ id: 'close', type: 'close' }]
@@ -514,7 +514,7 @@
     }, 30000);
     
     // Отправляем уведомление пользователю
-    popup.open({
+    popup.show({
       title: $_('alerts.transaction_sent'),
       message: $_('alerts.ton_transaction_sent')
     });
@@ -528,7 +528,7 @@
       
       if (data.tx_status === 'completed') {
         // Транзакция успешно обработана
-        popup.open({
+        popup.show({
           title: $_('alerts.transaction_confirmed'),
           message: `На ваш счет начислено ${data.will_amount} WILL токенов`
         });
@@ -542,7 +542,7 @@
         }, 60000);
       } else if (data.tx_status === 'failed') {
         // Транзакция не удалась
-        popup.open({
+        popup.show({
           title: $_('alerts.transaction_failed'),
           message: 'Не удалось обработать вашу транзакцию. Пожалуйста, попробуйте еще раз.'
         });
@@ -565,7 +565,7 @@
     if (!walletConnected) {
       console.error('Кошелек не подключен');
       transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
-      await popup.open({
+      await popup.show({
         title: $_('alerts.error'),
         message: transactionError,
         buttons: [{ id: 'close', type: 'close' }]
@@ -610,7 +610,7 @@
         if (!tonConnect.wallet) {
           console.error('Кошелек не подключен');
           transactionError = 'Кошелек не подключен. Пожалуйста, подключите кошелек на главном экране.';
-          await popup.open({
+          await popup.show({
             title: $_('alerts.error'),
             message: transactionError,
             buttons: [{ id: 'close', type: 'close' }]
@@ -652,7 +652,7 @@
           transactionError = apiError.message || 'Ошибка при регистрации транзакции на сервере';
           
           // Показываем уведомление об ошибке
-          await popup.open({
+          await popup.show({
             title: $_('alerts.error'),
             message: transactionError,
             buttons: [{ id: 'close', type: 'close' }]
@@ -668,7 +668,7 @@
         }
         
         // Показываем уведомление об ошибке
-        await popup.open({
+        await popup.show({
           title: $_('alerts.error'),
           message: transactionError,
           buttons: [{ id: 'close', type: 'close' }]
@@ -677,7 +677,7 @@
     } catch (error) {
       console.error('Ошибка при обработке платежа TON:', error);
       transactionError = error instanceof Error ? error.message : 'Неизвестная ошибка';
-      await popup.open({
+      await popup.show({
         title: $_('alerts.error'),
         message: transactionError,
         buttons: [{ id: 'close', type: 'close' }]
@@ -698,7 +698,7 @@
     }, 30000);
     
     // Отправляем уведомление пользователю
-    popup.open({
+    popup.show({
       title: $_('alerts.transaction_sent'),
       message: $_('alerts.ton_transaction_sent')
     });
@@ -712,7 +712,7 @@
       
       if (data.tx_status === 'success') {
         // Транзакция успешна
-        popup.open({
+        popup.show({
           title: $_('payment.success_title'),
           message: $_('payment.success_message')
         });
@@ -726,7 +726,7 @@
         }, 60000);
       } else if (data.tx_status === 'failed') {
         // Транзакция не удалась
-        popup.open({
+        popup.show({
           title: $_('payment.transaction_failed'),
           message: $_('payment.transaction_failed_message')
         });

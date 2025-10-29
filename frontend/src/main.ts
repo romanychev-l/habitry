@@ -1,7 +1,7 @@
 import './app.css'
 import { mount } from 'svelte';
 import App from './App.svelte'
-import { init } from '@telegram-apps/sdk-svelte'
+import { init } from '@tma.js/sdk-svelte'
 import './i18n/i18n'
 import { _ } from 'svelte-i18n';
 

@@ -1,4 +1,4 @@
-import { initDataRaw } from '@telegram-apps/sdk-svelte';
+import { initData } from '@tma.js/sdk-svelte';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -26,8 +26,9 @@ async function request(endpoint: string, options: RequestOptions = {}) {
     headers.set('X-Timezone', timezone);
     
     // Используем правильный формат авторизации для Telegram Mini Apps
-    if (initDataRaw()) {
-        headers.set('Authorization', `tma ${initDataRaw()}`);
+    const rawInitData = initData.raw();
+    if (rawInitData) {
+        headers.set('Authorization', `tma ${rawInitData}`);
     } else {
         console.warn('No Telegram authentication data available');
     }
