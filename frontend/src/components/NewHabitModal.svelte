@@ -15,7 +15,7 @@
   let selectedDays = new Set(habit?.days || []);
   let isOneTime = habit?.is_one_time || false;
   let wantToBecome = habit?.want_to_become || '';
-  let isDarkTheme = themeParams.backgroundColor() === '#000000';
+  let isDarkTheme = themeParams.bgColor() === '#000000';
   let isAuto = habit?.is_auto || false;
   let stake = '';
   let titleInput: HTMLInputElement;
