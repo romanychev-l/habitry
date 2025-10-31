@@ -274,20 +274,41 @@
   "onboarding": {
     "welcome": {
       "title": "Welcome to Habitry!",
-      "description": "We'll help you create and maintain good habits together with friends"
+      "description": "We'll help you create and maintain good habits together with friends",
+      "quote": "We are what we repeatedly do. Excellence, then, is not an act, but a habit.",
+      "quote_author": "— Aristotle"
     },
     "social": {
       "title": "Mutual Support",
-      "description": "Share your habit with friends via link. When a friend links your habit to theirs, they'll see your progress. To see their progress, you'll need to link their habit to yours too"
+      "description": "Try marking a habit! Press and hold the card.",
+      "hold_to_complete": "Press and hold",
+      "great_job": "Great job!",
+      "success_message": "You did it!"
     },
     "interaction": {
-      "title": "How to Mark Habits",
-      "description": "To mark a habit as done, press and hold its card"
+      "title": "Power of Streaks",
+      "description": "Build your streak! Tap on days to see the power of consistency.",
+      "streak_achieved": "7 days — great start!"
+    },
+    "community": {
+      "title": "Power of Community",
+      "description": "Share your habits with friends. Together it's easier to reach your goals!",
+      "shared_habits": "Shared Habits",
+      "leaderboard": "Leaderboard",
+      "friend_support": "Friend Support"
+    },
+    "stats": {
+      "title": "Stronger Together",
+      "description": "People who do habits with friends are much more likely to achieve their goals!",
+      "with_friends": "With Friends",
+      "alone": "Alone",
+      "success_rate": "success rate"
     },
     "start": {
       "title": "Let's Start!",
       "description": "Create your first habit and invite friends to join you",
-      "action": "Create Habit"
+      "action": "Create Habit",
+      "motivation": "You're ready to start your journey to a better version of yourself!"
     },
     "skip": "Skip",
     "next": "Next"

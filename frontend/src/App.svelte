@@ -25,7 +25,7 @@
   import trophyIcon from './assets/trophy.svg';
   
   // Текущая версия онбординга (увеличивайте это число при обновлении онбординга)
-  const CURRENT_ONBOARDING_VERSION = 1;
+  const CURRENT_ONBOARDING_VERSION = 4;
   
   // Инициализируем значение из localStorage
   $isListView = localStorage.getItem('isListView') === 'true';
