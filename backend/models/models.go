@@ -113,6 +113,7 @@ type User struct {
 	Timezone             string             `bson:"timezone" json:"timezone"`
 	NotificationsEnabled bool               `bson:"notifications_enabled" json:"notifications_enabled"`
 	NotificationTime     string             `bson:"notification_time" json:"notification_time"`
+	OnboardingVersion    int                `bson:"onboarding_version" json:"onboarding_version"`
 }
 
 type UserResponseWithHabits struct {
@@ -129,6 +130,7 @@ type UserResponseWithHabits struct {
 	Timezone             string             `json:"timezone"`
 	NotificationsEnabled bool               `json:"notifications_enabled"`
 	NotificationTime     string             `json:"notification_time"`
+	OnboardingVersion    int                `json:"onboarding_version"`
 	Habits               []HabitResponse    `json:"habits"`
 }
 
@@ -147,6 +149,7 @@ func (u *User) ToResponseWithHabits(habitResponses []HabitResponse) UserResponse
 		Timezone:             u.Timezone,
 		NotificationsEnabled: u.NotificationsEnabled,
 		NotificationTime:     u.NotificationTime,
+		OnboardingVersion:    u.OnboardingVersion,
 		Habits:               habitResponses, // Просто передаем готовый слайс
 	}
 }

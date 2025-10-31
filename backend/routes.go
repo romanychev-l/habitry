@@ -39,6 +39,7 @@ func setupGinRouter(
 		{
 			userGroup.POST("", userHandler.HandleUser)
 			userGroup.PUT("/last_visit", userHandler.HandleUpdateLastVisit)
+			userGroup.PUT("/onboarding_version", userHandler.HandleUpdateOnboardingVersion)
 			userGroup.GET("/settings", userHandler.HandleSettings)
 			userGroup.PUT("/settings", userHandler.HandleSettings)
 			userGroup.GET("/profile", userHandler.HandleUserProfile)

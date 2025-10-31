@@ -513,6 +513,49 @@ func (h *Handler) HandleUpdateLastVisit(c *gin.Context) {
 	})
 }
 
+// HandleUpdateOnboardingVersion обновляет версию онбординга пользователя
+func (h *Handler) HandleUpdateOnboardingVersion(c *gin.Context) {
+	// Получаем данные из контекста Telegram
+	initData, exists := middleware.CtxInitData(c.Request.Context())
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: no user data in context"})
+		return
+	}
+
+	var req struct {
+		OnboardingVersion int `json:"onboarding_version" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Обновляем версию онбординга
+	filter := bson.M{"telegram_id": initData.User.ID}
+	update := bson.M{
+		"$set": bson.M{
+			"onboarding_version": req.OnboardingVersion,
+		},
+	}
+
+	result, err := h.usersCollection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if result.MatchedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":            true,
+		"onboarding_version": req.OnboardingVersion,
+	})
+}
+
 // HandleUserProfile обрабатывает запрос на получение публичного профиля пользователя
 func (h *Handler) HandleUserProfile(c *gin.Context) {
 	username := c.Query("username")

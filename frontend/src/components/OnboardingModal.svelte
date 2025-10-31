@@ -101,7 +101,7 @@
 
   .modal {
     width: 100%;
-    background: #F9F8F3;
+    background: var(--tg-theme-bg-color, #F9F8F3);
     border-radius: 24px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
     overflow: hidden;
@@ -187,10 +187,6 @@
     color: var(--tg-theme-button-text-color);
     font-size: 16px;
     font-weight: 500;
-  }
-
-  :global([data-theme="dark"]) .modal {
-    background: var(--tg-theme-bg-color);
   }
 
   :global([data-theme="dark"]) h2 {

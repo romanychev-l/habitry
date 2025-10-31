@@ -24,6 +24,9 @@
   import plusIcon from './assets/plus.svg'; // Import the SVG
   import trophyIcon from './assets/trophy.svg';
   
+  // Текущая версия онбординга (увеличивайте это число при обновлении онбординга)
+  const CURRENT_ONBOARDING_VERSION = 1;
+  
   // Инициализируем значение из localStorage
   $isListView = localStorage.getItem('isListView') === 'true';
   let showModal = false;
@@ -486,6 +489,19 @@
         balance.set(data.balance);
         console.log('Balance after set:', $balance);
         
+        // Проверяем версию онбординга
+        const userOnboardingVersion = data.onboarding_version || 0;
+        console.log('Onboarding version check:', { 
+          current: CURRENT_ONBOARDING_VERSION, 
+          user: userOnboardingVersion 
+        });
+        
+        // Показываем онбординг если версия устарела и нет параметра запуска с привычкой
+        if (userOnboardingVersion < CURRENT_ONBOARDING_VERSION && !showHabitLinkModal) {
+          console.log('Showing onboarding due to version mismatch');
+          showOnboarding = true;
+        }
+        
         // Получаем текущую дату в часовом поясе пользователя
         const now = new Date();
         const userDate = now.toLocaleString('en-US', { timeZone: userTimezone }).split(',')[0];
@@ -575,15 +591,32 @@
   //   return aCompletedToday ? 1 : -1;
   // });
 
-  function handleOnboardingFinish() {
+  async function handleOnboardingFinish() {
     showOnboarding = false;
+    
+    // Обновляем версию онбординга на бекенде
+    try {
+      await api.updateOnboardingVersion(CURRENT_ONBOARDING_VERSION);
+      console.log('Onboarding version updated to:', CURRENT_ONBOARDING_VERSION);
+    } catch (error) {
+      console.error('Failed to update onboarding version:', error);
+    }
+    
     if (!showHabitLinkModal) {
       showModal = true;
     }
   }
 
-  function handleOnboardingSkip() {
+  async function handleOnboardingSkip() {
     showOnboarding = false;
+    
+    // Обновляем версию онбординга на бекенде даже при пропуске
+    try {
+      await api.updateOnboardingVersion(CURRENT_ONBOARDING_VERSION);
+      console.log('Onboarding version updated to:', CURRENT_ONBOARDING_VERSION);
+    } catch (error) {
+      console.error('Failed to update onboarding version:', error);
+    }
   }
 
   function handleTonTransactionSent(event: CustomEvent) {

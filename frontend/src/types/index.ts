@@ -40,6 +40,7 @@ export interface User {
     timezone: string;
     notifications_enabled: boolean;
     notification_time: string;
+    onboarding_version: number;
     habits: Habit[];
 }
 

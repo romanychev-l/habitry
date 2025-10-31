@@ -233,6 +233,12 @@ export const api = {
     }) =>
         request('/api/user/settings', { method: 'PUT', body: JSON.stringify(data) }),
     
+    updateOnboardingVersion: (version: number) =>
+        request('/api/user/onboarding_version', { 
+            method: 'PUT', 
+            body: JSON.stringify({ onboarding_version: version }) 
+        }),
+    
     getUserProfile: (username: string) =>
         request('/api/user/profile', { params: { username } }),
     
