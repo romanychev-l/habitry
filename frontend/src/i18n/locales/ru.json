@@ -186,7 +186,10 @@
     "community": "Сообщество",
     "telegram_channel": "Telegram канал",
     "community_chat": "Комьюнити чат",
-    "join": "Вступить"
+    "join": "Вступить",
+    "restart_onboarding": "Пройти онбординг заново",
+    "start": "Начать",
+    "other": "Другое"
   },
   "profile": {
     "title": "Профиль пользователя",

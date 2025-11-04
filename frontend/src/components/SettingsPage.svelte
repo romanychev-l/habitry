@@ -119,6 +119,10 @@
     window.open('https://t.me/+xxqVvxQiFyYzNjgy', '_blank');
   }
 
+  function handleStartOnboarding() {
+    dispatch('startOnboarding');
+  }
+
   // Загружаем настройки при монтировании компонента
   loadSettings();
 </script>
@@ -248,6 +252,23 @@
             on:click={handleJoinCommunity}
           >
             {$_('settings.join')}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <h2>{$_('settings.other')}</h2>
+      <div class="settings-group">
+        <div class="setting-item">
+          <div class="setting-label">
+            <span>{$_('settings.restart_onboarding')}</span>
+          </div>
+          <button 
+            class="action-button" 
+            on:click={handleStartOnboarding}
+          >
+            {$_('settings.start')}
           </button>
         </div>
       </div>
@@ -451,6 +472,16 @@
   }
 
   .join-button {
+    background-color: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .action-button {
     background-color: var(--tg-theme-button-color);
     color: var(--tg-theme-button-text-color);
     border: none;

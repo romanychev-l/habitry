@@ -775,7 +775,12 @@
       username={profileUsername} 
     />
   {:else if showSettings}
-    <SettingsPage />
+    <SettingsPage 
+      on:startOnboarding={() => {
+        showSettings = false;
+        showOnboarding = true;
+      }}
+    />
   {:else}
     {#if showOnboarding}
       <OnboardingModal 

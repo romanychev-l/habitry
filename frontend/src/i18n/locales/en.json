@@ -186,7 +186,10 @@
     "community": "Community",
     "telegram_channel": "Telegram Channel",
     "community_chat": "Community Chat",
-    "join": "Join"
+    "join": "Join",
+    "restart_onboarding": "Restart onboarding",
+    "start": "Start",
+    "other": "Other"
   },
   "profile": {
     "title": "User Profile",
