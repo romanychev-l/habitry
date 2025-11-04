@@ -2,11 +2,11 @@
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
   import { fade, fly } from 'svelte/transition';
-  import type { Habit } from '../types';
+  import type { Habit } from '../../types';
   import { themeParams, popup } from '@tma.js/sdk-svelte';
-  import { habits } from '../stores/habit';
-  import { user } from '../stores/user';
-  // import { showTelegramOrCustomAlert } from '../stores/alert';
+  import { habits } from '../../stores/habit';
+  import { user } from '../../stores/user';
+  // import { showTelegramOrCustomAlert } from '../../stores/alert';
   
   const dispatch = createEventDispatcher();
   export let habit: Habit | null = null;

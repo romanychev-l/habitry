@@ -2,7 +2,7 @@
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
   import { fade, fly } from 'svelte/transition';
-  import { api } from '../utils/api';
+  import { api } from '../../utils/api';
 
   export let show: boolean;
 

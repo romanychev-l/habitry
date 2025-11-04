@@ -2,7 +2,7 @@
   import { _ } from 'svelte-i18n';
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import { fade, fly } from 'svelte/transition';
-  import type { Habit } from '../types';
+  import type { Habit } from '../../types';
   import { popup } from '@tma.js/sdk-svelte';
 
   const dispatch = createEventDispatcher();

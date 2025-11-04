@@ -2,9 +2,9 @@
   import { _ } from 'svelte-i18n';
   import { createEventDispatcher } from 'svelte';
   import { fade, fly } from 'svelte/transition';
-  import type { Habit } from '../types';
+  import type { Habit } from '../../types';
   import { initData, shareStory } from '@tma.js/sdk-svelte';
-  import { generateHabitStoryImage, uploadBase64ToImgbb, getGradientForHabitId } from '../utils/storyShare';
+  import { generateHabitStoryImage, uploadBase64ToImgbb, getGradientForHabitId } from '../../utils/storyShare';
 
   const dispatch = createEventDispatcher();
   const BOT_USERNAME = import.meta.env.VITE_BOT_USERNAME;

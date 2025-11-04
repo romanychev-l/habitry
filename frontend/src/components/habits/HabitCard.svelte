@@ -1,22 +1,22 @@
 <script lang="ts">
     import { _ } from 'svelte-i18n';
-    import { isListView, displayScore } from '../stores/view';
-    import { habits } from '../stores/habit';
-import { user, balance } from '../stores/user';
+    import { isListView, displayScore } from '../../stores/view';
+    import { habits } from '../../stores/habit';
+import { user, balance } from '../../stores/user';
     import { createEventDispatcher } from 'svelte';
-    import HabitActionsModal from './HabitActionsModal.svelte';
-    import DeleteConfirmModal from './DeleteConfirmModal.svelte';
-    import ArchiveConfirmModal from './ArchiveConfirmModal.svelte';
-    import NewHabitModal from './NewHabitModal.svelte';
-    import HabitFollowersModal from './HabitFollowersModal.svelte';
-    import HabitLinkModal from './HabitLinkModal.svelte';
-    import type { Habit as HabitType } from '../types';
+    import HabitActionsModal from '../modals/HabitActionsModal.svelte';
+    import DeleteConfirmModal from '../modals/DeleteConfirmModal.svelte';
+    import ArchiveConfirmModal from '../modals/ArchiveConfirmModal.svelte';
+    import NewHabitModal from '../modals/NewHabitModal.svelte';
+    import HabitFollowersModal from '../modals/HabitFollowersModal.svelte';
+    import HabitLinkModal from '../modals/HabitLinkModal.svelte';
+    import type { Habit as HabitType } from '../../types';
     import { onMount } from 'svelte';
-    import { api } from '../utils/api';
+    import { api } from '../../utils/api';
     import { popup, initData, hapticFeedback } from '@tma.js/sdk-svelte';
-    import { gradients } from '../utils/gradients'; // Import gradients
-    import SolarUndoLeftRoundLinear from '../assets/SolarUndoLeftRoundLinear.svelte'; // Импортируем иконку
-    import SolarMenuDotsBold from '../assets/SolarMenuDotsBold.svelte'; // Импортируем новую иконку меню
+    import { gradients } from '../../utils/gradients'; // Import gradients
+    import SolarUndoLeftRoundLinear from '../icons/SolarUndoLeftRoundLinear.svelte'; // Импортируем иконку
+    import SolarMenuDotsBold from '../icons/SolarMenuDotsBold.svelte'; // Импортируем новую иконку меню
 
     const dispatch = createEventDispatcher();
 

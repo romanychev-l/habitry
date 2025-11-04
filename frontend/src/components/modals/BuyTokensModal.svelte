@@ -2,8 +2,8 @@
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
   import { fade, fly } from 'svelte/transition';
-  import { getTonConnect, subscribeToWalletChanges, sendTonTransaction } from '../utils/tonConnect';
-  import { api } from '../utils/api';
+  import { getTonConnect, subscribeToWalletChanges, sendTonTransaction } from '../../utils/tonConnect';
+  import { api } from '../../utils/api';
   import type { Wallet } from '@tonconnect/ui';
   import { beginCell, Address, toNano } from '@ton/core'
   import { TonClient, JettonMaster } from '@ton/ton';

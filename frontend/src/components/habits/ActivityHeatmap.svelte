@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { _ } from 'svelte-i18n';
-  import type { Habit } from '../types'; // Убедись, что тип импортирован
+  import type { Habit } from '../../types'; // Убедись, что тип импортирован
   export let data: { date: string; count: number }[] = [];
   export let habit: Habit; // <--- Добавь эту строку
   

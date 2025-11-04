@@ -1,7 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import { createEventDispatcher } from 'svelte';
-  import HabitCard from './HabitCard.svelte';
+  import HabitCard from '../components/habits/HabitCard.svelte';
   import type { Habit } from '../types';
   import { api } from '../utils/api';
   import { initData } from '@tma.js/sdk-svelte';

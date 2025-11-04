@@ -2,8 +2,8 @@
   import { _ } from 'svelte-i18n';
   import { createEventDispatcher, onMount } from 'svelte';
   import { fade, fly } from 'svelte/transition';
-  import type { Habit } from '../types';
-  import { api } from '../utils/api';
+  import type { Habit } from '../../types';
+  import { api } from '../../utils/api';
   import { initData } from '@tma.js/sdk-svelte';
   import DeleteConfirmModal from './DeleteConfirmModal.svelte';
   import UnarchiveConfirmModal from './UnarchiveConfirmModal.svelte';

@@ -1,13 +1,13 @@
 <script lang="ts">
-  import HabitCard from './components/HabitCard.svelte';
-  import NewHabitModal from './components/NewHabitModal.svelte';
-  import HabitLinkModal from './components/HabitLinkModal.svelte';
-  import SettingsPage from './components/SettingsPage.svelte';
-  import OnboardingModal from './components/OnboardingModal.svelte';
-  import UserProfilePage from './components/UserProfilePage.svelte';
-  import LeaderboardModal from './components/LeaderboardModal.svelte';
-  import ArchivedHabitsModal from './components/ArchivedHabitsModal.svelte';
-  // import BuyTokensModal from './components/BuyTokensModal.svelte';
+  import HabitCard from './components/habits/HabitCard.svelte';
+  import NewHabitModal from './components/modals/NewHabitModal.svelte';
+  import HabitLinkModal from './components/modals/HabitLinkModal.svelte';
+  import SettingsPage from './pages/SettingsPage.svelte';
+  import OnboardingModal from './components/onboarding/OnboardingModal.svelte';
+  import UserProfilePage from './pages/UserProfilePage.svelte';
+  import LeaderboardModal from './components/modals/LeaderboardModal.svelte';
+  import ArchivedHabitsModal from './components/modals/ArchivedHabitsModal.svelte';
+  // import BuyTokensModal from './components/modals/BuyTokensModal.svelte';
   import { user, balance } from './stores/user';
   import { isListView } from './stores/view';
   import { openTelegramInvoice } from './utils/telegram';
