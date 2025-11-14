@@ -4,7 +4,6 @@
   import HabitLinkModal from './components/modals/HabitLinkModal.svelte';
   import SettingsPage from './pages/SettingsPage.svelte';
   import OnboardingModal from './components/onboarding/OnboardingModal.svelte';
-  import HabitCompleteEffect from './components/effects/HabitCompleteEffect.svelte';
   import ConfettiEffect from './components/onboarding/shared/ConfettiEffect.svelte';
   import UserProfilePage from './pages/UserProfilePage.svelte';
   import LeaderboardModal from './components/modals/LeaderboardModal.svelte';
@@ -48,13 +47,11 @@
   let isHabitCardModalOpen = false;
   let closeModalsSignal = 0;
   let backButtonBound = false;
-  let showEffect = false;
-  let effectType: 'confetti' | 'burst' = 'burst';
+  let showConfetti = false;
 
-  function triggerCompletionEffect() {
-    effectType = Math.random() > 0.5 ? 'confetti' : 'burst';
-    showEffect = true;
-    setTimeout(() => showEffect = false, 3000);
+  function triggerConfetti() {
+    showConfetti = true;
+    setTimeout(() => showConfetti = false, 3000);
   }
 
   $: isAnyModalOpen = showModal || showHabitLinkModal || showSettings || showOnboarding || showUserProfile || showLeaderboard || showArchived || showBuyTokens || isHabitCardModalOpen;
@@ -703,7 +700,7 @@
           closeModalsSignal={closeModalsSignal}
           on:modalOpened={() => isHabitCardModalOpen = true}
           on:modalClosed={() => isHabitCardModalOpen = false}
-          on:habitCompleted={triggerCompletionEffect}
+          on:habitCompleted={triggerConfetti}
         />
       {/each}
       <div class="archive-entry">
@@ -826,13 +823,7 @@
   </div>
 </main>
 
-{#if showEffect}
-  {#if effectType === 'confetti'}
-    <ConfettiEffect show={showEffect} />
-  {:else}
-    <HabitCompleteEffect show={showEffect} />
-  {/if}
-{/if}
+<ConfettiEffect show={showConfetti} />
 
 <style>
   main {
