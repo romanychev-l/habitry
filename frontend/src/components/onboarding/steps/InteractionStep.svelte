@@ -49,7 +49,7 @@
 
 <div class="illustration-container">
   <div class="glow-effect pulse"></div>
-  <div class="illustration">💪</div>
+  <div class="illustration">🎯</div>
 </div>
 <h2>{$_('onboarding.social.title')}</h2>
 <p class="description">{$_('onboarding.social.description')}</p>

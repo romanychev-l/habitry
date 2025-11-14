@@ -314,7 +314,8 @@
       "motivation": "You're ready to start your journey to a better version of yourself!"
     },
     "skip": "Skip",
-    "next": "Next"
+    "next": "Next",
+    "back": "Back"
   },
   "creator": {
     "by": "Created by Leonid Romanychev"
