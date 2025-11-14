@@ -1,0 +1,36 @@
+---
+description: "Шаблон для нового хэндлера в aiogram 3"
+type: "manual"
+---
+
+Создай новый хэндлер для aiogram 3, используя следующий шаблон.
+
+```python
+from aiogram import Router, types
+from aiogram.filters import Command
+
+# Если используешь FSM
+# from aiogram.fsm.context import FSMContext
+# from ..states.some_state import SomeState
+
+# Если используешь Fluentogram для i18n
+# from fluentogram import TranslatorRunner
+
+router = Router()
+
+
+@router.message(Command("example"))
+async def example_handler(
+    message: types.Message,
+    # i18n: TranslatorRunner, # раскомментируй, если используешь i18n
+    # state: FSMContext, # раскомментируй, если используешь FSM
+):
+    """
+    This handler will be called when user sends `/example` command
+    """
+    await message.answer("Hello from example handler!")
+    # await message.answer(i18n.user.hello()) # пример с i18n
+
+```
+
+Не забудь зарегистрировать новый роутер в основном файле бота (`bot/__main__.py`).

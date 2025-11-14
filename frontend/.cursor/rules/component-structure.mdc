@@ -1,0 +1,40 @@
+---
+description: "Стандартный шаблон для Svelte компонента"
+type: "manual"
+---
+
+Создай новый Svelte компонент со следующей структурой:
+
+```svelte
+<script lang="ts">
+  // imports
+  import { onMount } from 'svelte';
+
+  // props
+  export let exampleProp: string;
+
+  // state
+  let internalState = '';
+
+  // lifecycle
+  onMount(() => {
+    // component initialization
+  });
+
+  // functions
+  function handleClick() {
+    // handle click
+  }
+</script>
+
+<!-- markup -->
+<div on:click={handleClick}>
+  {exampleProp}
+</div>
+
+<!-- styles -->
+<style>
+  div {
+    /* component styles */
+  }
+</style>

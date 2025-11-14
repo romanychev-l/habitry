@@ -1,0 +1,34 @@
+---
+description: "Использование Fluentogram для интернационализации (i18n)"
+type: "intelligent"
+globs: ["py_bot/bot/**/*.py"]
+alwaysApply: false
+---
+
+В проекте используется `fluentogram` для i18n. Придерживайся следующих практик:
+
+1.  **Получение текстов:** Всегда получай тексты через `TranslatorRunner`, который передается в хэндлеры через middleware.
+
+    ```python
+    # Неправильно
+    await message.answer("Привет, мир!")
+
+    # Правильно
+    await message.answer(i18n.hello.world())
+    ```
+
+2.  **Форматирование:** Используй аргументы для форматирования строк.
+
+    ```python
+    # В .ftl файле:
+    # welcome-user = Привет, { $user }!
+
+    # В коде:
+    await message.answer(i18n.welcome.user(user=message.from_user.full_name))
+    ```
+
+3.  **Структура файлов локализации:**
+    - Все текстовые строки для пользователя должны находиться в `locales/*/LC_MESSAGES/txt.ftl`.
+    - Все системные промпты (например, для AI) должны быть в `locales/*/LC_MESSAGES/prompts.ftl`.
+
+4.  **Добавление новых ключей:** При добавлении нового текста, убедись, что ключ добавлен во все файлы локализации (`en` и `ru`).

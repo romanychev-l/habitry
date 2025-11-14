@@ -1,0 +1,53 @@
+---
+description: "Проверка подлинности данных из Telegram Mini App"
+type: "intelligent"
+globs: ["backend/middleware/auth.go", "backend/handlers/**/*.go"]
+alwaysApply: false
+---
+
+**Важно:** Всегда проверяй подлинность данных, приходящих от клиента Telegram Mini App, используя `init-data-golang`.
+
+Это защитит твои эндпоинты от несанкционированного доступа.
+
+Пример middleware для проверки:
+
+```go
+package middleware
+
+import (
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/telegram-mini-apps/init-data-golang"
+)
+
+// AuthMiddleware создает middleware для проверки авторизации Telegram.
+func AuthMiddleware(telegramBotToken string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is missing"})
+			return
+		}
+
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "tma" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
+			return
+		}
+		initData := parts[1]
+
+		expIn := 24 * time.Hour // 24 hours
+		if err := initdata.Validate(initData, telegramBotToken, expIn); err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid init data"})
+			return
+		}
+
+		c.Next()
+	}
+}
+```
+
+Применяй этот middleware ко всем защищенным маршрутам.

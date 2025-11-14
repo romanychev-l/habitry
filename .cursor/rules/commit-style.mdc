@@ -1,0 +1,47 @@
+---
+description: "Правила оформления коммитов (Conventional Commits)"
+type: "alwaysApply"
+---
+
+**Всегда используй [Conventional Commits](https://www.conventionalcommits.org/) для сообщений коммитов.**
+
+Это помогает поддерживать историю изменений читаемой и позволяет автоматически генерировать changelogs.
+
+**Формат:**
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+**Основные типы (`type`):**
+
+*   `feat`: Новая функциональность (a new feature).
+*   `fix`: Исправление ошибки (a bug fix).
+*   `docs`: Изменения в документации.
+*   `style`: Изменения, не влияющие на логику кода (пробелы, форматирование, точки с запятой и т.д.).
+*   `refactor`: Рефакторинг кода, без исправления ошибок или добавления функциональности.
+*   `perf`: Улучшение производительности.
+*   `test`: Добавление или исправление тестов.
+*   `chore`: Другие изменения, не затрагивающие исходный код или тесты (например, изменения в build-скриптах).
+
+**Примеры:**
+
+```
+feat(api): add endpoint for user habits
+```
+
+```
+fix(frontend): correct button alignment on mobile
+```
+
+```
+docs(readme): update setup instructions
+```
+
+```
+refactor(backend): simplify user authentication logic
+```

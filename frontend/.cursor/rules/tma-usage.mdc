@@ -1,0 +1,63 @@
+---
+description: "Рекомендации по использованию Telegram Mini App SDK (TMA)"
+type: "intelligent"
+alwaysApply: false
+---
+
+При работе с TMA SDK (`@tma.js/sdk-svelte`) следуй этим рекомендациям:
+
+1.  **Инициализация SDK:** Всегда инициализируй SDK как можно раньше в жизненном цикле приложения, желательно в корневом компоненте (`App.svelte`).
+
+    ```svelte
+    <script lang="ts">
+      import { onMount } from 'svelte';
+      import { init, retrieveLaunchParams } from '@tma.js/sdk-svelte';
+
+      onMount(() => {
+        try {
+          const launchParams = retrieveLaunchParams();
+          init({ launchParams });
+        } catch (e) {
+          console.error(e);
+        }
+      });
+    </script>
+    ```
+
+2.  **Получение данных пользователя:** Используй `initData` для получения информации о пользователе. Всегда валидируй данные на бэкенде.
+
+    ```svelte
+    <script lang="ts">
+      import { initData } from '@tma.js/sdk-svelte';
+
+      const user = $initData?.user;
+    </script>
+
+    <p>Привет, {user?.firstName}!</p>
+    ```
+
+3.  **Использование компонентов UI из SDK:** По возможности используй готовые компоненты, такие как `MainButton`, `BackButton` для нативного вида в Telegram.
+
+    ```svelte
+    <script lang="ts">
+        import { MainButton } from '@tma.js/sdk-svelte';
+
+        const mainButton = MainButton.getInstance();
+        mainButton.setText('Главная кнопка');
+        mainButton.show();
+    </script>
+    ```
+
+4.  **Обратная связь:** Используй `HapticFeedback` для тактильной обратной связи при важных действиях пользователя.
+
+    ```svelte
+    <script lang="ts">
+        import { HapticFeedback } from '@tma.js/sdk-svelte';
+
+        const haptic = HapticFeedback.getInstance();
+
+        function handleClick() {
+            haptic.impactOccurred('medium');
+        }
+    </script>
+    ```
