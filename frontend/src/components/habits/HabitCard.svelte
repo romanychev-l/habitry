@@ -179,6 +179,7 @@ import { user, balance } from '../../stores/user';
             console.log('Получен ответ от сервера:', updatedHabit);
             // Оптимистично обновляем баланс пользователя (+1 WILL)
             balance.update(b => (b ?? 0) + 1);
+            dispatch('habitCompleted');
             
             isAnimating = true;
             // Сбрасываем флаг анимации после её завершения
