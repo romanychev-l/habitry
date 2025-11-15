@@ -121,10 +121,19 @@ jobs:
             docker logout ghcr.io || true
             echo $GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
-            # Очистка только контейнеров и образов текущего проекта
+            # Очистка контейнеров
             docker compose down
-            docker image prune -f --filter "label=com.docker.compose.project=habitry"
-            
+
+            # Удаление старых версий образов проекта
+            docker image rm ghcr.io/${{ github.repository }}/bot:latest || true
+            docker image rm ghcr.io/${{ github.repository }}/backend:latest || true
+
+            # Очистка всех dangling и неиспользуемых образов
+            docker image prune -af
+
+            # Очистка неиспользуемых ресурсов
+            docker system prune -af --volumes
+
             # Запуск новых контейнеров
             docker compose pull
             docker compose up -d
