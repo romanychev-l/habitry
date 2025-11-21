@@ -48,6 +48,10 @@
   let closeModalsSignal = 0;
   let backButtonBound = false;
   let showConfetti = false;
+  // Переменные для отложенных действий после онбординга
+  let pendingHabitLink = false;
+  let pendingProfileUsername = '';
+  let pendingCameFromLeaderboard = false;
 
   function triggerConfetti() {
     showConfetti = true;
@@ -185,8 +189,7 @@
       // Инициализируем аналитику после инициализации темы
       // initializeAnalytics();
 
-      // Проверяем параметры запуска после инициализации
-      handleStartParam();
+      // Параметры запуска обрабатываются в initializeUser() после проверки онбординга
 
       // Управление поведением свайпа
       console.log('Проверка доступности swipeBehavior.mount:', swipeBehavior.mount.isAvailable());
@@ -411,22 +414,38 @@
       if (startParam) {
         if (startParam.startsWith('habit_')) {
           const [_, habitId, sharedByUserId] = startParam.split('_');
-          console.log('Показываем окно выбора привычки:', { habitId, sharedByUserId });
+          console.log('Найдена реферальная ссылка на привычку:', { habitId, sharedByUserId });
           
           sharedHabitId = habitId;
           sharedByTelegramId = sharedByUserId;
-          showHabitLinkModal = true;
+          // Сохраняем для отложенного показа после онбординга
+          pendingHabitLink = true;
         } else if (startParam.startsWith('profile_')) {
           const username = startParam.slice(8);
-          console.log('Показываем профиль пользователя:', username);
+          console.log('Найден запрос на показ профиля:', username);
           
-          profileUsername = username;
-          showUserProfile = true;
-          cameFromLeaderboard = false;
+          // Сохраняем для отложенного показа после онбординга
+          pendingProfileUsername = username;
+          pendingCameFromLeaderboard = false;
         }
       }
     } catch (error) {
       console.error('Ошибка при обработке start param:', error);
+    }
+  }
+  
+  // Функция для применения отложенных действий после онбординга
+  function applyPendingActions() {
+    if (pendingHabitLink) {
+      showHabitLinkModal = true;
+      pendingHabitLink = false;
+    }
+    if (pendingProfileUsername) {
+      profileUsername = pendingProfileUsername;
+      cameFromLeaderboard = pendingCameFromLeaderboard;
+      showUserProfile = true;
+      pendingProfileUsername = '';
+      pendingCameFromLeaderboard = false;
     }
   }
 
@@ -503,10 +522,15 @@
           user: userOnboardingVersion 
         });
         
-        // Показываем онбординг если версия устарела и нет параметра запуска с привычкой
-        if (userOnboardingVersion < CURRENT_ONBOARDING_VERSION && !showHabitLinkModal) {
+        // Показываем онбординг если версия устарела
+        // Не показываем профиль/реферальную ссылку сразу, если нужен онбординг
+        if (userOnboardingVersion < CURRENT_ONBOARDING_VERSION) {
           console.log('Showing onboarding due to version mismatch');
           showOnboarding = true;
+          // Не применяем отложенные действия пока не пройден онбординг
+        } else {
+          // Если онбординг не нужен, применяем отложенные действия сразу
+          applyPendingActions();
         }
         
         // Получаем текущую дату в часовом поясе пользователя
@@ -609,7 +633,11 @@
       console.error('Failed to update onboarding version:', error);
     }
     
-    if (!showHabitLinkModal) {
+    // Применяем отложенные действия (профиль или реферальная ссылка)
+    applyPendingActions();
+    
+    // Если нет отложенных действий, показываем модалку создания привычки
+    if (!showHabitLinkModal && !showUserProfile) {
       showModal = true;
     }
   }
@@ -624,6 +652,9 @@
     } catch (error) {
       console.error('Failed to update onboarding version:', error);
     }
+    
+    // Применяем отложенные действия (профиль или реферальная ссылка)
+    applyPendingActions();
   }
 
   function handleTonTransactionSent(event: CustomEvent) {
@@ -794,7 +825,7 @@
       <OnboardingModal 
         on:finish={handleOnboardingFinish}
         on:skip={handleOnboardingSkip}
-        isSharedHabit={showHabitLinkModal}
+        isSharedHabit={pendingHabitLink || showHabitLinkModal}
       />
     {/if}
   {/if}
