@@ -22,7 +22,7 @@
 
 <style>
   .confetti-container {
-    position: absolute;
+    position: fixed;
     inset: 0;
     pointer-events: none;
     z-index: 2;

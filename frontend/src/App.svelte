@@ -47,15 +47,19 @@
   let isHabitCardModalOpen = false;
   let closeModalsSignal = 0;
   let backButtonBound = false;
-  let showConfetti = false;
+  let confettiInstances: number[] = [];
+  let confettiIdCounter = 0;
   // Переменные для отложенных действий после онбординга
   let pendingHabitLink = false;
   let pendingProfileUsername = '';
   let pendingCameFromLeaderboard = false;
 
   function triggerConfetti() {
-    showConfetti = true;
-    setTimeout(() => showConfetti = false, 3000);
+    const id = confettiIdCounter++;
+    confettiInstances = [...confettiInstances, id];
+    setTimeout(() => {
+      confettiInstances = confettiInstances.filter(instanceId => instanceId !== id);
+    }, 3000);
   }
 
   $: isAnyModalOpen = showModal || showHabitLinkModal || showSettings || showOnboarding || showUserProfile || showLeaderboard || showArchived || showBuyTokens || isHabitCardModalOpen;
@@ -854,7 +858,9 @@
   </div>
 </main>
 
-<ConfettiEffect show={showConfetti} />
+{#each confettiInstances as confettiId (confettiId)}
+  <ConfettiEffect show={true} />
+{/each}
 
 <style>
   main {
