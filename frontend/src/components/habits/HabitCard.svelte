@@ -554,7 +554,7 @@ import { user, balance } from '../../stores/user';
     left: 0;
     bottom: 0;
     width: 100%;
-    height: calc(var(--progress) * 100%);
+    height: calc(4.56% + (var(--progress) * 90.87%));
     background: var(--habit-gradient);
     transition: none;
     z-index: 0;
