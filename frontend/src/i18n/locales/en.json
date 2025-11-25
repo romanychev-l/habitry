@@ -307,6 +307,11 @@
       "alone": "Alone",
       "success_rate": "success rate"
     },
+    "homescreen": {
+      "title": "Add to Home Screen",
+      "description": "Access Habitry quickly by adding it to your home screen.",
+      "button": "Add to Home Screen"
+    },
     "start": {
       "title": "Let's Start!",
       "description": "Create your first habit and invite friends to join you",

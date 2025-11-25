@@ -1,27 +1,29 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
-  import { _ } from 'svelte-i18n';
-  import { scale, fly } from 'svelte/transition';
-  import { quintOut, elasticOut } from 'svelte/easing';
-  
-  import ConfettiEffect from './shared/ConfettiEffect.svelte';
-  import StarsBackground from './shared/StarsBackground.svelte';
-  import ProgressBar from './shared/ProgressBar.svelte';
-  import WelcomeStep from './steps/WelcomeStep.svelte';
-  import InteractionStep from './steps/InteractionStep.svelte';
-  import StreakStep from './steps/StreakStep.svelte';
-  import StatsStep from './steps/StatsStep.svelte';
-  import CommunityStep from './steps/CommunityStep.svelte';
-  import FinalStep from './steps/FinalStep.svelte';
+  import { createEventDispatcher, onMount, onDestroy } from "svelte";
+  import { _ } from "svelte-i18n";
+  import { scale, fly } from "svelte/transition";
+  import { quintOut, elasticOut } from "svelte/easing";
+
+  import ConfettiEffect from "./shared/ConfettiEffect.svelte";
+  import StarsBackground from "./shared/StarsBackground.svelte";
+  import ProgressBar from "./shared/ProgressBar.svelte";
+  import WelcomeStep from "./steps/WelcomeStep.svelte";
+  import InteractionStep from "./steps/InteractionStep.svelte";
+  import StreakStep from "./steps/StreakStep.svelte";
+  import StatsStep from "./steps/StatsStep.svelte";
+  import CommunityStep from "./steps/CommunityStep.svelte";
+  import AddToHomeScreenStep from "./steps/AddToHomeScreenStep.svelte";
+  import FinalStep from "./steps/FinalStep.svelte";
 
   const dispatch = createEventDispatcher();
-  
+
   export let isSharedHabit = false;
-  
+
   let currentStep = 0;
-  $: totalSteps = isSharedHabit ? 3 : 6;
+
+  $: totalSteps = isSharedHabit ? 5 : 7;
   let showConfetti = false;
-  
+
   // Состояние для интерактивных шагов
   let habitCompleted = false;
   let holdProgress = 0;
@@ -33,15 +35,15 @@
 
   // Предотвращаем скролл на основной странице
   function disableBodyScroll() {
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.width = "100%";
   }
 
   function enableBodyScroll() {
-    document.body.style.overflow = '';
-    document.body.style.position = '';
-    document.body.style.width = '';
+    document.body.style.overflow = "";
+    document.body.style.position = "";
+    document.body.style.width = "";
   }
 
   onMount(() => {
@@ -59,9 +61,9 @@
       if (currentStep === 1 && !habitCompleted) return;
       if (currentStep === 2 && !isSharedHabit && streakDays < 7) return;
       if (currentStep === 2 && isSharedHabit && friendsAdded < 2) return;
-      
+
       direction = 1; // Движение вперёд
-      
+
       // Сброс состояний перед переходом на следующий шаг
       habitCompleted = false;
       holdProgress = 0;
@@ -70,18 +72,18 @@
       currentStep++;
     } else {
       triggerConfetti();
-      setTimeout(() => dispatch('finish'), 1500);
+      setTimeout(() => dispatch("finish"), 1500);
     }
   }
 
   function skipOnboarding() {
-    dispatch('skip');
+    dispatch("skip");
   }
 
   function previousStep() {
     if (currentStep > 0) {
       direction = -1; // Движение назад
-      
+
       // Сброс состояний перед возвратом
       habitCompleted = false;
       holdProgress = 0;
@@ -93,7 +95,7 @@
 
   function triggerConfetti() {
     showConfetti = true;
-    setTimeout(() => showConfetti = false, 3000);
+    setTimeout(() => (showConfetti = false), 3000);
   }
 
   // Обработчики для InteractionStep
@@ -120,11 +122,12 @@
     }
   }
 
-  $: canProceed = 
-    currentStep === 0 || 
+  $: canProceed =
+    currentStep === 0 ||
     currentStep === 3 ||
     currentStep === 4 ||
     currentStep === 5 ||
+    currentStep === 6 ||
     (currentStep === 1 && habitCompleted) ||
     (currentStep === 2 && !isSharedHabit && streakDays >= 7) ||
     (currentStep === 2 && isSharedHabit && friendsAdded >= 2);
@@ -133,24 +136,43 @@
 <div class="fullscreen-container">
   <StarsBackground />
   <ProgressBar {totalSteps} {currentStep} />
-  
+
   <button class="close-btn" on:click={skipOnboarding}>
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M18 6L6 18"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M6 6L18 18"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
     </svg>
   </button>
 
   <div class="content">
     {#key currentStep}
-      <div class="step"
+      <div
+        class="step"
         in:fly={{ x: direction * 300, duration: 400, easing: quintOut }}
         out:fly={{ x: -direction * 300, duration: 400, easing: quintOut }}
       >
         {#if currentStep === 0}
           <WelcomeStep />
         {:else if currentStep === 1}
-          <InteractionStep 
+          <InteractionStep
             bind:habitCompleted
             bind:holdProgress
             bind:isHolding
@@ -158,7 +180,7 @@
             on:holding={handleHolding}
           />
         {:else if currentStep === 2}
-          <StreakStep 
+          <StreakStep
             bind:streakDays
             bind:friendsAdded
             {isSharedHabit}
@@ -170,34 +192,38 @@
         {:else if currentStep === 4 && !isSharedHabit}
           <CommunityStep />
         {:else if (currentStep === 5 && !isSharedHabit) || (currentStep === 3 && isSharedHabit)}
+          <AddToHomeScreenStep />
+        {:else if (currentStep === 6 && !isSharedHabit) || (currentStep === 4 && isSharedHabit)}
           <FinalStep />
         {/if}
       </div>
     {/key}
   </div>
-  
+
   <div class="footer">
     {#if currentStep > 0}
       <button class="back-btn" on:click={previousStep}>
-        ← {$_('onboarding.back')}
+        ← {$_("onboarding.back")}
       </button>
     {/if}
-    <button 
-      class="next-btn" 
+    <button
+      class="next-btn"
       class:pulse-btn={canProceed}
       class:final-btn={currentStep === totalSteps - 1}
       on:click={nextStep}
       disabled={!canProceed}
     >
       <span class="btn-text">
-        {currentStep === totalSteps - 1 ? $_('onboarding.start.action') : $_('onboarding.next')}
+        {currentStep === totalSteps - 1
+          ? $_("onboarding.start.action")
+          : $_("onboarding.next")}
       </span>
       {#if currentStep === totalSteps - 1}
         <span class="btn-icon">🚀</span>
       {/if}
     </button>
   </div>
-  
+
   <ConfettiEffect show={showConfetti} />
 </div>
 
@@ -209,7 +235,7 @@
     flex-direction: column;
     height: 100dvh;
     z-index: 1000;
-    background: var(--tg-theme-bg-color, #F9F8F3);
+    background: var(--tg-theme-bg-color, #f9f8f3);
     overflow: hidden;
   }
 
@@ -218,7 +244,7 @@
     top: 12px;
     right: 12px;
     z-index: 1001;
-    background: rgba(0,0,0,0.1);
+    background: rgba(0, 0, 0, 0.1);
     color: var(--tg-theme-text-color, #000);
     border: none;
     border-radius: 50%;
@@ -230,9 +256,9 @@
     cursor: pointer;
     padding: 0;
   }
-  
+
   :global([data-theme="dark"]) .close-btn {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
     color: #fff;
   }
 
@@ -258,7 +284,7 @@
     width: calc(100% - 48px);
     height: 100%;
   }
-  
+
   .footer {
     padding: 16px 24px 20px;
     display: flex;
@@ -303,7 +329,7 @@
     position: relative;
     overflow: hidden;
   }
-  
+
   .next-btn:not(:disabled):active {
     transform: scale(0.97);
   }
@@ -312,14 +338,19 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
-  
+
   .pulse-btn {
     animation: button-pulse 1.5s ease-in-out infinite;
   }
 
   @keyframes button-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7); }
-    50% { box-shadow: 0 0 0 8px rgba(147, 51, 234, 0); }
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7);
+    }
+    50% {
+      box-shadow: 0 0 0 8px rgba(147, 51, 234, 0);
+    }
   }
 
   .final-btn {
@@ -329,14 +360,19 @@
   }
 
   @keyframes rainbow-shift {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
   }
 
   .btn-icon {
     font-size: 20px;
   }
-  
+
   :global([data-theme="dark"]) .back-btn {
     color: white;
     border-color: white;
@@ -352,4 +388,3 @@
     color: white;
   }
 </style>
-
