@@ -67,7 +67,7 @@ async def check_and_charge_balance(user_id: int, amount: int, i18n) -> tuple[boo
         return False, 0
 
 
-async def _call_deepseek_api(prompt: str, model: str = "deepseek-chat", **kwargs) -> str:
+async def _call_deepseek_api(prompt: str, model: str = "deepseek-reasoner", **kwargs) -> str:
     """
     Запрос к DeepSeek API
     """
