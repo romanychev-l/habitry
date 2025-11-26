@@ -13,6 +13,9 @@ from bot.config_data.config import config_settings
 
 commands_router = Router()
 
+# Импортируем функцию анализа привычек для использования в команде /start
+from bot.handlers.ai import cmd_analyze_habits
+
 
 # @commands_router.message(CommandStart())
 # async def process_start_command(
@@ -26,7 +29,16 @@ commands_router = Router()
 #     # await start_logic(msg, state, i18n)
 
 @commands_router.message(Command("start"))
-async def start(msg: types.Message, i18n: TranslatorRunner):
+async def start(msg: types.Message, command: CommandObject, i18n: TranslatorRunner):
+    # Проверяем параметр start из ссылки (например, /start analyze_habits)
+    start_param = command.args
+    
+    # Если параметр равен "analyze_habits", вызываем функцию анализа привычек
+    if start_param == "analyze_habits":
+        await cmd_analyze_habits(msg, i18n)
+        return
+    
+    # Обычная обработка команды /start
     # await msg.answer('https://pmpu.site/gfit?tg_id=' + str(msg.from_user.id))
     builder = InlineKeyboardBuilder()
     builder.row(

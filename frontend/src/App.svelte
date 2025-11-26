@@ -19,11 +19,13 @@
   import { onMount, onDestroy } from 'svelte';
   import { subscribeToWalletChanges } from './utils/tonConnect';
   import type { Wallet } from '@tonconnect/ui';
-  import { popup, initData, themeParams, swipeBehavior, viewport, backButton } from '@tma.js/sdk-svelte';
+  import { popup, initData, themeParams, swipeBehavior, viewport, backButton, openTelegramLink } from '@tma.js/sdk-svelte';
   import { initGoogleAnalytics } from './utils/analytics';
   // import TelegramAnalytics from '@telegram-apps/analytics';
   import plusIcon from './assets/plus.svg'; // Import the SVG
   import trophyIcon from './assets/trophy.svg';
+  
+  const BOT_USERNAME = import.meta.env.VITE_BOT_USERNAME;
   
   // Текущая версия онбординга (увеличивайте это число при обновлении онбординга)
   const CURRENT_ONBOARDING_VERSION = 4;
@@ -677,6 +679,44 @@
     // Запускаем проверку статуса транзакции
     setTimeout(() => checkUsdtTransactionStatus(transactionId), 30000);
   }
+
+  // Функция для открытия AI ассистента (бота)
+  function handleOpenAIAssistant() {
+    try {
+      if (!BOT_USERNAME) {
+        console.error('BOT_USERNAME не установлен');
+        return;
+      }
+
+      // Формируем ссылку на бота с командой /analyze_habits
+      // Используем параметр start для передачи команды
+      // Когда пользователь откроет эту ссылку, Telegram автоматически отправит /start analyze_habits боту
+      const botUrl = `https://t.me/${BOT_USERNAME}?start=analyze_habits`;
+      
+      console.log('Открываем бота:', botUrl);
+      
+      // Открываем ссылку через Telegram WebApp API (предпочтительный способ)
+      if (window.Telegram?.WebApp?.openLink) {
+        window.Telegram.WebApp.openLink(botUrl);
+      } else if (openTelegramLink && typeof openTelegramLink === 'function') {
+        // Fallback: используем SDK функцию если доступна
+        openTelegramLink(botUrl);
+      } else {
+        // Последний fallback: используем window.open
+        window.open(botUrl, '_blank');
+      }
+      
+      // Закрываем мини-апп после открытия бота
+      // Небольшая задержка перед закрытием, чтобы ссылка успела открыться
+      setTimeout(() => {
+        if (window.Telegram?.WebApp?.close) {
+          window.Telegram.WebApp.close();
+        }
+      }, 100);
+    } catch (error) {
+      console.error('Ошибка при открытии AI ассистента:', error);
+    }
+  }
 </script>
 
 <main>
@@ -761,6 +801,14 @@
     <img src={trophyIcon} alt="Leaderboard" />
   </button>
 
+  <button 
+    class="ai-assistant-button"
+    class:behind-modal={isAnyModalOpen}
+    on:click={handleOpenAIAssistant}
+    title="AI Ассистент"
+  >
+    🤖
+  </button>
 
   <button 
     class="add-button"
@@ -976,6 +1024,34 @@
     filter: brightness(0) invert(1);
   }
 
+  .ai-assistant-button {
+    position: fixed;
+    bottom: 20px;
+    right: 70px;
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: var(--tg-theme-button-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: background-color 0.2s, transform 0.2s;
+    z-index: 2;
+  }
+
+  .ai-assistant-button:hover {
+    transform: scale(1.1);
+  }
+
+  .ai-assistant-button.behind-modal {
+    z-index: 1;
+  }
+
   .add-button {
     position: fixed;
     bottom: 20px;
@@ -1066,8 +1142,7 @@
     -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
   } */
 
-  .add-button img,
-  .add-balance-button img {
+  .add-button img {
     width: 80%;
     height: 80%;
     filter: brightness(0) invert(1);
