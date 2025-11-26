@@ -802,20 +802,20 @@
   </button>
 
   <button 
-    class="ai-assistant-button"
-    class:behind-modal={isAnyModalOpen}
-    on:click={handleOpenAIAssistant}
-    title="AI Ассистент"
-  >
-    🤖
-  </button>
-
-  <button 
     class="add-button"
     class:behind-modal={isAnyModalOpen}
     on:click={() => showModal = true}
   >
     <img src={plusIcon} alt="Add Habit" />
+  </button>
+
+  <button 
+    class="ai-assistant-button"
+    class:behind-modal={isAnyModalOpen}
+    on:click={handleOpenAIAssistant}
+    title="AI Ассистент"
+  >
+    ✨
   </button>
 
   {#if showLeaderboard}
@@ -1026,19 +1026,20 @@
 
   .ai-assistant-button {
     position: fixed;
-    bottom: 20px;
-    right: 70px;
+    bottom: 70px;
+    right: 20px;
     width: 40px;
     height: 40px;
     border: none;
     background: var(--tg-theme-button-color);
     color: white;
-    border-radius: 50%;
+    mask: url('/src/assets/streak.svg') no-repeat center / contain;
+    -webkit-mask: url('/src/assets/streak.svg') no-repeat center / contain;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 24px;
+    font-size: 20px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     transition: background-color 0.2s, transform 0.2s;
     z-index: 2;
